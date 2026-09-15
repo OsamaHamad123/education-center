@@ -6,8 +6,8 @@ Multi-Branch Education Center Management System — نظام ويب عربي (RT
 
 ## الحالة
 
-المشروع في مرحلة التأسيس. هذا المستودع يحتوي حالياً على **هيكل المجلدات والوثائق فقط** — لم يتم بعد
-تثبيت أي اعتماديات ولا كتابة كود التطبيق. ابدأ من `Phase 0` في خطة المشروع.
+اكتملت **المرحلة 0** (التأسيس وأدوات جودة الكود). التطبيق يعمل ويعرض صفحة عربية RTL مبدئية،
+وكل فحوص الجودة خضراء. لم تُنشأ قاعدة البيانات بعد — تبدأ في المرحلة 1.
 
 - المواصفات الكاملة: [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md)
 - قواعد العمل لكل جلسة: [`CLAUDE.md`](CLAUDE.md)
@@ -35,23 +35,38 @@ index.ts         الواجهة العامة للوحدة — الاستيراد
 عزل الفروع مطبَّق على طبقتين: طبقة التطبيق (`TenantContext` + `withTenant`) وطبقة قاعدة البيانات
 (Row Level Security). التفاصيل في [ADR 0001](docs/decisions/0001-row-level-tenancy.md).
 
-## البدء (بعد تنفيذ Phase 0)
+## البدء
+
+مطلوب: Node.js 22+، pnpm، و Docker Desktop.
 
 ```bash
-corepack enable pnpm   # pnpm غير مثبت على الجهاز حالياً
 pnpm install
-cp .env.example .env   # ثم املأ القيم
-pnpm db:up             # تشغيل PostgreSQL عبر Docker
-pnpm db:migrate
-pnpm db:seed
-pnpm dev
+cp .env.example .env     # القيم الافتراضية تطابق docker-compose
+pnpm db:up               # تشغيل PostgreSQL 16 (ينشئ الدورين وقاعدة الاختبار)
+pnpm dev                 # http://localhost:3000
 ```
 
-أوامر الجودة المطلوبة قبل أي commit:
+من المرحلة 1 فصاعداً تُضاف: `pnpm db:migrate` ثم `pnpm db:seed`.
+
+أوامر الجودة المطلوبة قبل أي commit (يشغّلها Husky تلقائياً أيضاً):
 
 ```bash
 pnpm typecheck && pnpm lint && pnpm test
 ```
+
+| الأمر                                                 | الغرض                  |
+| ----------------------------------------------------- | ---------------------- |
+| `pnpm dev`                                            | تشغيل التطبيق          |
+| `pnpm typecheck`                                      | `tsc --noEmit`         |
+| `pnpm lint` / `pnpm format`                           | ESLint / Prettier      |
+| `pnpm test`                                           | Vitest (وحدات + تكامل) |
+| `pnpm test:e2e`                                       | Playwright             |
+| `pnpm db:up` / `db:migrate` / `db:seed` / `db:studio` | قاعدة البيانات         |
+
+### قواعد معمارية مفروضة بالـ lint
+
+- لا يُستورد من وحدة أخرى إلا عبر واجهتها العامة `@/modules/<module>` — الاستيراد العميق خطأ lint.
+- طبقة `domain/` لا تستورد `next` أو `react` أو `drizzle-orm` أو `@/shared/db` — خطأ lint.
 
 ## الترخيص
 

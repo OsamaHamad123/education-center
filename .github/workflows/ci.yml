@@ -1,0 +1,149 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TZ: Africa/Cairo
+
+jobs:
+  quality:
+    name: typecheck · lint · unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Unit tests
+        run: pnpm test:unit
+
+  integration:
+    name: integration (postgres + RLS)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: school_test
+          TZ: Africa/Cairo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_TEST_URL: postgresql://school_app:app@localhost:5432/school_test
+      DATABASE_TEST_OWNER_URL: postgresql://school_owner:owner@localhost:5432/school_test
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Mirrors docker/postgres/01-init.sh. The app role has NOBYPASSRLS so the
+      # isolation suite tests the real policies, not a privileged shortcut.
+      - name: Create roles and extensions
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d school_test -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE school_owner LOGIN PASSWORD 'owner' NOBYPASSRLS;
+          CREATE ROLE school_app LOGIN PASSWORD 'app' NOBYPASSRLS NOCREATEDB NOCREATEROLE NOSUPERUSER;
+          CREATE EXTENSION IF NOT EXISTS pgcrypto;
+          CREATE EXTENSION IF NOT EXISTS btree_gist;
+          CREATE EXTENSION IF NOT EXISTS pg_trgm;
+          GRANT ALL ON DATABASE school_test TO school_owner;
+          ALTER SCHEMA public OWNER TO school_owner;
+          GRANT CONNECT ON DATABASE school_test TO school_app;
+          GRANT USAGE ON SCHEMA public TO school_app;
+          SQL
+
+      - name: Integration tests
+        run: pnpm test:integration
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    needs: [quality]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build
+        # No production secrets in CI; env.ts validation is exercised by the tests.
+        env:
+          SKIP_ENV_VALIDATION: "1"
+        run: pnpm build
+
+  e2e:
+    name: e2e (main only)
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - name: E2E tests
+        env:
+          SKIP_ENV_VALIDATION: "1"
+        run: pnpm test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

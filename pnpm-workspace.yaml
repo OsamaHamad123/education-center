@@ -1,0 +1,7 @@
+allowBuilds:
+  esbuild: true
+  "@tailwindcss/oxide": true
+  sharp: false
+  unrs-resolver: false
+minimumReleaseAgeExclude:
+  - better-auth@1.7.5

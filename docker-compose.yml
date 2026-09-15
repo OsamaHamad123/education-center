@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: education-center-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: school
+      TZ: Africa/Cairo
+      PGTZ: Africa/Cairo
+      # Consumed by 01-init.sh below.
+      APP_DB: school
+      TEST_DB: school_test
+      OWNER_ROLE: school_owner
+      OWNER_PASSWORD: ${DB_OWNER_PASSWORD:-owner}
+      APP_ROLE: school_app
+      APP_PASSWORD: ${DB_APP_PASSWORD:-app}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./docker/postgres/01-init.sh:/docker-entrypoint-initdb.d/01-init.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d school"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  db-data:

@@ -1,26 +1,65 @@
 # PROGRESS
 
 ## Current phase
-Phase 0 — Project setup & clean code tooling — status: not started
+
+Phase 0 — Project setup & clean code tooling — status: **review**
 
 ## Completed
-- [x] Repository scaffold — folder skeleton (Section 6), CLAUDE.md, docs/PROJECT_PLAN.md, docs/PROGRESS.md,
-      ADR 0001, .gitignore, .env.example, README.md, GitHub repository created.
+
+- [x] Repository scaffold — folder skeleton (Section 6), CLAUDE.md, docs/PROJECT_PLAN.md,
+      docs/PROGRESS.md, ADR 0001, .gitignore, .env.example, README.md, GitHub repository created.
+- [x] Phase 0 — project setup & clean code tooling:
+  - Next.js 16.3.5 (App Router, `src/`, alias `@/*`) + React 19.2.8, pnpm 12.4.2
+  - Strict `tsconfig.json`: `strict`, `noUncheckedIndexedAccess`, `noImplicitOverride`,
+    `noFallthroughCasesInSwitch`, `noImplicitReturns`, `noUnusedLocals`, `noUnusedParameters`,
+    `verbatimModuleSyntax`
+  - shadcn/ui (RTL, Radix base) with 16 components in `src/shared/ui`
+  - ESLint 9 flat config with type-aware rules + **architecture boundaries** (see Decisions)
+  - Prettier + tailwind plugin, Husky (pre-commit: lint-staged + typecheck; commit-msg: commitlint)
+  - `docker-compose.yml` + `docker/postgres/01-init.sh`: Postgres 16, `TZ=Africa/Cairo`,
+    roles `school_owner` / `school_app` (both `NOBYPASSRLS`), databases `school` + `school_test`,
+    extensions `pgcrypto`, `btree_gist`, `pg_trgm`
+  - `src/shared/config/env.ts` (t3-env) and `constants.ts`; `.env.example`
+  - Root layout `lang="ar" dir="rtl"`, Cairo font, Toaster, print `@page A4` styles
+  - `src/shared/i18n/ar.ts` — the single source of Arabic UI text
+  - `src/shared/lib/`: `result.ts`, `time.ts`, `money.ts`, `phone.ts`, `utils.ts` **+ 40 unit tests**
+  - Vitest (unit + integration projects), Playwright (desktop + mobile), sample e2e smoke test
+  - GitHub Actions CI: typecheck · lint · format · unit → integration (Postgres service) → build → e2e on main
 
 ## Decisions log
-| Date | Decision | Reason |
-|---|---|---|
-| 2026-09-15 | Project lives at `F:\vscode projects\education-center` | مجلد المشاريع المعتاد على جهاز المالك |
-| 2026-09-15 | Repository `education-center` is public on GitHub (OsamaHamad123) | اختيار المالك |
-| 2026-09-15 | Scaffold only (no dependencies installed yet); Phase 0 runs in its own session | قاعدة "مرحلة واحدة لكل جلسة" في القسم 14 |
-| 2026-09-15 | Empty skeleton folders are kept in git via `.gitkeep` | git لا يتتبع المجلدات الفارغة |
+
+| Date       | Decision                                                                                 | Reason                                                                                                                                                                                                                                                                           |
+| ---------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-15 | Project lives at `F:\vscode projects\education-center`                                   | مجلد المشاريع المعتاد على جهاز المالك                                                                                                                                                                                                                                            |
+| 2026-09-15 | Repository `education-center` is public on GitHub (OsamaHamad123)                        | اختيار المالك                                                                                                                                                                                                                                                                    |
+| 2026-09-15 | Empty skeleton folders are kept in git via `.gitkeep`                                    | git لا يتتبع المجلدات الفارغة                                                                                                                                                                                                                                                    |
+| 2026-09-15 | **TypeScript 6.0.3, not the latest 7.0.2**                                               | `typescript-eslint@8.70` requires `typescript <6.1.0`. TS 7 would cost us type-aware linting, and CLAUDE.md forbids disabling lint rules to make something pass. Revisit when typescript-eslint supports TS 7.                                                                   |
+| 2026-09-15 | **ESLint 9.39.5, not the latest 10.10.0**                                                | `eslint-plugin-react@7.37.5` (pulled in by `eslint-config-next`) crashes on ESLint 10: `contextOrFilename.getFilename is not a function`. Revisit when that plugin ships ESLint 10 support.                                                                                      |
+| 2026-09-15 | Architecture rules enforced with `no-restricted-imports`, not `eslint-plugin-boundaries` | PROJECT_PLAN Phase 0 allows either. The native rule expresses both constraints we need in ~15 lines with zero extra dependency, and its messages are Arabic. Verified by probe files that it errors on a cross-module deep import and on `react`/`@/shared/db` inside `domain/`. |
+| 2026-09-15 | `better-auth` pinned to 1.7.4 and `vitest` to 5.0.0 (not 1.7.5 / 5.0.1)                  | pnpm 12's `minimumReleaseAge` supply-chain policy rejects packages published within the last day. Keeping the policy on is worth one patch version.                                                                                                                              |
+| 2026-09-15 | `exactOptionalPropertyTypes` left **off**                                                | Vendored shadcn/Radix, sonner and react-day-picker props are not written for it; patching them on every `shadcn add` would be churn. All flags PROJECT_PLAN section 4 requires are on.                                                                                           |
+| 2026-09-15 | Own `cn()` from `clsx` + `tailwind-merge` instead of shadcn 4's `cn` npm package         | The package is a three-line utility; `clsx` + `tailwind-merge` are already in the stack per section 4, and one less dependency is one less supply-chain surface.                                                                                                                 |
+| 2026-09-15 | `/api/health` added in Phase 0 instead of Phase 10                                       | The e2e smoke test and the container healthcheck both need it, and it is six lines. Phase 10 still adds the DB ping.                                                                                                                                                             |
+| 2026-09-15 | `pnpm test` passes with zero integration tests (`passWithNoTests`)                       | The integration project is empty until Phase 1 creates the schema and policies.                                                                                                                                                                                                  |
 
 ## Deviations from PROJECT_PLAN
-- None yet.
+
+- **Versions are not all "latest stable"** (section 4 versions policy): TypeScript and ESLint are one major
+  behind, for the compatibility reasons in the decisions log. Everything else is latest stable, pinned exactly.
+- `eslint-plugin-boundaries` was listed first in Phase 0 task 4; we used the sanctioned alternative
+  `no-restricted-imports`.
+- `/api/health` moved forward from Phase 10 to Phase 0.
 
 ## Known issues / TODO
-- `pnpm` is not installed on the dev machine. Enable it before Phase 0: `corepack enable pnpm`.
-- Section 16 (Open Questions) is still unanswered — answer questions 1–4 before Phase 1/2.
+
+- `pnpm` is not on the default `PATH` in every shell — it is installed at
+  `C:\Users\OsamaHamad\AppData\Roaming\npm`. `corepack enable pnpm` failed with `EPERM` because
+  `C:\Program Files\nodejs` is not user-writable; it would work from an elevated shell.
+- Peer warnings remain from `eslint-config-next`'s plugins (`eslint-plugin-import`, `jsx-a11y`, `react`)
+  and from `tsconfck` wanting TypeScript 5. Harmless today; they disappear as those packages catch up.
+- **Section 16 Open Questions are still unanswered.** Questions 1–5 and 9 shape the Phase 1 schema —
+  answer them before starting Phase 1.
 
 ## Next steps
-- Phase 0 — Project setup & clean code tooling (use the prompt in `docs/PROJECT_PLAN.md`, Section 14).
+
+- Phase 1 — Database schema, migrations, RLS, seed (prompt in `docs/PROJECT_PLAN.md`, section 14).

@@ -4,12 +4,14 @@
 - Date: 2026-09-15
 
 ## Context
+
 The system serves one education center with several branches (مدينة نصر، العبور، الجيزة). A branch admin
 must never be able to read or modify another branch's data, while a super admin needs consolidated views
 and teachers work across several branches. Branch isolation is the single most security-critical property
 of the product.
 
 Options considered:
+
 1. **Database per branch** — strongest isolation, but cross-branch reports, shared teachers and student
    transfers become painful, and migrations must run N times.
 2. **Schema per branch** — same drawbacks with a bit less operational cost.
@@ -17,6 +19,7 @@ Options considered:
 4. **Shared schema with `branch_id` + PostgreSQL Row Level Security** (defense in depth).
 
 ## Decision
+
 Option 4. Every tenant-owned table carries `branch_id`. Isolation is enforced twice:
 
 - **Application layer:** repositories require a `TenantContext` first argument; `branch_id` for a branch
@@ -29,6 +32,7 @@ The application connects as the `school_app` role, which has **no `BYPASSRLS`**.
 as the separate owner role `school_owner`.
 
 ## Consequences
+
 - A forgotten `where branch_id = ...` in a query returns zero rows instead of leaking data.
 - Cross-branch reports, shared teachers and student transfers stay simple (one database, one schema).
 - Every new tenant table must ship with: RLS enabled + forced, policies, and an isolation test under

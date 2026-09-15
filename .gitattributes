@@ -1,0 +1,14 @@
+# Keep line endings LF everywhere, including in Windows working trees.
+# Two things depend on it: `prettier --check` (endOfLine: lf) must agree on every
+# machine, and docker/postgres/01-init.sh only runs inside the Linux container if
+# it has LF endings.
+* text=auto eol=lf
+
+*.sh text eol=lf
+pnpm-lock.yaml text eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary

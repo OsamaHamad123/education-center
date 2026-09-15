@@ -4,12 +4,14 @@
 > The full specification lives in `docs/PROJECT_PLAN.md`. Progress is tracked in `docs/PROGRESS.md`.
 
 ## What we are building
+
 A lightweight, mobile-first, Arabic (RTL) web system for an education center with multiple branches
 (e.g. Nasr City, El Obour, Giza). It manages branches, classes (شُعب), students, teachers, weekly
 timetables, daily attendance, teacher session counts and payroll, printable reports, a teacher portal
 and a public parent/student lookup page.
 
 ## Tech stack (do not change without asking)
+
 - Next.js (App Router, latest stable) + React + TypeScript (strict)
 - PostgreSQL 16 + Drizzle ORM + drizzle-kit migrations
 - Better Auth (Drizzle adapter, username plugin) for authentication
@@ -24,6 +26,7 @@ If a library API looks different from what you remember, check the official docs
 Never downgrade or add a new major dependency without asking.
 
 ## Commands
+
 ```bash
 pnpm dev            # run app
 pnpm typecheck      # tsc --noEmit
@@ -39,6 +42,7 @@ pnpm db:studio      # drizzle studio
 ```
 
 ## Architecture rules (NON-NEGOTIABLE)
+
 1. **Modular monolith.** Business code lives in `src/modules/<module>/` with layers:
    `domain/` (pure TS, no framework, no DB) → `application/` (use cases) → `infrastructure/` (Drizzle repos) → `ui/` (components).
 2. `src/app/` contains routes only: thin pages that call use cases. No business logic in pages or components.
@@ -48,6 +52,7 @@ pnpm db:studio      # drizzle studio
 6. Use cases return `Result<T, AppError>`; never throw for expected business errors. Throw only for bugs.
 
 ## Multi-branch isolation (SECURITY CRITICAL)
+
 - Every tenant-owned table has `branch_id`. Every query on those tables runs inside `withTenant(ctx, fn)`,
   which opens a transaction and sets `app.user_role` and `app.branch_id` so PostgreSQL RLS applies.
 - Repositories receive `TenantContext` as a required first argument. No repository function without it.
@@ -59,6 +64,7 @@ pnpm db:studio      # drizzle studio
 - Every new tenant table needs: RLS enabled, a policy, and an isolation test in `tests/integration/tenant-isolation/`.
 
 ## Coding conventions
+
 - TypeScript strict, no `any`, no `@ts-ignore`, no non-null `!` unless justified in a comment.
 - Files: kebab-case (`transfer-student.ts`). Components: PascalCase exports. DB columns: snake_case. TS: camelCase.
 - Money is stored as integer **piasters** (`amount_piasters`), never floats. Format with `formatEGP()`.
@@ -69,6 +75,7 @@ pnpm db:studio      # drizzle studio
 - Small functions, early returns, descriptive names. Comments explain WHY, not what.
 
 ## Workflow for every task
+
 1. Read `docs/PROGRESS.md` and the relevant phase in `docs/PROJECT_PLAN.md`.
 2. For anything non-trivial, present a short plan first and wait for approval.
 3. Implement in small steps. Write/update tests alongside code (domain logic → unit tests first).
@@ -78,7 +85,18 @@ pnpm db:studio      # drizzle studio
 7. Do NOT start the next phase until the user confirms.
 
 ## Never do
+
 - Never disable RLS, lint rules, type checks or tests to make something pass.
 - Never commit `.env` or secrets. Never log passwords, access codes or full phone numbers.
 - Never run destructive DB commands (`drop`, `truncate`, `db push --force`) without explicit permission.
 - Never invent requirements. If the spec is ambiguous, ask, and record the decision in `docs/PROGRESS.md`.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

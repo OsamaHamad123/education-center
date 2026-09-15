@@ -1,0 +1,4 @@
+# Husky puts node_modules/.bin on PATH, so these resolve without pnpm being on
+# the system PATH — git hooks do not inherit a login shell's environment.
+lint-staged
+tsc --noEmit

@@ -1,8 +1,9 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("app shell", () => {
-  test("renders the Arabic RTL home page", async ({ page }) => {
-    await page.goto("/");
+  test("renders the Arabic RTL login page", async ({ page }) => {
+    // "/" is behind auth now, so the login screen is the public RTL surface.
+    await page.goto("/login");
 
     const html = page.locator("html");
     await expect(html).toHaveAttribute("dir", "rtl");

@@ -2,20 +2,36 @@
 
 ## Current phase
 
-Phase 1 — Database schema, migrations, RLS, seed — status: **done, verified against a real PostgreSQL**
+Phase 2 — Authentication, roles, tenant context, app shell — status: **done, verified in the running app**
 
-All acceptance criteria met on PostgreSQL 16 in Docker:
+| Acceptance criterion (section 14)                    | Result                                                                                                  |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Each seeded role logs in and lands on the right area | ✅ super admin and branch admin → `/`, teacher → `/teacher` (a teacher visiting `/` is redirected back) |
+| Switching branch changes all data scope              | ✅ the switcher rewrites `selected_branch`, `resolveTenantContext` re-reads it, and the banner follows  |
+| Branch admin never sees the switcher                 | ✅ the component is not rendered for them at all — absent, not disabled                                 |
+| Mutations blocked in "كافة الفروع" mode              | ✅ `createAction` returns `BRANCH_REQUIRED`, and RLS refuses underneath                                 |
+| `pnpm typecheck && pnpm lint && pnpm test`           | ✅ 110 tests (73 unit + 37 integration)                                                                 |
+| e2e                                                  | ✅ 22 tests, desktop and mobile viewports                                                               |
 
-| Criterion                                                             | Result                                                                     |
-| --------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Migrations apply cleanly to an empty database                         | ✅ `0000` + `0001`, from a fresh volume                                    |
-| Seed runs repeatedly without errors                                   | ✅ run three times, identical counts                                       |
-| Branch admin A sees 0 rows of branch B through a raw unfiltered query | ✅ NSR admin: 60/180 students, 4/12 classes, 96/216 sessions, 1/3 branches |
-| Cross-branch teacher overlap rejected by the database                 | ✅ `no_teacher_overlap` exclusion constraint fires                         |
-| `pnpm typecheck && pnpm lint && pnpm test`                            | ✅ 77 tests (40 unit + 37 integration)                                     |
+Also checked by hand in the browser and in the database: login and logout both land in
+`audit_logs` with the right user and branch, and the stored IP is a SHA-256 hash, never raw.
+
+Phase 1 (schema, migrations, RLS, seed) remains verified: migrations apply to an empty database,
+the seed is re-runnable, and a branch admin issuing an unfiltered query sees 60 of 180 students,
+4 of 12 classes, 96 of 216 sessions and 1 of 3 branches.
 
 ## Completed
 
+- [x] Phase 2 — authentication, roles, tenant context, app shell:
+  - Better Auth 1.7.4 (Drizzle adapter, username plugin, `disableSignUp`), `/api/auth/[...all]`
+  - Login page with "إدارة" / "معلم" tabs; forced password-change page
+  - `getSessionUser`, `resolveTenantContext`, `permissions.ts` (28 permissions), `createAction`,
+    `requirePermission`
+  - `src/proxy.ts` route protection (Next.js 16 renamed `middleware.ts` → `proxy.ts`)
+  - Dashboard shell: permission-filtered sidebar, mobile sheet nav, BranchSwitcher,
+    active-branch / read-only banners; teacher portal shell; logout
+  - Login and logout auditing, with hashed IPs
+  - 33 new unit tests (permission matrix, createAction pipeline) and 11 e2e specs
 - [x] Repository scaffold — folder skeleton (Section 6), CLAUDE.md, docs/PROJECT_PLAN.md,
       docs/PROGRESS.md, ADR 0001, .gitignore, .env.example, README.md, GitHub repository created.
 - [x] Phase 0 — project setup & clean code tooling:
@@ -83,6 +99,10 @@ All acceptance criteria met on PostgreSQL 16 in Docker:
   `C:\Program Files\nodejs` is not user-writable; it would work from an elevated shell.
 - Peer warnings remain from `eslint-config-next`'s plugins (`eslint-plugin-import`, `jsx-a11y`, `react`)
   and from `tsconfck` wanting TypeScript 5. Harmless today; they disappear as those packages catch up.
+- **Per-account failure lockout is not implemented** (see the rate-limit decision above). Today a
+  determined attacker gets 20 tries per 5 minutes per IP against a known username. Worth adding a
+  failed-attempt counter keyed on the username before go-live, especially for 6-digit teacher codes.
+- **404 and error pages are still the English Next.js defaults.** Phase 10 replaces them.
 - **The seed produces 108 timetable slots, not the 288 a full grid would hold.** The seed assigns
   teachers by rotation and lets the `no_teacher_overlap` constraint reject clashes, so shared
   teachers thin the grid out. Fine as demo data; Phase 6 builds the real conflict-aware editor.
@@ -95,9 +115,12 @@ All acceptance criteria met on PostgreSQL 16 in Docker:
 
 ## Next steps
 
-Phase 2 — Authentication, roles, tenant context, app shell (prompt in `docs/PROJECT_PLAN.md`,
-section 14). It has a ready-made first task: `resolveTenantContext()` and the query layer must
-apply the super admin's selected branch as a WHERE clause, since RLS deliberately no longer does.
+Phase 3 — Branches, users, subjects, center settings (Super Admin). The module layering and the
+`createAction` / `requirePermission` pipeline are in place, so Phase 3 is the first phase that is
+purely "fill in the modules".
+
+Carry forward into every list query from here on: **a super admin's selected branch must be applied
+as a WHERE clause**, because RLS deliberately no longer scopes their reads (see the decisions log).
 
 To bring a machine up from scratch:
 

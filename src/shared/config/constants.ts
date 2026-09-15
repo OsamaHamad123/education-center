@@ -23,10 +23,15 @@ export const LOOKUP_LIMITS = {
   retentionDays: 7,
 } as const;
 
-/** Login lockout (section 9). */
+/**
+ * Sign-in rate limiting (section 9).
+ *
+ * A per-IP request budget, not a per-account failure lockout — see the comment in
+ * `shared/auth/auth.ts` for why, and docs/PROGRESS.md for the follow-up.
+ */
 export const LOGIN_LIMITS = {
-  maxFailedAttempts: 5,
-  lockoutMinutes: 15,
+  maxAttemptsPerIp: 20,
+  windowMinutes: 5,
 } as const;
 
 /** Bounds for the bell schedule (section 7.10). */

@@ -27,6 +27,9 @@ export default defineConfig({
 
   webServer: {
     command: "pnpm build && pnpm start",
+    // The suite signs in a dozen times from one address; the per-IP budget is
+    // meant for humans, not for a test run.
+    env: { DISABLE_RATE_LIMIT: "1" },
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,

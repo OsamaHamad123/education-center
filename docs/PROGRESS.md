@@ -2,20 +2,29 @@
 
 ## Current phase
 
-Phase 4 — Classes & Students — status: **done, verified in the running app**
+Phase 5 — Teachers — status: **done, verified in the running app**
 
-| Acceptance criterion (section 14)                                  | Result                                                                                                |
-| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| Rules 10.3 covered by unit + integration tests                     | ✅ 32 domain unit tests for the enrollment transitions, plus 10 integration tests for a real transfer |
-| Transfer keeps the code and the history, visible to the new branch | ✅ code unchanged; the new branch reads both enrollments and the pre-transfer attendance              |
-| Old branch sees "transferred out"                                  | ✅ read-only: they keep the record, and every write control is gone                                   |
-| Isolation tests for students and enrollments                       | ✅ a branch that never taught them sees nothing, by code or by id                                     |
-| Rules 10.2 (classes)                                               | ✅ track frozen once sessions exist; a class with students cannot be deactivated                      |
-| `pnpm typecheck && pnpm lint && pnpm test`                         | ✅ 186 tests (139 unit + 47 integration)                                                              |
-| e2e                                                                | ✅ 66 tests, desktop and mobile, passing twice in a row on the same database                          |
+| Acceptance criterion (section 14)           | Result                                                                       |
+| ------------------------------------------- | ---------------------------------------------------------------------------- |
+| A branch admin cannot see unlinked teachers | ✅ RLS narrows them to their own links; verified by test and in the browser  |
+| A branch admin has no rate-edit controls    | ✅ stronger than that — no rate ever reaches their page, at any width        |
+| Rate history stored                         | ✅ the opening rate and every change; an idle save writes nothing            |
+| Isolation tests for teachers                | ✅ 13 integration tests, including the by-phone link path                    |
+| `pnpm typecheck && pnpm lint && pnpm test`  | ✅ 213 tests (153 unit + 60 integration)                                     |
+| e2e                                         | ✅ 84 tests, desktop and mobile, passing twice in a row on the same database |
 
 ## Completed
 
+- [x] Phase 5 — teachers:
+  - `teachers/domain`: access-code generation that refuses weak draws; rate validation
+    and change detection
+  - Create a teacher (super admin) with per-track rates, an automatic login account and a
+    one-time access code; edit rates into `teacher_rate_history`; reset the code;
+    activate/deactivate (which also closes their login)
+  - Link an existing teacher to a branch by phone (branch admin), unlink and relink
+  - Teacher profile: branches, weekly load, recent sessions, and rate history for a super admin
+  - `drizzle/0004` adds the narrow by-phone lookup the linking flow needs
+  - 15 new unit tests, 13 new integration tests, 9 new e2e specs
 - [x] Phase 4 — classes and students:
   - `students/domain`: enrollment transitions (`planClassChange`, `planBranchTransfer`,
     `planArchive`, `planRestore`) as pure functions returning a plan the use case applies;
@@ -136,18 +145,20 @@ Phase 4 — Classes & Students — status: **done, verified in the running app**
 
 ## Next steps
 
-Phase 5 — Teachers. Smaller than Phase 4: teacher profiles with per-track rates, the one-time
-access code, linking an existing teacher to a branch by phone, rate history, and a teacher
-profile page.
+Phase 6 — Timetable engine. The first phase with real algorithmic content: `compute-periods`
+from the bell schedule and its breaks, a grid editor per class (Sat→Thu × periods), conflict
+messages whose detail depends on the viewer's role, copying a timetable between classes, and
+A4 print pages.
 
 Carrying forward:
 
-1. **A super admin's selected branch is applied as a WHERE clause**, not by RLS — `students.repository.ts`
-   shows the pattern (`scopeToBranch`).
+1. `no_teacher_overlap` already rejects a cross-branch clash in the DATABASE (verified in Phase 1).
+   Phase 6 must catch it first and say _which_ class — but a branch admin may not learn the other
+   branch's name, so the message has to differ by role (rule 10.4).
 2. **Any new RLS helper that reads a table must be `SECURITY DEFINER` with a pinned `search_path`**,
    or it will recurse into the policy of whatever it reads.
-3. Teacher rates are the input to payroll's snapshots, so `teacher_rate_history` records changes
-   while `class_sessions.rate_applied_piasters` remains the only thing payroll reads.
+3. Period times are computed once and STORED on each slot, so conflict checks stay a single
+   index scan. Changing a bell schedule must recompute future slots and report what it breaks.
 
 To bring a machine up from scratch:
 

@@ -81,7 +81,7 @@ jobs:
           PGPASSWORD: postgres
         run: |
           psql -h localhost -U postgres -d school_test -v ON_ERROR_STOP=1 <<'SQL'
-          CREATE ROLE school_owner LOGIN PASSWORD 'owner' NOBYPASSRLS;
+          CREATE ROLE school_owner LOGIN PASSWORD 'owner' BYPASSRLS;
           CREATE ROLE school_app LOGIN PASSWORD 'app' NOBYPASSRLS NOCREATEDB NOCREATEROLE NOSUPERUSER;
           CREATE EXTENSION IF NOT EXISTS pgcrypto;
           CREATE EXTENSION IF NOT EXISTS btree_gist;

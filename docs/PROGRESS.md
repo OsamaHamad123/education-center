@@ -2,7 +2,13 @@
 
 ## Current phase
 
-Phase 0 — Project setup & clean code tooling — status: **review**
+Phase 1 — Database schema, migrations, RLS, seed — status: **BLOCKED — written but UNVERIFIED**
+
+> ⛔ Every acceptance criterion of Phase 1 needs a running PostgreSQL, and Docker Desktop
+> would not start on the dev machine (the `docker-desktop` WSL distro stays `Stopped`).
+> The migrations have never been applied, the seed has never run, and the 30 integration
+> tests have never executed. Nothing in Phase 1 may be treated as working until someone
+> starts Docker Desktop and runs the commands under "Next steps".
 
 ## Completed
 
@@ -25,6 +31,16 @@ Phase 0 — Project setup & clean code tooling — status: **review**
   - `src/shared/lib/`: `result.ts`, `time.ts`, `money.ts`, `phone.ts`, `utils.ts` **+ 40 unit tests**
   - Vitest (unit + integration projects), Playwright (desktop + mobile), sample e2e smoke test
   - GitHub Actions CI: typecheck · lint · format · unit → integration (Postgres service) → build → e2e on main
+
+- [~] Phase 1 — schema, migrations, RLS, seed — **code complete, zero verification**:
+  - 21 tables in `src/shared/db/schema/` covering PROJECT_PLAN section 7 in full
+  - `drizzle/0000_initial_schema.sql` (generated) and `drizzle/0001_rls_and_constraints.sql`
+    (hand-written: RLS policies, helper functions, grants, teacher-overlap exclusion constraint)
+  - `src/shared/db/client.ts` (app role) and `with-tenant.ts`; `src/shared/auth/tenant-context.ts`
+  - `src/shared/db/seed.ts` — 3 branches, 4 admins, 8 subjects, 6 teachers (2 shared across
+    branches), 12 classes, 180 students, a full week's timetable and 2 weeks of attendance
+  - `tests/integration/helpers/` (owner + app connections, `asTenant`, `ctxFor`, factories)
+  - 30 integration tests: `tenant-isolation/branch-isolation.test.ts` and `constraints.test.ts`
 
 ## Decisions log
 
@@ -49,6 +65,8 @@ Phase 0 — Project setup & clean code tooling — status: **review**
 - `eslint-plugin-boundaries` was listed first in Phase 0 task 4; we used the sanctioned alternative
   `no-restricted-imports`.
 - `/api/health` moved forward from Phase 10 to Phase 0.
+- Phase 1's acceptance criteria are **not met**: they all require a live database.
+- `branch_breaks` gained a unique constraint not listed in section 7.11 (see decisions log).
 
 ## Known issues / TODO
 
@@ -57,9 +75,22 @@ Phase 0 — Project setup & clean code tooling — status: **review**
   `C:\Program Files\nodejs` is not user-writable; it would work from an elevated shell.
 - Peer warnings remain from `eslint-config-next`'s plugins (`eslint-plugin-import`, `jsx-a11y`, `react`)
   and from `tsconfck` wanting TypeScript 5. Harmless today; they disappear as those packages catch up.
-- **Section 16 Open Questions are still unanswered.** Questions 1–5 and 9 shape the Phase 1 schema —
-  answer them before starting Phase 1.
+- **Docker Desktop will not start on this machine.** `wsl -l -v` shows `docker-desktop  Stopped`;
+  launching `Docker Desktop.exe` starts `com.docker.backend` but the engine never comes up. It
+  probably needs a GUI interaction (sign-in, licence, or a pending update).
+- Open questions 1–5 and 9 were answered with the plan's defaults (see decisions log). Questions
+  6, 7, 8 and 10 remain open and affect Phases 8 and 10.
 
 ## Next steps
 
-- Phase 1 — Database schema, migrations, RLS, seed (prompt in `docs/PROJECT_PLAN.md`, section 14).
+**Verify Phase 1.** Start Docker Desktop, then:
+
+```bash
+pnpm db:up          # Postgres 16 + roles + school_test
+pnpm db:migrate     # applies 0000 and 0001
+pnpm db:seed        # demo data; prints login credentials
+pnpm test           # 40 unit + 30 integration tests
+```
+
+Expect failures on the first run — none of this SQL has ever touched a database. Fix, re-run,
+then move to Phase 2 (authentication, roles, tenant context, app shell).

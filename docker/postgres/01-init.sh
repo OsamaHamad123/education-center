@@ -35,8 +35,12 @@ SQL
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<-SQL
 	DO \$\$
 	BEGIN
+	  -- BYPASSRLS on the owner: tenant tables are FORCE RLS, and migrations and the
+	  -- seed must still be able to write them. This weakens nothing — a table owner
+	  -- can disable RLS on its own tables regardless. The security boundary is the
+	  -- app role below, which has neither privilege.
 	  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${OWNER_ROLE}') THEN
-	    CREATE ROLE ${OWNER_ROLE} LOGIN PASSWORD '${OWNER_PASSWORD}' NOBYPASSRLS;
+	    CREATE ROLE ${OWNER_ROLE} LOGIN PASSWORD '${OWNER_PASSWORD}' BYPASSRLS;
 	  END IF;
 
 	  -- NOBYPASSRLS is the single most important line in this file: without it a

@@ -2,18 +2,32 @@
 
 ## Current phase
 
-Phase 6 — Timetable engine — status: **done, verified in the running app**
+Phase 7 — Attendance & sessions — status: **done, verified in the running app**
 
-| Acceptance criterion (section 14)          | Result                                                                             |
-| ------------------------------------------ | ---------------------------------------------------------------------------------- |
-| Rules 10.4 implemented                     | ✅ computed periods, slot validation, recompute-on-settings-change, copy, print    |
-| Exclusion constraint + friendly message    | ✅ `no_teacher_overlap` still the guarantee; the message is role-aware (0005)      |
-| Print is clean at A4 in Chrome print view  | ✅ landscape grid, letterhead, screen-only controls hidden with `print:hidden`     |
-| `pnpm typecheck && pnpm lint && pnpm test` | ✅ 278 tests (200 unit + 78 integration)                                           |
-| e2e                                        | ✅ 119 tests, desktop and mobile, passing twice in a row against the same database |
+| Acceptance criterion (section 14)          | Result                                                                                           |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| Rules 10.5 tested                          | ✅ lazy session, idempotent save, roster from enrolments, edit window, cancel, substitute, extra |
+| Rate snapshot verified                     | ✅ survives a rate change, a cancellation and a restore — integration test                       |
+| A full class marked in under 30s at 390px  | ✅ measured at **0.5s** of the 30s budget, and the figure is recorded by the test                |
+| Isolation tests incl. the teacher scope    | ✅ 18 integration tests: branch, teacher, today-only, and the marking setting                    |
+| `pnpm typecheck && pnpm lint && pnpm test` | ✅ 337 tests (241 unit + 96 integration)                                                         |
+| e2e                                        | ✅ 144 tests, desktop and mobile, passing twice in a row against the same database               |
 
 ## Completed
 
+- [x] Phase 7 — attendance and sessions:
+  - `attendance/domain`: `edit-window` (who may write which day), `roster` (who is on the
+    register, what a save writes, the status cycle, the summary), `session-plan`
+    (the snapshot, the substitution, the cancellation rule)
+  - Mobile-first marking screen: everyone defaults to حاضر, one tap makes a student غائب,
+    a fixed save button, live counters, per-student notes, optimistic with safe rollback
+  - Sessions are created **lazily on the first save**, snapshotting subject, times, track
+    and the teacher's rate; the save is an upsert on `(session_id, student_id)`
+  - Sessions log with filters; cancel with a reason, restore, substitute teacher
+    (re-snapshotting the substitute's own rate), and extra sessions off the timetable
+  - Teacher portal home: today's lessons across every branch, marking today only
+  - A4 portrait attendance sheet with signature lines
+  - 41 new unit tests, 18 new integration tests, 14 new e2e specs
 - [x] Phase 6 — timetable engine:
   - `timetable/domain`: `compute-periods` (the single source of period times),
     `conflicts` (find + **redact** by viewer role), `recompute` (what a bell change does to
@@ -122,6 +136,10 @@ Phase 6 — Timetable engine — status: **done, verified in the running app**
 | 2026-09-16 | Clearing a cell **deactivates** the slot; it is never deleted                            | `class_sessions.timetable_slot_id` references it, and CLAUDE.md forbids hard deletes. Both the unique index and the exclusion constraint are `where (is_active)`, so the cell is genuinely free again.                                                                                                                        |
 | 2026-09-16 | A recompute that would collide **deactivates that slot and reports it**                  | The alternative is letting `no_teacher_overlap` abort the whole settings save with a raw `23P01`. The admin gets a list of what fell out instead of an error in English.                                                                                                                                                      |
 | 2026-09-16 | New permission `settings.read` (all three roles)                                         | Print headers need the centre's name and logo. `settings.manage` stays super-admin only because it carries policy — edit windows, alert thresholds, whether the public lookup is on.                                                                                                                                          |
+| 2026-09-16 | **Marking a register for a FUTURE day is refused**, for every role                       | Rule 10.5 describes a window for editing PAST attendance and says nothing about the future. A register for a lesson that has not happened is not a late edit, it is fiction — so it is blocked and the rule is recorded here rather than invented silently.                                                                   |
+| 2026-09-16 | The roster is the authority; a submitted student not on it is **dropped, not written**   | `attendance_records.branch_id` comes from the session, so RLS would happily accept a row for a student in another branch if the id were smuggled into the payload. `planAttendance` refuses it before the database is asked.                                                                                                  |
+| 2026-09-16 | An extra session is checked for a **time** clash, not only a period-number clash         | The unique key is `(class, date, period)`, so two sessions that overlap on the clock under different period numbers would both be accepted. A class cannot be in two lessons at once either.                                                                                                                                  |
+| 2026-09-16 | Restoring a cancelled session keeps its **original** rate                                | The rate was snapshotted when the lesson ran. Re-deriving it on restore would quietly pay today's rate for last month's lesson.                                                                                                                                                                                               |
 
 ## Deviations from PROJECT_PLAN
 
@@ -132,6 +150,10 @@ Phase 6 — Timetable engine — status: **done, verified in the running app**
 - `/api/health` moved forward from Phase 10 to Phase 0.
 - Phase 1's acceptance criteria are **not met**: they all require a live database.
 - `branch_breaks` gained a unique constraint not listed in section 7.11 (see decisions log).
+- **The teacher marking route is `/teacher/attendance/[slotId]`, not `[sessionId]`** (section 11).
+  Sessions are created lazily on the first save, so an unmarked period has no id to link to; the
+  timetable slot is the only stable handle a teacher can arrive with. The date is not in the URL
+  either — a teacher marks today, and only today.
 
 ## Known issues / TODO
 
@@ -151,6 +173,16 @@ Phase 6 — Timetable engine — status: **done, verified in the running app**
   determined attacker gets 20 tries per 5 minutes per IP against a known username. Worth adding a
   failed-attempt counter keyed on the username before go-live, especially for 6-digit teacher codes.
 - **404 and error pages are still the English Next.js defaults.** Phase 10 replaces them.
+- **A class's register can be long.** The e2e suite has been enrolling students into the seeded
+  classes since Phase 4, so أدبي 1 - بنين in مدينة نصر now has well over a hundred. The screen
+  handles it, but the demo data no longer looks like a real class — reseed before showing it.
+- **The e2e suite is CPU-bound on sign-in.** Eight browsers each running a scrypt hash blew the
+  default 5-second navigation assertion; a single sign-in against an idle server takes ~0.2s.
+  The helpers now allow 20 seconds. The real fix is Playwright `storageState` — sign in once per
+  role and reuse the cookie — which would also cut the suite's runtime roughly in half.
+- **Two lists had outgrown their first page** and their e2e tests were asserting on row one:
+  teachers (Phase 5) and branches (Phase 3). Both now search before asserting. This will recur for
+  every list the suite writes to; the underlying cause is still the throwaway rows below.
 - **Copying a week between two classes on the SAME track in one branch can never create a
   slot.** The copy carries the teacher, and that teacher is by definition already in the source
   class at that exact minute, so every candidate collides. It works across tracks (different
@@ -183,24 +215,24 @@ Phase 6 — Timetable engine — status: **done, verified in the running app**
 
 ## Next steps
 
-Phase 7 — Attendance & sessions. The mobile-first screen the centre actually lives in: pick a
-date and a class, get that day's periods from the timetable, and mark a full class in under
-thirty seconds of interactions on a 390px screen.
+Phase 8 — Payroll and reports. The first phase whose output is money, so the domain function
+comes first and everything else reads it.
 
 Carrying forward:
 
-1. A `class_session` is created **lazily, on first save** — not on view — and snapshots the
-   subject, the times, the track and the teacher's rate **at that moment** (rule 10.5). Phase 5's
-   integration test already fixes the rule that a later rate change must not touch it.
-2. The period list for a day comes from `timetable_slots`, so `getClassTimetable` and
-   `computePeriods` are the input. Times are read from the SLOT, not recomputed, because the slot
-   is what was true when the week was planned.
-3. Attendance saves are **idempotent** (upsert by `(session_id, student_id)`), because a phone on
-   a bad connection will retry.
-4. Students listed are those whose **enrollment covers `session_date`** in that class — Phase 4's
-   `student_enrollments` is what answers that, not `students.class_id`.
-5. Every new tenant table (`class_sessions`, `attendance_records`) needs RLS, a policy, and an
-   isolation test — including the teacher scope, which is narrower than a branch admin's.
+1. `calculateEarnings` is a **pure function over snapshots** (rule 10.6): it reads
+   `rate_applied_piasters` and `track_applied` from `class_sessions`, never the teacher's
+   current rate. Phase 7's integration test already fixes that a rate change, a cancellation
+   and a restore all leave the snapshot alone.
+2. **Cancelled sessions are excluded from payroll** but keep their attendance. That pairing is
+   the whole point of `status`, and a report that forgets it overpays.
+3. Money stays in integer piasters end to end and is formatted only at the edge with
+   `formatEGP()`. Nothing above the domain sees a float.
+4. A branch admin's payroll is their branch's half of a shared teacher's earnings — the same
+   redaction problem Phase 6 solved for conflicts (`drizzle/0005`). Grouping by teacher → branch
+   → track must not let one branch total another's.
+5. Absence alerts use `center_settings.absence_alert_threshold_percent` and wa.me links built by
+   `whatsAppLink()` in `shared/lib/phone.ts`; CLAUDE.md forbids logging a full phone number.
 
 To bring a machine up from scratch:
 

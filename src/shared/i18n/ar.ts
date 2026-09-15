@@ -1,3 +1,5 @@
+import { isoDayOfWeek, type IsoDate } from "@/shared/lib/time";
+
 /**
  * All user-facing Arabic text. Components never hard-code strings (CLAUDE.md,
  * "Coding conventions"), so this file is the single place to review wording.
@@ -539,9 +541,105 @@ export const ar = {
     allDay: "اليوم كاملاً",
   },
 
+  attendance: {
+    title: "الحضور",
+    description: "اختر اليوم والشعبة، ثم سجّل الحضور. الجميع حاضرون افتراضياً — علّم الغائبين فقط.",
+    date: "التاريخ",
+    today: "اليوم",
+    previousDay: "اليوم السابق",
+    nextDay: "اليوم التالي",
+    classLabel: "الشعبة",
+    chooseClass: "اختر الشعبة",
+    period: "الحصة",
+    noPeriods: "لا توجد حصص في جدول هذا اليوم.",
+    noPeriodsHint: "أضف حصصاً في جدول الشعبة، أو سجّل حصة إضافية.",
+    noClasses: "لا توجد شُعب نشطة في هذا الفرع.",
+    unmarked: "لم تُسجّل",
+    marked: "مسجّلة",
+    cancelledBadge: "ملغاة",
+    extraBadge: "إضافية",
+    students: "طالباً",
+    open: "فتح",
+
+    sheetTitle: "تسجيل الحضور",
+    markAllPresent: "تعليم الكل حاضر",
+    save: "حفظ الحضور",
+    saved: "تم حفظ الحضور.",
+    savedBy: "آخر تعديل بواسطة",
+    notes: "ملاحظة",
+    notesFor: "ملاحظة عن",
+    noStudents: "لا يوجد طلاب مقيّدون في هذه الشعبة في هذا اليوم.",
+    noStudentsHint: "الطالب يظهر هنا فقط إذا كان قيده يغطي هذا التاريخ.",
+    emptyRoster: "لا يوجد طلاب مقيّدون في هذه الشعبة في هذا التاريخ.",
+    summary: "الملخص",
+    attendedPercent: "نسبة الحضور",
+
+    sessions: "سجل الحصص",
+    sessionsDescription: "الحصص التي نُفّذت فعلاً. الإلغاء يُخرج الحصة من المستحقات ويُبقي الحضور كما هو.",
+    subject: "المادة",
+    teacher: "المعلم",
+    status: "الحالة",
+    time: "الوقت",
+    from: "من",
+    to: "إلى",
+    allStatuses: "كل الحالات",
+    allClasses: "كل الشُعب",
+    allTeachers: "كل المعلمين",
+    noSessions: "لا توجد حصص في هذه الفترة.",
+    noSessionsHint: "غيّر التواريخ أو التصفية.",
+
+    cancel: "إلغاء الحصة",
+    cancelTitle: "إلغاء هذه الحصة؟",
+    cancelDescription: "تخرج الحصة من مستحقات المعلم. الحضور المسجّل يبقى كما هو ولا يُحذف.",
+    cancelReason: "سبب الإلغاء",
+    cancelled: "تم إلغاء الحصة.",
+    alreadyCancelled: "الحصة ملغاة بالفعل.",
+    reasonRequired: "اكتب سبب الإلغاء.",
+    restore: "إعادة تفعيل الحصة",
+    restoreTitle: "إعادة تفعيل الحصة؟",
+    restoreDescription: "تعود الحصة إلى المستحقات بأجرها المسجّل وقت تنفيذها.",
+    restored: "تمت إعادة تفعيل الحصة.",
+    notCancelled: "الحصة غير ملغاة.",
+
+    substitute: "معلم بديل",
+    substituteTitle: "تعيين معلم بديل",
+    substituteDescription:
+      "يُحتسب للبديل أجره هو، بمسار الحصة كما نُفّذت. الأجر يُعاد تسجيله الآن ولا يتأثر بأي تعديل لاحق.",
+    substituted: "تم تعيين المعلم البديل.",
+    sameTeacher: "هذا هو معلم الحصة بالفعل.",
+
+    extra: "حصة إضافية",
+    extraTitle: "تسجيل حصة إضافية",
+    extraDescription: "حصة خارج الجدول الأسبوعي — تعويضية أو مراجعة. تُحتسب في المستحقات كأي حصة.",
+    extraCreated: "تمت إضافة الحصة.",
+    startTime: "من الساعة",
+    endTime: "إلى الساعة",
+    periodTaken: "يوجد حصة بهذا الرقم في هذا اليوم.",
+    timeTaken: "يوجد حصة أخرى في نفس الوقت لهذه الشعبة.",
+    timesOrdered: "وقت النهاية يجب أن يكون بعد وقت البداية.",
+    noSuchSubject: "المادة غير موجودة.",
+    noSuchPeriod: "لا توجد حصة بهذا الرقم في هذا اليوم.",
+    teacherNotInBranch: "هذا المعلم غير مرتبط بالفرع أو غير نشط.",
+    sessionCancelled: "الحصة ملغاة — أعد تفعيلها أولاً لتسجيل الحضور.",
+
+    /** Why this viewer may not write this day (rule 10.5). */
+    violations: {
+      FUTURE_DATE: "لا يمكن تسجيل حضور ليوم لم يأت بعد.",
+      OUTSIDE_EDIT_WINDOW: "انتهت مهلة تعديل الحضور لهذا اليوم. راجع الإدارة العامة.",
+      TEACHER_TODAY_ONLY: "يمكنك تسجيل حضور حصص اليوم فقط.",
+      TEACHER_MARKING_DISABLED: "تسجيل الحضور بواسطة المعلمين موقوف حالياً.",
+    },
+
+    myToday: "حصص اليوم",
+    myTodayDescription: "حصصك اليوم في كل فرع تعمل به.",
+    noSessionsToday: "لا توجد لك حصص اليوم.",
+    markNow: "تسجيل الحضور",
+  },
+
   print: {
     print: "طباعة",
     classTimetable: "الجدول الأسبوعي للشعبة",
+    attendanceSheet: "كشف حضور",
     teacherTimetable: "الجدول الأسبوعي للمعلم",
     printedAt: "تاريخ الطباعة",
     signature: "التوقيع",
@@ -582,4 +680,9 @@ export type Ar = typeof ar;
  */
 export function weekdayName(day: number): string {
   return (ar.weekdays as Record<number, string>)[day] ?? String(day);
+}
+
+/** The Arabic day name of a calendar day — "السبت" for a Saturday. */
+export function weekdayNameOf(date: IsoDate): string {
+  return weekdayName(isoDayOfWeek(date));
 }

@@ -40,7 +40,10 @@ async function signIn(page: Page, username: string) {
   await page.getByLabel("اسم المستخدم").fill(username);
   await page.getByLabel("كلمة المرور").fill(PASSWORD);
   await page.getByRole("button", { name: "دخول" }).click();
-  await expect(page).toHaveURL("/");
+  // Signing in deliberately costs a scrypt hash, and the suite runs eight browsers at
+  // once — 5 seconds is the default, not a budget this navigation was ever meant to
+  // fit. A single sign-in against an idle server takes ~0.2s.
+  await expect(page).toHaveURL("/", { timeout: 20_000 });
 }
 
 /** A super admin must pick a branch before the branch-scoped screens will write. */

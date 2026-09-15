@@ -28,7 +28,10 @@ async function signIn(page: Page, username: string) {
   await page.getByLabel("اسم المستخدم").fill(username);
   await page.getByLabel("كلمة المرور").fill(PASSWORD);
   await page.getByRole("button", { name: "دخول" }).click();
-  await expect(page).toHaveURL("/");
+  // Signing in deliberately costs a scrypt hash, and the suite runs eight browsers at
+  // once — 5 seconds is the default, not a budget this navigation was ever meant to
+  // fit. A single sign-in against an idle server takes ~0.2s.
+  await expect(page).toHaveURL("/", { timeout: 20_000 });
 }
 
 function dialog(page: Page) {
@@ -327,7 +330,7 @@ test.describe("the teacher portal", () => {
     await page.getByLabel("رقم الهاتف").fill(TEACHER_PHONE);
     await page.getByLabel("كود الدخول").fill(TEACHER_CODE);
     await page.getByRole("button", { name: "دخول" }).click();
-    await expect(page).toHaveURL(/\/teacher$/);
+    await expect(page).toHaveURL(/\/teacher$/, { timeout: 20_000 });
   }
 
   test("shows a teacher their own week, grouped by day", async ({ page }) => {
@@ -348,7 +351,7 @@ test.describe("the teacher portal", () => {
     await expect(page.getByRole("link", { name: "الشُعب" })).toHaveCount(0);
     // And the route itself sends them back to their own area.
     await page.goto("/timetable");
-    await expect(page).toHaveURL(/\/teacher$/);
+    await expect(page).toHaveURL(/\/teacher$/, { timeout: 20_000 });
   });
 
   test("lets a teacher print their own week", async ({ page }) => {

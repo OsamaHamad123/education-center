@@ -23,7 +23,10 @@ test.describe("login", () => {
   test("super admin lands on the dashboard with a branch switcher", async ({ page }) => {
     await signInAsAdmin(page, "admin");
 
-    await expect(page).toHaveURL("/");
+    // Signing in deliberately costs a scrypt hash, and the suite runs eight browsers at
+    // once — 5 seconds is the default, not a budget this navigation was ever meant to
+    // fit. A single sign-in against an idle server takes ~0.2s.
+    await expect(page).toHaveURL("/", { timeout: 20_000 });
     await expect(page.getByRole("heading", { level: 1 })).toContainText("الإدارة العامة");
     await expect(page.getByRole("combobox", { name: "تبديل الفرع" })).toBeVisible();
     // No branch selected yet, so mutations are off and the banner says so.
@@ -33,7 +36,10 @@ test.describe("login", () => {
   test("branch admin lands on the dashboard with NO branch switcher", async ({ page }) => {
     await signInAsAdmin(page, "admin_nsr");
 
-    await expect(page).toHaveURL("/");
+    // Signing in deliberately costs a scrypt hash, and the suite runs eight browsers at
+    // once — 5 seconds is the default, not a budget this navigation was ever meant to
+    // fit. A single sign-in against an idle server takes ~0.2s.
+    await expect(page).toHaveURL("/", { timeout: 20_000 });
     await expect(page.getByRole("combobox", { name: "تبديل الفرع" })).toHaveCount(0);
     // Their branch is stated in the banner, at every width.
     await expect(page.getByText("الفرع النشط: فرع مدينة نصر")).toBeVisible();
@@ -47,7 +53,7 @@ test.describe("login", () => {
     await page.getByRole("button", { name: "دخول" }).click();
 
     // A teacher redirected from "/" ends up in their own portal.
-    await expect(page).toHaveURL(/\/teacher$/);
+    await expect(page).toHaveURL(/\/teacher$/, { timeout: 20_000 });
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
@@ -69,7 +75,10 @@ test.describe("route protection", () => {
 
   test("a branch admin has no link to /branches in the navigation", async ({ page }) => {
     await signInAsAdmin(page, "admin_nsr");
-    await expect(page).toHaveURL("/");
+    // Signing in deliberately costs a scrypt hash, and the suite runs eight browsers at
+    // once — 5 seconds is the default, not a budget this navigation was ever meant to
+    // fit. A single sign-in against an idle server takes ~0.2s.
+    await expect(page).toHaveURL("/", { timeout: 20_000 });
 
     // Below the lg breakpoint the sidebar collapses into a sheet, so open it first.
     const menu = page.getByRole("button", { name: "القائمة" });
@@ -90,17 +99,20 @@ test.describe("route protection", () => {
     await page.getByLabel("رقم الهاتف").fill(TEACHER_PHONE);
     await page.getByLabel("كود الدخول").fill(TEACHER_CODE);
     await page.getByRole("button", { name: "دخول" }).click();
-    await expect(page).toHaveURL(/\/teacher$/);
+    await expect(page).toHaveURL(/\/teacher$/, { timeout: 20_000 });
 
     await page.goto("/");
-    await expect(page).toHaveURL(/\/teacher$/);
+    await expect(page).toHaveURL(/\/teacher$/, { timeout: 20_000 });
   });
 });
 
 test.describe("branch switching", () => {
   test("choosing a branch replaces the read-only banner with the active branch", async ({ page }) => {
     await signInAsAdmin(page, "admin");
-    await expect(page).toHaveURL("/");
+    // Signing in deliberately costs a scrypt hash, and the suite runs eight browsers at
+    // once — 5 seconds is the default, not a budget this navigation was ever meant to
+    // fit. A single sign-in against an idle server takes ~0.2s.
+    await expect(page).toHaveURL("/", { timeout: 20_000 });
 
     await page.getByRole("combobox", { name: "تبديل الفرع" }).click();
     await page.getByRole("option", { name: "فرع العبور" }).click();
@@ -114,7 +126,10 @@ test.describe("branch switching", () => {
 test.describe("logout", () => {
   test("returns to login and the session no longer opens the dashboard", async ({ page }) => {
     await signInAsAdmin(page, "admin_nsr");
-    await expect(page).toHaveURL("/");
+    // Signing in deliberately costs a scrypt hash, and the suite runs eight browsers at
+    // once — 5 seconds is the default, not a budget this navigation was ever meant to
+    // fit. A single sign-in against an idle server takes ~0.2s.
+    await expect(page).toHaveURL("/", { timeout: 20_000 });
 
     await page.getByRole("button", { name: "حسابي" }).click();
     await page.getByRole("menuitem", { name: "تسجيل الخروج" }).click();

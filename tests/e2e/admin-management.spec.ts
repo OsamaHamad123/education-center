@@ -36,7 +36,20 @@ async function signIn(page: Page, username: string) {
   await page.getByLabel("اسم المستخدم").fill(username);
   await page.getByLabel("كلمة المرور").fill(PASSWORD);
   await page.getByRole("button", { name: "دخول" }).click();
-  await expect(page).toHaveURL("/");
+  // Signing in deliberately costs a scrypt hash, and the suite runs eight browsers at
+  // once — 5 seconds is the default, not a budget this navigation was ever meant to
+  // fit. A single sign-in against an idle server takes ~0.2s.
+  await expect(page).toHaveURL("/", { timeout: 20_000 });
+}
+
+/**
+ * Narrows a paginated list to one row. Every run of this suite leaves a branch and a
+ * teacher behind, so the tables have long since outgrown their first page and "the
+ * row I am looking for" is only reliably reachable through the search box.
+ */
+async function findInList(page: Page, label: string, name: string) {
+  await page.getByPlaceholder(label).locator("visible=true").first().fill(name);
+  await expect(visible(page, name).first()).toBeVisible();
 }
 
 test.describe("branches", () => {
@@ -46,7 +59,7 @@ test.describe("branches", () => {
 
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("الفروع");
     for (const name of ["فرع مدينة نصر", "فرع العبور", "فرع الجيزة"]) {
-      await expect(visible(page, name).first()).toBeVisible();
+      await findInList(page, "اسم الفرع", name);
     }
   });
 
@@ -54,6 +67,7 @@ test.describe("branches", () => {
     await signIn(page, "admin");
     await page.goto("/branches");
 
+    await findInList(page, "اسم الفرع", "فرع العبور");
     await page.getByRole("button", { name: "تعديل فرع العبور" }).last().click();
 
     const codeField = page.getByLabel("الكود");
@@ -78,7 +92,7 @@ test.describe("branches", () => {
     await page.getByLabel("اسم الفرع").last().fill(original);
     await page.getByLabel("الكود").last().fill(tag);
     await page.getByRole("button", { name: "حفظ" }).click();
-    await expect(visible(page, original).first()).toBeVisible();
+    await findInList(page, "اسم الفرع", original);
 
     await page
       .getByRole("button", { name: `تعديل ${original}` })

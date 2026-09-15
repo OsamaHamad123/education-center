@@ -26,6 +26,8 @@ export const ar = {
     next: "التالي",
     previous: "السابق",
     confirm: "تأكيد",
+    close: "إغلاق",
+    done: "تم",
     loading: "جارٍ التحميل…",
     saving: "جارٍ الحفظ…",
     noResults: "لا توجد نتائج",
@@ -439,6 +441,114 @@ export const ar = {
     linkedHere: "مرتبط بفرعك",
   },
 
+  timetable: {
+    title: "جدول الحصص",
+    description: "الجدول الأسبوعي لكل شعبة. أوقات الحصص محسوبة من جرس المدرسة ولا تُكتب يدوياً.",
+    chooseClass: "اختر الشعبة",
+    classLabel: "الشعبة",
+    day: "اليوم",
+    period: "الحصة",
+    time: "الوقت",
+    subject: "المادة",
+    teacher: "المعلم",
+    empty: "لا توجد حصص في هذا الجدول بعد.",
+    emptyHint: "اضغط أي خانة فارغة لإضافة حصة.",
+    noClasses: "لا توجد شُعب نشطة في هذا الفرع.",
+    noClassesHint: "أضف شعبة أولاً من صفحة الشُعب.",
+    addSlot: "إضافة حصة",
+    editSlot: "تعديل الحصة",
+    emptyCell: "فارغة",
+    clear: "إفراغ الخانة",
+    clearTitle: "إفراغ هذه الخانة؟",
+    clearDescription: "تُحذف الحصة من الجدول الأسبوعي. الحصص المنفّذة سابقاً تبقى في السجل كما هي.",
+    saved: "تم حفظ الحصة.",
+    cleared: "تم إفراغ الخانة.",
+    noTeachers: "لا يوجد معلمون مرتبطون بهذا الفرع.",
+    noTeachersHint: "اربط معلماً بالفرع أولاً من صفحة المعلمين.",
+    noSubjects: "لا توجد مواد نشطة.",
+    teacherNotInBranch: "هذا المعلم غير مرتبط بالفرع أو غير نشط.",
+    dayNotWorking: "هذا اليوم ليس من أيام العمل في هذا الفرع.",
+    periodOutOfRange: "رقم الحصة خارج نطاق جرس المدرسة.",
+    weeklyTotal: "إجمالي الحصص",
+
+    copy: "نسخ من شعبة أخرى",
+    copyTitle: "نسخ الجدول",
+    copyDescription:
+      "تُنسخ المادة والمعلم واليوم والحصة فقط. الأوقات تُعاد حسب جرس مسار هذه الشعبة، والخانات الممتلئة لا تُستبدل.",
+    copySource: "الشعبة المصدر",
+    copied: "تم نسخ الجدول.",
+    copiedCount: "حصة منسوخة",
+    copySkipped: "تخطّي",
+    copySkipReasons: {
+      period_missing: "لا توجد حصة بهذا الرقم في جرس هذه الشعبة",
+      day_not_working: "ليس يوم عمل في هذا الفرع",
+      cell_occupied: "الخانة ممتلئة بالفعل",
+      teacher_not_in_branch: "المعلم غير مرتبط بالفرع",
+      teacher_busy: "المعلم مشغول في هذا الوقت",
+    },
+    copyEmpty: "الشعبة المصدر ليس بها جدول.",
+    copyNothing: "لم تُنسخ أي حصة.",
+
+    /** Conflict messages. The detail differs by role — see drizzle/0005. */
+    conflictClassBusy: "الخانة مشغولة بالفعل في هذه الشعبة.",
+    conflictTeacherSameBranch: "المعلم مشغول في هذا الوقت مع",
+    conflictTeacherOtherBranch: "المعلم مشغول في هذا الوقت في فرع",
+    conflictTeacherHidden: "المعلم مشغول في هذا الوقت.",
+
+    settings: "جرس المدرسة",
+    settingsTitle: "إعدادات الجدول",
+    settingsDescription:
+      "أوقات الحصص تُحسب من هذه القيم: البداية + مدة الحصص + الفسحات. تغييرها يُعيد حساب الجداول القائمة.",
+    dayStartTime: "بداية اليوم",
+    periodDuration: "مدة الحصة (دقيقة)",
+    periodsCount: "عدد الحصص",
+    workingDays: "أيام العمل",
+    breaks: "الفسحات",
+    addBreak: "إضافة فسحة",
+    removeBreak: "حذف الفسحة",
+    breakAfter: "بعد الحصة",
+    breakDuration: "المدة (دقيقة)",
+    breakLabel: "الاسم",
+    breakDefaultLabel: "الفسحة",
+    preview: "معاينة الأوقات",
+    previewHint: "هكذا سيبدو اليوم الدراسي بعد الحفظ.",
+    settingsSaved: "تم حفظ إعدادات الجدول.",
+    notConfigured: "لم تُضبط إعدادات الجدول لهذا المسار بعد.",
+    notConfiguredHint: "اضبط جرس المدرسة أولاً حتى تُحسب أوقات الحصص.",
+    recomputeRetimed: "حصة أُعيد ضبط وقتها",
+    recomputeDeactivated: "حصة خرجت من الجدول",
+    recomputeReasons: {
+      period_removed: "رقم الحصة لم يعد موجوداً",
+      day_removed: "اليوم لم يعد من أيام العمل",
+    },
+    recomputeConflicts: "حصة تعارضت بعد التغيير وخرجت من الجدول",
+    recomputeNone: "لم تتأثر أي حصة.",
+
+    scheduleViolations: {
+      NO_WORKING_DAYS: "اختر يوم عمل واحداً على الأقل.",
+      DUPLICATE_BREAK: "لا يمكن وضع فسحتين بعد الحصة نفسها.",
+      BREAK_AFTER_LAST_PERIOD: "فسحة بعد آخر حصة لا تغيّر شيئاً — احذفها أو زد عدد الحصص.",
+      DAY_OVERFLOWS_MIDNIGHT: "اليوم الدراسي يتجاوز منتصف الليل. قلّل عدد الحصص أو ابدأ مبكراً.",
+    },
+
+    myTimetable: "جدولي",
+    myTimetableDescription: "حصصك الأسبوعية في كل فرع تعمل به.",
+    teacherTimetable: "جدول المعلم",
+    noSlots: "لا توجد حصص في الجدول.",
+    branch: "الفرع",
+    allDay: "اليوم كاملاً",
+  },
+
+  print: {
+    print: "طباعة",
+    classTimetable: "الجدول الأسبوعي للشعبة",
+    teacherTimetable: "الجدول الأسبوعي للمعلم",
+    printedAt: "تاريخ الطباعة",
+    signature: "التوقيع",
+    page: "صفحة",
+    backToApp: "رجوع",
+  },
+
   /** Why an enrollment was closed — see enrollment_end in the schema. */
   enrollmentReasons: {
     class_change: "تغيير شعبة",
@@ -465,3 +575,11 @@ export const ar = {
 } as const;
 
 export type Ar = typeof ar;
+
+/**
+ * Day name from an ISO weekday. `ar.weekdays` has literal keys 1–7, so indexing it
+ * with a plain `number` needs this one narrow cast rather than one at every call site.
+ */
+export function weekdayName(day: number): string {
+  return (ar.weekdays as Record<number, string>)[day] ?? String(day);
+}

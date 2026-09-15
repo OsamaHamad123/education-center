@@ -174,6 +174,66 @@ export async function makeCenterSettings(overrides: { teacherCanMarkAttendance?:
   return settings;
 }
 
+export async function makeScheduleSettings(args: {
+  branchId: string;
+  track?: schema.Track;
+  dayStartTime?: string;
+  periodDurationMin?: number;
+  periodsCount?: number;
+  workingDays?: number[];
+  breaks?: { afterPeriod: number; durationMin: number; label?: string }[];
+}) {
+  const [settings] = await ownerDb
+    .insert(schema.branchScheduleSettings)
+    .values({
+      branchId: args.branchId,
+      track: args.track ?? "scientific",
+      dayStartTime: args.dayStartTime ?? "08:00",
+      periodDurationMin: args.periodDurationMin ?? 45,
+      periodsCount: args.periodsCount ?? 6,
+      workingDays: args.workingDays ?? [6, 7, 1, 2, 3, 4],
+    })
+    .returning();
+  if (!settings) throw new Error("makeScheduleSettings failed");
+
+  for (const item of args.breaks ?? []) {
+    await ownerDb.insert(schema.branchBreaks).values({
+      settingsId: settings.id,
+      afterPeriod: item.afterPeriod,
+      durationMin: item.durationMin,
+      label: item.label ?? "الفسحة",
+    });
+  }
+  return settings;
+}
+
+export async function makeSlot(args: {
+  branchId: string;
+  classId: string;
+  teacherId: string;
+  subjectId: string;
+  dayOfWeek?: number;
+  periodNumber?: number;
+  startTime?: string;
+  endTime?: string;
+}) {
+  const [slot] = await ownerDb
+    .insert(schema.timetableSlots)
+    .values({
+      branchId: args.branchId,
+      classId: args.classId,
+      teacherId: args.teacherId,
+      subjectId: args.subjectId,
+      dayOfWeek: args.dayOfWeek ?? 6,
+      periodNumber: args.periodNumber ?? 1,
+      startTime: args.startTime ?? "08:00",
+      endTime: args.endTime ?? "08:45",
+    })
+    .returning();
+  if (!slot) throw new Error("makeSlot failed");
+  return slot;
+}
+
 /**
  * Two branches, each with a class, a student and a teacher — the arrangement almost
  * every isolation test needs.

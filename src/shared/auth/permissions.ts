@@ -13,6 +13,8 @@ export const PERMISSIONS = {
   "branch.manage": ["super_admin"],
   "branch.switch": ["super_admin"],
   "settings.manage": ["super_admin"],
+  /** The centre's own name and logo: not branch data, and every print header needs it. */
+  "settings.read": ["super_admin", "branch_admin", "teacher"],
   "subject.read": ["super_admin", "branch_admin"],
   "subject.manage": ["super_admin"],
 

@@ -36,6 +36,13 @@
       "when": 1789508791614,
       "tag": "0004_teacher_lookup_by_phone",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789600000000,
+      "tag": "0005_timetable_conflict_lookup",
+      "breakpoints": true
     }
   ]
 }

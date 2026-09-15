@@ -33,6 +33,17 @@ function dialog(page: Page) {
   return page.getByRole("dialog");
 }
 
+/**
+ * Narrows the list to one teacher. The suite has been leaving its fixtures behind
+ * since Phase 5, so the table now spans several pages and "the row I just created"
+ * is only reliably reachable through the search box.
+ */
+async function findInList(page: Page, name: string) {
+  const search = page.getByPlaceholder("الاسم").locator("visible=true").first();
+  await search.fill(name);
+  await expect(visible(page, name).first()).toBeVisible();
+}
+
 function uniquePhone(): string {
   // 015 is a real Egyptian prefix the seed does not use heavily.
   return `015${String(Math.floor(Math.random() * 100_000_000)).padStart(8, "0")}`;
@@ -144,6 +155,9 @@ test.describe("rates", () => {
     await createTeacher(page, label);
 
     await page.goto("/teachers");
+    // Search first: every run leaves its teacher behind, so by now the list is longer
+    // than one page and a freshly created teacher is not necessarily on it.
+    await findInList(page, `معلم اختبار ${label}`);
     await page
       .getByRole("button", { name: new RegExp(`^تعديل معلم اختبار ${label}`) })
       .first()
@@ -153,6 +167,7 @@ test.describe("rates", () => {
     await expect(visible(page, "تم حفظ التعديلات.").first()).toBeVisible();
 
     // Two entries now: the opening rate and the change.
+    await findInList(page, `معلم اختبار ${label}`);
     await page
       .locator('a[href^="/teachers/"]')
       .locator("visible=true")

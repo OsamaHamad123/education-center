@@ -3,7 +3,11 @@
  *
  * Other modules may import from this file ONLY.
  */
-export { getCenterSettings } from "./application/queries/get-settings";
+export {
+  getCenterIdentity,
+  getCenterSettings,
+  type CenterIdentity,
+} from "./application/queries/get-settings";
 export { updateCenterSettings, uploadCenterLogo } from "./application/use-cases/update-settings";
 export { updateSettingsSchema } from "./application/schemas";
 export { SettingsForm } from "./ui/settings-form";

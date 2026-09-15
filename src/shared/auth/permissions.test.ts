@@ -67,7 +67,15 @@ describe("role boundaries", () => {
 
   it("gives a teacher only read access plus marking attendance", () => {
     expect(permissionsFor("teacher").sort()).toEqual(
-      ["attendance.mark", "attendance.read", "payroll.read", "timetable.read"].sort(),
+      [
+        "attendance.mark",
+        "attendance.read",
+        "payroll.read",
+        // The centre's NAME and logo, for the header of their own printed timetable.
+        // Not `settings.manage`, which carries policy and stays super-admin only.
+        "settings.read",
+        "timetable.read",
+      ].sort(),
     );
   });
 });

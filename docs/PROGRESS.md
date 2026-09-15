@@ -2,19 +2,31 @@
 
 ## Current phase
 
-Phase 3 — Branches, users, subjects, center settings — status: **done, verified in the running app**
+Phase 4 — Classes & Students — status: **done, verified in the running app**
 
-| Acceptance criterion (section 14)          | Result                                                                                                           |
-| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| Business rules in 10.1                     | ✅ branch code frozen once students exist; last active branch cannot be deactivated; deactivation keeps all data |
-| Audit entries created                      | ✅ every mutation writes one in the same transaction; verified through the new viewer                            |
-| Forms validated                            | ✅ Zod on both sides, per-field Arabic messages, duplicate name/code rejected server-side                        |
-| Responsive                                 | ✅ tables become cards under `md`; the whole e2e suite passes at phone width too                                 |
-| `pnpm typecheck && pnpm lint && pnpm test` | ✅ 125 tests (88 unit + 37 integration)                                                                          |
-| e2e                                        | ✅ 46 tests, desktop and mobile                                                                                  |
+| Acceptance criterion (section 14)                                  | Result                                                                                                |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| Rules 10.3 covered by unit + integration tests                     | ✅ 32 domain unit tests for the enrollment transitions, plus 10 integration tests for a real transfer |
+| Transfer keeps the code and the history, visible to the new branch | ✅ code unchanged; the new branch reads both enrollments and the pre-transfer attendance              |
+| Old branch sees "transferred out"                                  | ✅ read-only: they keep the record, and every write control is gone                                   |
+| Isolation tests for students and enrollments                       | ✅ a branch that never taught them sees nothing, by code or by id                                     |
+| Rules 10.2 (classes)                                               | ✅ track frozen once sessions exist; a class with students cannot be deactivated                      |
+| `pnpm typecheck && pnpm lint && pnpm test`                         | ✅ 186 tests (139 unit + 47 integration)                                                              |
+| e2e                                                                | ✅ 66 tests, desktop and mobile, passing twice in a row on the same database                          |
 
 ## Completed
 
+- [x] Phase 4 — classes and students:
+  - `students/domain`: enrollment transitions (`planClassChange`, `planBranchTransfer`,
+    `planArchive`, `planRestore`) as pure functions returning a plan the use case applies;
+    student-code format/parse; Arabic-aware duplicate detection; an RFC-4180 CSV reader/writer
+  - `classes` module: CRUD with the two rules from 10.2
+  - `students` module: server-paged list with trigram search and filters, profile with the
+    enrollment timeline, create/edit, change class, transfer branch, archive, restore,
+    CSV import with a per-row preview, CSV export
+  - `drizzle/0002` lets a former branch read a transferred student; `drizzle/0003` fixes the
+    policy recursion that introduced (see the decisions log)
+  - 51 new unit tests, 10 new integration tests, 10 new e2e specs
 - [x] Phase 3 — branches, users, subjects, center settings, audit viewer:
   - `branches` module: CRUD, activate/deactivate, code-lock rule, counts of students and admins
   - `users` module: branch admin accounts — create with a one-time temporary password,
@@ -96,7 +108,10 @@ Phase 3 — Branches, users, subjects, center settings — status: **done, verif
 
 ## Known issues / TODO
 
-- **The e2e rename test creates a branch and leaves it deactivated.** Running the suite many
+- **The e2e suite leaves throwaway rows behind.** Mutating tests enrol their own student
+  (and Phase 3's rename test creates its own branch) so the suite is repeatable — verified by
+  running it twice — but those students stay in the seeded branches. Reseed periodically.
+- **The old e2e rename test creates a branch and leaves it deactivated.** Running the suite many
   times against one database slowly accumulates inactive `فرع اختبار XXXXX` rows. Harmless, but
   worth a cleanup step when the suite grows.
 
@@ -121,17 +136,18 @@ Phase 3 — Branches, users, subjects, center settings — status: **done, verif
 
 ## Next steps
 
-Phase 4 — Classes & Students. The biggest phase so far: student codes, phone normalization,
-enrollment transitions (change class, transfer branch, archive, restore), Arabic trigram search,
-and CSV import/export. Its prompt asks for the domain tests to be written before the use cases.
+Phase 5 — Teachers. Smaller than Phase 4: teacher profiles with per-track rates, the one-time
+access code, linking an existing teacher to a branch by phone, rate history, and a teacher
+profile page.
 
-Two things carry forward:
+Carrying forward:
 
-1. **A super admin's selected branch must be applied as a WHERE clause** in every list query,
-   because RLS deliberately no longer scopes their reads (see the decisions log). Phase 3's lists
-   are center-wide so it did not bite yet; the students list is the first that needs it.
-2. `student_code` generation must go through `student_code_counters` with `SELECT … FOR UPDATE`,
-   and the code must survive a branch transfer unchanged.
+1. **A super admin's selected branch is applied as a WHERE clause**, not by RLS — `students.repository.ts`
+   shows the pattern (`scopeToBranch`).
+2. **Any new RLS helper that reads a table must be `SECURITY DEFINER` with a pinned `search_path`**,
+   or it will recurse into the policy of whatever it reads.
+3. Teacher rates are the input to payroll's snapshots, so `teacher_rate_history` records changes
+   while `class_sessions.rate_applied_piasters` remains the only thing payroll reads.
 
 To bring a machine up from scratch:
 

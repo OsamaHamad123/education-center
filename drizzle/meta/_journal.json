@@ -15,6 +15,20 @@
       "when": 1789500859955,
       "tag": "0001_rls_and_constraints",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789507197816,
+      "tag": "0002_transferred_student_visibility",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789507735373,
+      "tag": "0003_fix_policy_recursion",
+      "breakpoints": true
     }
   ]
 }

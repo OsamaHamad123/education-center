@@ -1,8 +1,27 @@
 /**
  * Public API of the `students` module — الطلاب وقيودهم.
  *
- * Other modules may import from this file ONLY. Never deep-import
- * `src/modules/students/domain|application|infrastructure|ui` from outside this module.
- * Re-export use cases, queries, domain types and UI components here as they are built.
+ * Other modules may import from this file ONLY.
  */
-export {};
+export { listStudentsPage, type StudentsPage, type StudentRow } from "./application/queries/list-students";
+export { getStudentProfile, type StudentProfile } from "./application/queries/get-student";
+export {
+  archiveStudent,
+  changeStudentClass,
+  createStudent,
+  editStudent,
+  restoreStudent,
+  transferStudentBranch,
+} from "./application/use-cases/manage-student";
+export {
+  exportStudentsCsv,
+  importStudents,
+  previewStudentImport,
+  type ImportPreview,
+  type ImportRowResult,
+} from "./application/use-cases/import-students";
+export { StudentsTable } from "./ui/students-table";
+export { StudentsFilters } from "./ui/students-filters";
+export { StudentForm } from "./ui/student-form";
+export { StudentProfileView } from "./ui/student-profile";
+export { ImportStudentsDialog } from "./ui/import-students-dialog";

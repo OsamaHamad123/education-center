@@ -1,8 +1,14 @@
 /**
  * Public API of the `classes` module — الشُعب.
  *
- * Other modules may import from this file ONLY. Never deep-import
- * `src/modules/classes/domain|application|infrastructure|ui` from outside this module.
- * Re-export use cases, queries, domain types and UI components here as they are built.
+ * Other modules may import from this file ONLY.
  */
-export {};
+export {
+  listClassesForBranch,
+  listClassOptions,
+  type ClassWithCounts,
+  type ClassOption,
+} from "./application/queries/list-classes";
+export { createClass, editClass, setClassActive } from "./application/use-cases/manage-class";
+export { ClassesTable } from "./ui/classes-table";
+export { ClassFormDialog } from "./ui/class-form";

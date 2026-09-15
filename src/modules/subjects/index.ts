@@ -1,8 +1,9 @@
 /**
  * Public API of the `subjects` module — المواد الدراسية.
  *
- * Other modules may import from this file ONLY. Never deep-import
- * `src/modules/subjects/domain|application|infrastructure|ui` from outside this module.
- * Re-export use cases, queries, domain types and UI components here as they are built.
+ * Other modules may import from this file ONLY.
  */
-export {};
+export { listSubjectsForAdmin, type SubjectWithUsage } from "./application/queries/list-subjects";
+export { createSubject, renameSubject, setSubjectActive } from "./application/use-cases/manage-subject";
+export { SubjectsTable } from "./ui/subjects-table";
+export { SubjectFormDialog } from "./ui/subject-form";

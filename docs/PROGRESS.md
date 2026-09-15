@@ -2,26 +2,28 @@
 
 ## Current phase
 
-Phase 2 — Authentication, roles, tenant context, app shell — status: **done, verified in the running app**
+Phase 3 — Branches, users, subjects, center settings — status: **done, verified in the running app**
 
-| Acceptance criterion (section 14)                    | Result                                                                                                  |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Each seeded role logs in and lands on the right area | ✅ super admin and branch admin → `/`, teacher → `/teacher` (a teacher visiting `/` is redirected back) |
-| Switching branch changes all data scope              | ✅ the switcher rewrites `selected_branch`, `resolveTenantContext` re-reads it, and the banner follows  |
-| Branch admin never sees the switcher                 | ✅ the component is not rendered for them at all — absent, not disabled                                 |
-| Mutations blocked in "كافة الفروع" mode              | ✅ `createAction` returns `BRANCH_REQUIRED`, and RLS refuses underneath                                 |
-| `pnpm typecheck && pnpm lint && pnpm test`           | ✅ 110 tests (73 unit + 37 integration)                                                                 |
-| e2e                                                  | ✅ 22 tests, desktop and mobile viewports                                                               |
-
-Also checked by hand in the browser and in the database: login and logout both land in
-`audit_logs` with the right user and branch, and the stored IP is a SHA-256 hash, never raw.
-
-Phase 1 (schema, migrations, RLS, seed) remains verified: migrations apply to an empty database,
-the seed is re-runnable, and a branch admin issuing an unfiltered query sees 60 of 180 students,
-4 of 12 classes, 96 of 216 sessions and 1 of 3 branches.
+| Acceptance criterion (section 14)          | Result                                                                                                           |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Business rules in 10.1                     | ✅ branch code frozen once students exist; last active branch cannot be deactivated; deactivation keeps all data |
+| Audit entries created                      | ✅ every mutation writes one in the same transaction; verified through the new viewer                            |
+| Forms validated                            | ✅ Zod on both sides, per-field Arabic messages, duplicate name/code rejected server-side                        |
+| Responsive                                 | ✅ tables become cards under `md`; the whole e2e suite passes at phone width too                                 |
+| `pnpm typecheck && pnpm lint && pnpm test` | ✅ 125 tests (88 unit + 37 integration)                                                                          |
+| e2e                                        | ✅ 46 tests, desktop and mobile                                                                                  |
 
 ## Completed
 
+- [x] Phase 3 — branches, users, subjects, center settings, audit viewer:
+  - `branches` module: CRUD, activate/deactivate, code-lock rule, counts of students and admins
+  - `users` module: branch admin accounts — create with a one-time temporary password,
+    reset password, deactivate (both revoke every live session)
+  - `subjects` module: CRUD, deactivation blocked while an active timetable still uses it
+  - `settings` module: center settings and logo upload with an allowlist of types
+  - `audit` module: server-paged viewer with branch / entity / action / date filters
+  - Shared UI: `DataTable` (TanStack Table v9), `PageHeader`, `EmptyState`, `ConfirmDialog`
+  - 9 new domain unit tests, 12 new e2e specs
 - [x] Phase 2 — authentication, roles, tenant context, app shell:
   - Better Auth 1.7.4 (Drizzle adapter, username plugin, `disableSignUp`), `/api/auth/[...all]`
   - Login page with "إدارة" / "معلم" tabs; forced password-change page
@@ -94,6 +96,10 @@ the seed is re-runnable, and a branch admin issuing an unfiltered query sees 60 
 
 ## Known issues / TODO
 
+- **The e2e rename test creates a branch and leaves it deactivated.** Running the suite many
+  times against one database slowly accumulates inactive `فرع اختبار XXXXX` rows. Harmless, but
+  worth a cleanup step when the suite grows.
+
 - `pnpm` is not on the default `PATH` in every shell — it is installed at
   `C:\Users\OsamaHamad\AppData\Roaming\npm`. `corepack enable pnpm` failed with `EPERM` because
   `C:\Program Files\nodejs` is not user-writable; it would work from an elevated shell.
@@ -115,12 +121,17 @@ the seed is re-runnable, and a branch admin issuing an unfiltered query sees 60 
 
 ## Next steps
 
-Phase 3 — Branches, users, subjects, center settings (Super Admin). The module layering and the
-`createAction` / `requirePermission` pipeline are in place, so Phase 3 is the first phase that is
-purely "fill in the modules".
+Phase 4 — Classes & Students. The biggest phase so far: student codes, phone normalization,
+enrollment transitions (change class, transfer branch, archive, restore), Arabic trigram search,
+and CSV import/export. Its prompt asks for the domain tests to be written before the use cases.
 
-Carry forward into every list query from here on: **a super admin's selected branch must be applied
-as a WHERE clause**, because RLS deliberately no longer scopes their reads (see the decisions log).
+Two things carry forward:
+
+1. **A super admin's selected branch must be applied as a WHERE clause** in every list query,
+   because RLS deliberately no longer scopes their reads (see the decisions log). Phase 3's lists
+   are center-wide so it did not bite yet; the students list is the first that needs it.
+2. `student_code` generation must go through `student_code_counters` with `SELECT … FOR UPDATE`,
+   and the code must survive a branch transfer unchanged.
 
 To bring a machine up from scratch:
 

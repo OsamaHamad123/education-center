@@ -1,8 +1,13 @@
 /**
  * Public API of the `users` module — المستخدمون وحسابات مديري الفروع.
  *
- * Other modules may import from this file ONLY. Never deep-import
- * `src/modules/users/domain|application|infrastructure|ui` from outside this module.
- * Re-export use cases, queries, domain types and UI components here as they are built.
+ * Other modules may import from this file ONLY.
  */
-export {};
+export { listBranchAdminsForAdmin, type BranchAdminRow } from "./application/queries/list-branch-admins";
+export {
+  createBranchAdmin,
+  resetBranchAdminPassword,
+  setBranchAdminActive,
+} from "./application/use-cases/manage-branch-admin";
+export { BranchAdminsTable } from "./ui/branch-admins-table";
+export { CreateBranchAdminDialog } from "./ui/create-branch-admin";

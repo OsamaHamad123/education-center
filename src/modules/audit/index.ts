@@ -1,8 +1,8 @@
 /**
  * Public API of the `audit` module — سجل التدقيق.
  *
- * Other modules may import from this file ONLY. Never deep-import
- * `src/modules/audit/domain|application|infrastructure|ui` from outside this module.
- * Re-export use cases, queries, domain types and UI components here as they are built.
+ * Other modules may import from this file ONLY.
  */
-export {};
+export { listAuditLogsPage, type AuditPage, type AuditRow } from "./application/queries/list-audit-logs";
+export { AuditFilters } from "./ui/audit-filters";
+export { AuditTable } from "./ui/audit-table";

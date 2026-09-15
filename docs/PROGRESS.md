@@ -2,13 +2,17 @@
 
 ## Current phase
 
-Phase 1 — Database schema, migrations, RLS, seed — status: **BLOCKED — written but UNVERIFIED**
+Phase 1 — Database schema, migrations, RLS, seed — status: **done, verified against a real PostgreSQL**
 
-> ⛔ Every acceptance criterion of Phase 1 needs a running PostgreSQL, and Docker Desktop
-> would not start on the dev machine (the `docker-desktop` WSL distro stays `Stopped`).
-> The migrations have never been applied, the seed has never run, and the 30 integration
-> tests have never executed. Nothing in Phase 1 may be treated as working until someone
-> starts Docker Desktop and runs the commands under "Next steps".
+All acceptance criteria met on PostgreSQL 16 in Docker:
+
+| Criterion                                                             | Result                                                                     |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Migrations apply cleanly to an empty database                         | ✅ `0000` + `0001`, from a fresh volume                                    |
+| Seed runs repeatedly without errors                                   | ✅ run three times, identical counts                                       |
+| Branch admin A sees 0 rows of branch B through a raw unfiltered query | ✅ NSR admin: 60/180 students, 4/12 classes, 96/216 sessions, 1/3 branches |
+| Cross-branch teacher overlap rejected by the database                 | ✅ `no_teacher_overlap` exclusion constraint fires                         |
+| `pnpm typecheck && pnpm lint && pnpm test`                            | ✅ 77 tests (40 unit + 37 integration)                                     |
 
 ## Completed
 
@@ -32,7 +36,7 @@ Phase 1 — Database schema, migrations, RLS, seed — status: **BLOCKED — wri
   - Vitest (unit + integration projects), Playwright (desktop + mobile), sample e2e smoke test
   - GitHub Actions CI: typecheck · lint · format · unit → integration (Postgres service) → build → e2e on main
 
-- [~] Phase 1 — schema, migrations, RLS, seed — **code complete, zero verification**:
+- [x] Phase 1 — schema, migrations, RLS, seed:
   - 21 tables in `src/shared/db/schema/` covering PROJECT_PLAN section 7 in full
   - `drizzle/0000_initial_schema.sql` (generated) and `drizzle/0001_rls_and_constraints.sql`
     (hand-written: RLS policies, helper functions, grants, teacher-overlap exclusion constraint)
@@ -40,7 +44,11 @@ Phase 1 — Database schema, migrations, RLS, seed — status: **BLOCKED — wri
   - `src/shared/db/seed.ts` — 3 branches, 4 admins, 8 subjects, 6 teachers (2 shared across
     branches), 12 classes, 180 students, a full week's timetable and 2 weeks of attendance
   - `tests/integration/helpers/` (owner + app connections, `asTenant`, `ctxFor`, factories)
-  - 30 integration tests: `tenant-isolation/branch-isolation.test.ts` and `constraints.test.ts`
+  - 37 integration tests: `tenant-isolation/branch-isolation.test.ts` and `constraints.test.ts`,
+    plus `helpers/errors.ts`, which unwraps Drizzle's `Failed query:` wrapper so an assertion
+    matches the actual Postgres `constraint_name` / `code` rather than any failure at all
+  - Seeded database: 3 branches, 4 admin accounts, 6 teachers (2 shared), 12 classes,
+    180 students, 108 timetable slots, 216 sessions, 3240 attendance records
 
 ## Decisions log
 
@@ -75,22 +83,29 @@ Phase 1 — Database schema, migrations, RLS, seed — status: **BLOCKED — wri
   `C:\Program Files\nodejs` is not user-writable; it would work from an elevated shell.
 - Peer warnings remain from `eslint-config-next`'s plugins (`eslint-plugin-import`, `jsx-a11y`, `react`)
   and from `tsconfck` wanting TypeScript 5. Harmless today; they disappear as those packages catch up.
-- **Docker Desktop will not start on this machine.** `wsl -l -v` shows `docker-desktop  Stopped`;
-  launching `Docker Desktop.exe` starts `com.docker.backend` but the engine never comes up. It
-  probably needs a GUI interaction (sign-in, licence, or a pending update).
+- **The seed produces 108 timetable slots, not the 288 a full grid would hold.** The seed assigns
+  teachers by rotation and lets the `no_teacher_overlap` constraint reject clashes, so shared
+  teachers thin the grid out. Fine as demo data; Phase 6 builds the real conflict-aware editor.
 - Open questions 1–5 and 9 were answered with the plan's defaults (see decisions log). Questions
   6, 7, 8 and 10 remain open and affect Phases 8 and 10.
+- Docker Desktop on this machine crashes at startup on stale AF_UNIX socket files
+  (`%LOCALAPPDATA%/Docker/run/dockerInference`, `%LOCALAPPDATA%/docker-secrets-engine/engine.sock`).
+  Windows cannot delete them; renaming the containing folder and restarting Docker fixes it. Those
+  folders are now `*.broken-<timestamp>` and can be deleted once Docker is confirmed healthy.
 
 ## Next steps
 
-**Verify Phase 1.** Start Docker Desktop, then:
+Phase 2 — Authentication, roles, tenant context, app shell (prompt in `docs/PROJECT_PLAN.md`,
+section 14). It has a ready-made first task: `resolveTenantContext()` and the query layer must
+apply the super admin's selected branch as a WHERE clause, since RLS deliberately no longer does.
+
+To bring a machine up from scratch:
 
 ```bash
-pnpm db:up          # Postgres 16 + roles + school_test
-pnpm db:migrate     # applies 0000 and 0001
-pnpm db:seed        # demo data; prints login credentials
-pnpm test           # 40 unit + 30 integration tests
+pnpm install && cp .env.example .env
+pnpm db:up && pnpm db:migrate && pnpm db:seed
+pnpm test
 ```
 
-Expect failures on the first run — none of this SQL has ever touched a database. Fix, re-run,
-then move to Phase 2 (authentication, roles, tenant context, app shell).
+Seeded logins: `admin` / `admin_nsr` / `admin_obr` / `admin_giz` with `Password123!`;
+teachers sign in with their phone and access code `123456`.

@@ -10,6 +10,15 @@ import {
   makeSession,
 } from "../helpers/factories";
 import * as schema from "@/shared/db/schema";
+import { expectConstraintViolation, pgErrorOf, PG_CODE } from "../helpers/errors";
+import { todayInCairo } from "@/shared/lib/time";
+
+/**
+ * Fixtures join today, and student_enrollments_dates_ordered requires end_date to be
+ * on or after start_date — so a closing date has to be today or later, not a fixed
+ * date in the past.
+ */
+const futureDate = todayInCairo(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
 
 /**
  * Constraints that protect business rules at the database level, where no bug in a
@@ -50,7 +59,7 @@ describe("teacher double-booking (PROJECT_PLAN 7.12)", () => {
       endTime: "08:45",
     });
 
-    await expect(
+    await expectConstraintViolation(
       ownerDb.insert(schema.timetableSlots).values({
         branchId: branchB.id,
         classId: classB.id,
@@ -61,7 +70,8 @@ describe("teacher double-booking (PROJECT_PLAN 7.12)", () => {
         startTime: "08:30",
         endTime: "09:15",
       }),
-    ).rejects.toThrow(/no_teacher_overlap/);
+      "no_teacher_overlap",
+    );
   });
 
   it("allows back-to-back periods — 08:45 does not overlap 08:00–08:45", async () => {
@@ -128,14 +138,15 @@ describe("student enrollment invariants (PROJECT_PLAN 7.6)", () => {
 
     // makeStudent already opened one; a second open row would double-count the
     // student in every attendance sheet.
-    await expect(
+    await expectConstraintViolation(
       ownerDb.insert(schema.studentEnrollments).values({
         studentId: student.id,
         branchId: branch.id,
         classId: otherClass.id,
-        startDate: "2026-01-01",
+        startDate: futureDate,
       }),
-    ).rejects.toThrow(/student_enrollments_one_open/);
+      "student_enrollments_one_open",
+    );
   });
 
   it("allows a new enrollment once the previous one is closed", async () => {
@@ -146,7 +157,7 @@ describe("student enrollment invariants (PROJECT_PLAN 7.6)", () => {
 
     await ownerDb
       .update(schema.studentEnrollments)
-      .set({ endDate: "2026-02-01", endReason: "class_change" })
+      .set({ endDate: futureDate, endReason: "class_change" })
       .where(sql`student_id = ${student.id}`);
 
     await expect(
@@ -154,7 +165,7 @@ describe("student enrollment invariants (PROJECT_PLAN 7.6)", () => {
         studentId: student.id,
         branchId: branch.id,
         classId: otherClass.id,
-        startDate: "2026-02-01",
+        startDate: futureDate,
       }),
     ).resolves.not.toThrow();
   });
@@ -164,12 +175,13 @@ describe("student enrollment invariants (PROJECT_PLAN 7.6)", () => {
     const klass = await makeClass(branch.id);
     const student = await makeStudent(branch.id, klass.id);
 
-    await expect(
+    await expectConstraintViolation(
       ownerDb
         .update(schema.studentEnrollments)
-        .set({ endDate: "2026-02-01" })
+        .set({ endDate: futureDate })
         .where(sql`student_id = ${student.id}`),
-    ).rejects.toThrow(/student_enrollments_closed_has_reason/);
+      "student_enrollments_closed_has_reason",
+    );
   });
 });
 
@@ -179,12 +191,13 @@ describe("student archive invariants (PROJECT_PLAN 7.5)", () => {
     const klass = await makeClass(branch.id);
     const student = await makeStudent(branch.id, klass.id);
 
-    await expect(
+    await expectConstraintViolation(
       ownerDb
         .update(schema.students)
         .set({ status: "archived" })
         .where(sql`id = ${student.id}`),
-    ).rejects.toThrow(/students_archived_has_reason/);
+      "students_archived_has_reason",
+    );
   });
 
   it("derives parent_phone_last4 automatically", async () => {
@@ -231,9 +244,10 @@ describe("session and attendance invariants", () => {
     const teacher = await makeTeacher([branch.id]);
 
     await makeSession({ branchId: branch.id, classId: klass.id, teacherId: teacher.id, periodNumber: 2 });
-    await expect(
+    await expectConstraintViolation(
       makeSession({ branchId: branch.id, classId: klass.id, teacherId: teacher.id, periodNumber: 2 }),
-    ).rejects.toThrow(/class_sessions_class_date_period_unique/);
+      "class_sessions_class_date_period_unique",
+    );
   });
 
   it("requires a reason when a session is cancelled", async () => {
@@ -242,12 +256,13 @@ describe("session and attendance invariants", () => {
     const teacher = await makeTeacher([branch.id]);
     const session = await makeSession({ branchId: branch.id, classId: klass.id, teacherId: teacher.id });
 
-    await expect(
+    await expectConstraintViolation(
       ownerDb
         .update(schema.classSessions)
         .set({ status: "cancelled" })
         .where(sql`id = ${session.id}`),
-    ).rejects.toThrow(/class_sessions_cancelled_has_reason/);
+      "class_sessions_cancelled_has_reason",
+    );
   });
 
   it("records a student at most once per session", async () => {
@@ -265,8 +280,9 @@ describe("session and attendance invariants", () => {
     };
     await ownerDb.insert(schema.attendanceRecords).values(row);
 
-    await expect(ownerDb.insert(schema.attendanceRecords).values(row)).rejects.toThrow(
-      /attendance_records_session_student_unique/,
+    await expectConstraintViolation(
+      ownerDb.insert(schema.attendanceRecords).values(row),
+      "attendance_records_session_student_unique",
     );
   });
 });
@@ -274,14 +290,18 @@ describe("session and attendance invariants", () => {
 describe("center_settings is a singleton (PROJECT_PLAN 7.17)", () => {
   it("rejects a second row", async () => {
     await ownerDb.insert(schema.centerSettings).values({ centerName: "مركز أول" });
-    await expect(ownerDb.insert(schema.centerSettings).values({ centerName: "مركز ثانٍ" })).rejects.toThrow();
+
+    // The singleton column is unique and always true, so a second row collides.
+    const error = await pgErrorOf(ownerDb.insert(schema.centerSettings).values({ centerName: "مركز ثانٍ" }));
+    expect(error.code).toBe(PG_CODE.uniqueViolation);
   });
 });
 
 describe("branch code format", () => {
   it("rejects a code that would corrupt student codes", async () => {
-    await expect(
+    await expectConstraintViolation(
       ownerDb.insert(schema.branches).values({ name: "فرع سيء", code: "bad-code" }),
-    ).rejects.toThrow(/branches_code_format/);
+      "branches_code_format",
+    );
   });
 });

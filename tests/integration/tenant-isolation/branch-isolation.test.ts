@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { applyMigrations, asTenant, closeConnections, ctxFor, ownerDb, resetDatabase } from "../helpers/db";
 import { makeCenterSettings, makeTwoBranches } from "../helpers/factories";
+import { expectPermissionDenied, expectRlsViolation } from "../helpers/errors";
 import * as schema from "@/shared/db/schema";
 import { todayInCairo } from "@/shared/lib/time";
 
@@ -99,7 +100,7 @@ describe("branch admin cannot reach another branch", () => {
   });
 
   it("cannot insert a row carrying another branch's id", async () => {
-    await expect(
+    await expectRlsViolation(
       asTenant(ctxFor.branchAdmin(fixtures.branchA.id), (tx) =>
         tx.insert(schema.classes).values({
           branchId: fixtures.branchB.id,
@@ -109,7 +110,7 @@ describe("branch admin cannot reach another branch", () => {
           gradeLevel: "الصف الثالث الثانوي",
         }),
       ),
-    ).rejects.toThrow(/row-level security/i);
+    );
   });
 
   it("cannot update a foreign row — the update silently matches nothing", async () => {
@@ -128,14 +129,14 @@ describe("branch admin cannot reach another branch", () => {
   });
 
   it("cannot move one of its own students into another branch", async () => {
-    await expect(
+    await expectRlsViolation(
       asTenant(ctxFor.branchAdmin(fixtures.branchA.id), (tx) =>
         tx
           .update(schema.students)
           .set({ branchId: fixtures.branchB.id, classId: fixtures.classB.id })
           .where(sql`id = ${fixtures.studentA.id}`),
       ),
-    ).rejects.toThrow(/row-level security/i);
+    );
   });
 });
 
@@ -145,16 +146,34 @@ describe("super admin", () => {
     expect(rows).toHaveLength(2);
   });
 
-  it("is scoped to one branch once a branch is selected", async () => {
+  it("still READS every branch when one is selected — the switcher is a view filter", async () => {
+    // Deliberate: RLS does not scope a super admin's reads, because they can change
+    // the selected branch themselves at any moment. `queries/*` apply the selected
+    // branch as an ordinary WHERE clause. What the selection really controls is
+    // writes, which the next two tests cover.
     const rows = await asTenant(ctxFor.superAdmin(fixtures.branchA.id), (tx) =>
       tx.select().from(schema.students),
     );
-    expect(rows.map((r) => r.studentCode)).toEqual(["AAA-26-00001"]);
+    expect(rows).toHaveLength(2);
+  });
+
+  it("cannot write into a branch other than the selected one", async () => {
+    await expectRlsViolation(
+      asTenant(ctxFor.superAdmin(fixtures.branchA.id), (tx) =>
+        tx.insert(schema.classes).values({
+          branchId: fixtures.branchB.id,
+          name: "شعبة في فرع غير مختار",
+          track: "scientific",
+          gender: "mixed",
+          gradeLevel: "الصف الثالث الثانوي",
+        }),
+      ),
+    );
   });
 
   it("cannot mutate while in 'كافة الفروع' mode", async () => {
     // branchId null means no branch is selected, and every write policy requires one.
-    await expect(
+    await expectRlsViolation(
       asTenant(ctxFor.superAdmin(null), (tx) =>
         tx.insert(schema.classes).values({
           branchId: fixtures.branchA.id,
@@ -164,7 +183,7 @@ describe("super admin", () => {
           gradeLevel: "الصف الثالث الثانوي",
         }),
       ),
-    ).rejects.toThrow(/row-level security/i);
+    );
   });
 
   it("can transfer a student between branches, which a branch admin cannot", async () => {
@@ -225,7 +244,7 @@ describe("teacher scope", () => {
   });
 
   it("cannot create a session for a different teacher", async () => {
-    await expect(
+    await expectRlsViolation(
       asTenant(ctxFor.teacher(fixtures.teacherA.id), (tx) =>
         tx.insert(schema.classSessions).values({
           branchId: fixtures.branchB.id,
@@ -240,11 +259,11 @@ describe("teacher scope", () => {
           rateAppliedPiasters: 15_000,
         }),
       ),
-    ).rejects.toThrow(/row-level security/i);
+    );
   });
 
   it("cannot create a session dated in the past", async () => {
-    await expect(
+    await expectRlsViolation(
       asTenant(ctxFor.teacher(fixtures.teacherA.id), (tx) =>
         tx.insert(schema.classSessions).values({
           branchId: fixtures.branchA.id,
@@ -259,7 +278,7 @@ describe("teacher scope", () => {
           rateAppliedPiasters: 15_000,
         }),
       ),
-    ).rejects.toThrow(/row-level security/i);
+    );
   });
 });
 
@@ -274,11 +293,11 @@ describe("audit log", () => {
       }),
     );
 
-    await expect(
+    await expectPermissionDenied(
       asTenant(ctxFor.branchAdmin(fixtures.branchA.id), (tx) =>
         tx.delete(schema.auditLogs).where(sql`entity = 'class'`),
       ),
-    ).rejects.toThrow(/permission denied/i);
+    );
   });
 
   it("shows a branch admin only their own branch's entries", async () => {

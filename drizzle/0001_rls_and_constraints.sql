@@ -69,11 +69,22 @@ LANGUAGE sql STABLE AS
 $$ SELECT coalesce((SELECT teacher_can_mark_attendance FROM center_settings LIMIT 1), false) $$;
 --> statement-breakpoint
 
--- A branch admin sees a branch's data; a super admin sees the selected branch, or
--- every branch when none is selected ("كافة الفروع", which is read-only).
+-- A branch admin reads exactly one branch. A super admin reads every branch.
+--
+-- The branch switcher is a VIEW FILTER for a super admin, not a permission: they can
+-- change it themselves at any time, so scoping their reads here would buy no security.
+-- Scoping it here actively broke things, because under FORCE ROW LEVEL SECURITY
+-- PostgreSQL applies the SELECT policy to the NEW row of an UPDATE — a super admin
+-- scoped to branch A could therefore not transfer a student INTO branch B (rule 10.3),
+-- nor even see branch B's classes to pick a target. Cross-branch reports (10.7) hit
+-- the same wall. So: super admins read everything here, and `queries/*` apply the
+-- selected branch as an ordinary WHERE clause.
+--
+-- What the switcher still controls is WRITES — see app_can_write_branch below, which
+-- requires a specific branch and so keeps "كافة الفروع" read-only.
 CREATE OR REPLACE FUNCTION app_can_read_branch(target_branch uuid) RETURNS boolean
 LANGUAGE sql STABLE AS
-$$ SELECT (app_role() = 'super_admin' AND (app_branch_id() IS NULL OR target_branch = app_branch_id()))
+$$ SELECT (app_role() = 'super_admin')
        OR (app_role() = 'branch_admin' AND target_branch = app_branch_id()) $$;
 --> statement-breakpoint
 

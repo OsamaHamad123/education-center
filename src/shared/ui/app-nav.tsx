@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
+  KeyRound,
   Building2,
   CalendarDays,
   ClipboardCheck,
@@ -44,6 +45,7 @@ const ICONS: Record<NavIconKey, LucideIcon> = {
   reports: FileText,
   audit: ScrollText,
   settings: Settings,
+  key: KeyRound,
 };
 
 /**

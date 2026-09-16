@@ -1,16 +1,25 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getPayrollReport, PayrollReportView } from "@/modules/payroll";
+import {
+  getPayrollReport,
+  getPayrollSessions,
+  PayrollReportView,
+  PayrollSessionsView,
+  startOfMonth,
+} from "@/modules/payroll";
 import { getSessionUser } from "@/shared/auth/session";
 import { ar } from "@/shared/i18n/ar";
+import { todayInCairo } from "@/shared/lib/time";
 import { PageHeader } from "@/shared/ui/page-header";
 
 export const metadata: Metadata = { title: ar.payroll.myEarnings };
 
 /**
- * A teacher's own earnings (rule 10.9). The same report the admin sees, narrowed to
- * them — not by a filter this page applies, but by `class_sessions_select`, which
- * shows a teacher only their own sessions in every branch they work in.
+ * A teacher's own earnings and the lessons behind them (rule 10.9).
+ *
+ * The same report an admin sees, narrowed to them — not by a filter this page
+ * applies, but by `class_sessions_select`, which shows a teacher only their own
+ * sessions, in every branch they work in. Read-only: there is no action on the page.
  */
 export default async function TeacherEarningsPage({
   searchParams,
@@ -21,18 +30,35 @@ export default async function TeacherEarningsPage({
   if (!user?.teacherId) notFound();
 
   const params = await searchParams;
-  const report = await getPayrollReport({
-    from: params.from,
-    to: params.to,
+  const today = todayInCairo();
+  const from = params.from ?? startOfMonth(today);
+  const to = params.to ?? today;
+
+  const [report, sessions] = await Promise.all([
     // Belt and braces over the policy: a teacher asks only about themselves.
-    teacherId: user.teacherId,
-  });
+    getPayrollReport({ from, to, teacherId: user.teacherId }),
+    getPayrollSessions({ teacherId: user.teacherId, from, to }),
+  ]);
   if (!report.ok) notFound();
 
   return (
     <>
       <PageHeader title={ar.payroll.myEarnings} description={ar.payroll.descriptionTeacher} />
-      <PayrollReportView report={report.data} />
+
+      <div className="space-y-6">
+        <PayrollReportView report={report.data} />
+
+        {sessions.ok ? (
+          <section className="space-y-2">
+            <h2 className="text-lg font-bold tracking-tight">{ar.payroll.details}</h2>
+            <PayrollSessionsView
+              teacherName={sessions.data.teacherName}
+              sessions={sessions.data.sessions}
+              truncated={sessions.data.truncated}
+            />
+          </section>
+        ) : null}
+      </div>
     </>
   );
 }

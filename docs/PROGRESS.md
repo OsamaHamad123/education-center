@@ -2,19 +2,31 @@
 
 ## Current phase
 
-Phase 8 — Payroll & reports — status: **done, verified in the running app**
+Phase 9 — Teacher portal & public lookup — status: **done, verified in the running app**
 
-| Acceptance criterion (section 14)           | Result                                                                                                  |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Rules 10.6–10.7                             | ✅ payroll teacher→branch→track with drill-down, CSV and print; four reports; dashboards                |
-| A rate change does not move a past total    | ✅ integration test; the report reads only `rate_applied_piasters`                                      |
-| A branch admin cannot filter other branches | ✅ they are sent no branch picker, and RLS refuses one smuggled past the query                          |
-| Numbers match a seed verification query     | ✅ GIZ 7,250 · OBR 8,150 · NSR 14,050 ج.م — hand-written SQL, the screen, and the print sheet all agree |
-| `pnpm typecheck && pnpm lint && pnpm test`  | ✅ 381 tests (267 unit + 114 integration)                                                               |
-| e2e                                         | ✅ 178 tests, desktop and mobile, passing twice in a row against the same database                      |
+| Acceptance criterion (section 14)                            | Result                                                                              |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| The lookup cannot enumerate                                  | ✅ one message and one null for every failure; 14 integration tests, one per attack |
+| Rate limiting works                                          | ✅ blocks on the 6th attempt, verified by hand against a server with the limiter ON |
+| A teacher sees combined + per-branch data, own branches only | ✅ today, week, earnings and the lessons behind them — all scoped by RLS            |
+| PDFs render Arabic with the Cairo font                       | ⛔ **not built** — deliberately deferred, see below                                 |
+| `pnpm typecheck && pnpm lint && pnpm test`                   | ✅ 419 tests (290 unit + 129 integration)                                           |
+| e2e                                                          | ✅ 200 tests, desktop and mobile, passing twice in a row against the same database  |
 
 ## Completed
 
+- [x] Phase 9 — teacher portal and the public lookup:
+  - `drizzle/0006`: `app_public_lookup`, the one audited hole through RLS for a request
+    with no session. It authorises itself (code AND last four digits, in one predicate),
+    honours `lookup_enabled`, and returns an already-redacted document — the full name
+    never leaves the database
+  - `lookup/domain`: credential shaping (Arabic-Indic digits included), the masked-name
+    format, and the two rate-limit windows with the reasoning for each
+  - Public `/lookup` page: mobile-first, `noindex`, `force-dynamic`, and no URL that
+    could carry a student's code
+  - Teacher portal completed: earnings now list the lessons behind the total, and
+    "تغيير كود الدخول" reuses the one password-change flow every role shares
+  - 23 new unit tests, 14 new integration tests (one per attack scenario), 11 new e2e specs
 - [x] Phase 8 — payroll and reports:
   - `payroll/domain/calculate-earnings`: the money rules, exactly the signature in 10.6 —
     completed sessions only, grouped by branch and track, integer piasters throughout
@@ -131,32 +143,36 @@ Phase 8 — Payroll & reports — status: **done, verified in the running app**
 
 ## Decisions log
 
-| Date       | Decision                                                                                 | Reason                                                                                                                                                                                                                                                                                                                        |
-| ---------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-09-15 | Project lives at `F:\vscode projects\education-center`                                   | مجلد المشاريع المعتاد على جهاز المالك                                                                                                                                                                                                                                                                                         |
-| 2026-09-15 | Repository `education-center` is public on GitHub (OsamaHamad123)                        | اختيار المالك                                                                                                                                                                                                                                                                                                                 |
-| 2026-09-15 | Empty skeleton folders are kept in git via `.gitkeep`                                    | git لا يتتبع المجلدات الفارغة                                                                                                                                                                                                                                                                                                 |
-| 2026-09-15 | **TypeScript 6.0.3, not the latest 7.0.2**                                               | `typescript-eslint@8.70` requires `typescript <6.1.0`. TS 7 would cost us type-aware linting, and CLAUDE.md forbids disabling lint rules to make something pass. Revisit when typescript-eslint supports TS 7.                                                                                                                |
-| 2026-09-15 | **ESLint 9.39.5, not the latest 10.10.0**                                                | `eslint-plugin-react@7.37.5` (pulled in by `eslint-config-next`) crashes on ESLint 10: `contextOrFilename.getFilename is not a function`. Revisit when that plugin ships ESLint 10 support.                                                                                                                                   |
-| 2026-09-15 | Architecture rules enforced with `no-restricted-imports`, not `eslint-plugin-boundaries` | PROJECT_PLAN Phase 0 allows either. The native rule expresses both constraints we need in ~15 lines with zero extra dependency, and its messages are Arabic. Verified by probe files that it errors on a cross-module deep import and on `react`/`@/shared/db` inside `domain/`.                                              |
-| 2026-09-15 | `better-auth` pinned to 1.7.4 and `vitest` to 5.0.0 (not 1.7.5 / 5.0.1)                  | pnpm 12's `minimumReleaseAge` supply-chain policy rejects packages published within the last day. Keeping the policy on is worth one patch version.                                                                                                                                                                           |
-| 2026-09-15 | `exactOptionalPropertyTypes` left **off**                                                | Vendored shadcn/Radix, sonner and react-day-picker props are not written for it; patching them on every `shadcn add` would be churn. All flags PROJECT_PLAN section 4 requires are on.                                                                                                                                        |
-| 2026-09-15 | Own `cn()` from `clsx` + `tailwind-merge` instead of shadcn 4's `cn` npm package         | The package is a three-line utility; `clsx` + `tailwind-merge` are already in the stack per section 4, and one less dependency is one less supply-chain surface.                                                                                                                                                              |
-| 2026-09-15 | `/api/health` added in Phase 0 instead of Phase 10                                       | The e2e smoke test and the container healthcheck both need it, and it is six lines. Phase 10 still adds the DB ping.                                                                                                                                                                                                          |
-| 2026-09-15 | `pnpm test` passes with zero integration tests (`passWithNoTests`)                       | The integration project is empty until Phase 1 creates the schema and policies.                                                                                                                                                                                                                                               |
-| 2026-09-16 | **The conflict message is redacted in SQL, not only in TypeScript** (`drizzle/0005`)     | A branch admin must be told a teacher is busy without learning whose class or which branch. Doing the redaction in the SECURITY DEFINER function means their server process never holds the other branch's data at all; `redactConflict` in `domain/conflicts.ts` is a second, independently tested layer over the same rule. |
-| 2026-09-16 | A bell schedule that ends **exactly at 24:00 is rejected**                               | `time` columns carry no date, so 24:00 wraps to `00:00` and `end_time > start_time` fails. Found by a unit test that originally asserted the opposite.                                                                                                                                                                        |
-| 2026-09-16 | Clearing a cell **deactivates** the slot; it is never deleted                            | `class_sessions.timetable_slot_id` references it, and CLAUDE.md forbids hard deletes. Both the unique index and the exclusion constraint are `where (is_active)`, so the cell is genuinely free again.                                                                                                                        |
-| 2026-09-16 | A recompute that would collide **deactivates that slot and reports it**                  | The alternative is letting `no_teacher_overlap` abort the whole settings save with a raw `23P01`. The admin gets a list of what fell out instead of an error in English.                                                                                                                                                      |
-| 2026-09-16 | New permission `settings.read` (all three roles)                                         | Print headers need the centre's name and logo. `settings.manage` stays super-admin only because it carries policy — edit windows, alert thresholds, whether the public lookup is on.                                                                                                                                          |
-| 2026-09-16 | **Marking a register for a FUTURE day is refused**, for every role                       | Rule 10.5 describes a window for editing PAST attendance and says nothing about the future. A register for a lesson that has not happened is not a late edit, it is fiction — so it is blocked and the rule is recorded here rather than invented silently.                                                                   |
-| 2026-09-16 | The roster is the authority; a submitted student not on it is **dropped, not written**   | `attendance_records.branch_id` comes from the session, so RLS would happily accept a row for a student in another branch if the id were smuggled into the payload. `planAttendance` refuses it before the database is asked.                                                                                                  |
-| 2026-09-16 | An extra session is checked for a **time** clash, not only a period-number clash         | The unique key is `(class, date, period)`, so two sessions that overlap on the clock under different period numbers would both be accepted. A class cannot be in two lessons at once either.                                                                                                                                  |
-| 2026-09-16 | Restoring a cancelled session keeps its **original** rate                                | The rate was snapshotted when the lesson ran. Re-deriving it on restore would quietly pay today's rate for last month's lesson.                                                                                                                                                                                               |
-| 2026-09-16 | Absence alerts ignore students with fewer than **4 recorded sessions**                   | One absence out of one session is 100%, and an alert list topped by arithmetic accidents is one nobody reads. Not in rule 10.7; stated as a named constant so it is a visible policy rather than a magic number.                                                                                                              |
-| 2026-09-16 | `late` and `excused` count as ATTENDING; only `absent` counts against a student          | Rule 10.7 does not say which statuses count. A centre that counted an excused absence against a child would be answering the wrong question to the parent asking it. `attendanceRate` and `absenceRate` are exact complements, so no two screens can disagree.                                                                |
-| 2026-09-16 | The class matrix shows the **worst** status of a day, not one cell per period            | A day holds several periods. The question the grid answers is "which days did this student miss", and a row of six sub-cells per day fits on no screen.                                                                                                                                                                       |
-| 2026-09-16 | The payroll CSV is a **blob**, not a download URL                                        | It lists what people are paid. A URL is something that can be forwarded, cached or logged; the bytes are already in hand.                                                                                                                                                                                                     |
+| Date       | Decision                                                                                    | Reason                                                                                                                                                                                                                                                                                                                        |
+| ---------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-15 | Project lives at `F:\vscode projects\education-center`                                      | مجلد المشاريع المعتاد على جهاز المالك                                                                                                                                                                                                                                                                                         |
+| 2026-09-15 | Repository `education-center` is public on GitHub (OsamaHamad123)                           | اختيار المالك                                                                                                                                                                                                                                                                                                                 |
+| 2026-09-15 | Empty skeleton folders are kept in git via `.gitkeep`                                       | git لا يتتبع المجلدات الفارغة                                                                                                                                                                                                                                                                                                 |
+| 2026-09-15 | **TypeScript 6.0.3, not the latest 7.0.2**                                                  | `typescript-eslint@8.70` requires `typescript <6.1.0`. TS 7 would cost us type-aware linting, and CLAUDE.md forbids disabling lint rules to make something pass. Revisit when typescript-eslint supports TS 7.                                                                                                                |
+| 2026-09-15 | **ESLint 9.39.5, not the latest 10.10.0**                                                   | `eslint-plugin-react@7.37.5` (pulled in by `eslint-config-next`) crashes on ESLint 10: `contextOrFilename.getFilename is not a function`. Revisit when that plugin ships ESLint 10 support.                                                                                                                                   |
+| 2026-09-15 | Architecture rules enforced with `no-restricted-imports`, not `eslint-plugin-boundaries`    | PROJECT_PLAN Phase 0 allows either. The native rule expresses both constraints we need in ~15 lines with zero extra dependency, and its messages are Arabic. Verified by probe files that it errors on a cross-module deep import and on `react`/`@/shared/db` inside `domain/`.                                              |
+| 2026-09-15 | `better-auth` pinned to 1.7.4 and `vitest` to 5.0.0 (not 1.7.5 / 5.0.1)                     | pnpm 12's `minimumReleaseAge` supply-chain policy rejects packages published within the last day. Keeping the policy on is worth one patch version.                                                                                                                                                                           |
+| 2026-09-15 | `exactOptionalPropertyTypes` left **off**                                                   | Vendored shadcn/Radix, sonner and react-day-picker props are not written for it; patching them on every `shadcn add` would be churn. All flags PROJECT_PLAN section 4 requires are on.                                                                                                                                        |
+| 2026-09-15 | Own `cn()` from `clsx` + `tailwind-merge` instead of shadcn 4's `cn` npm package            | The package is a three-line utility; `clsx` + `tailwind-merge` are already in the stack per section 4, and one less dependency is one less supply-chain surface.                                                                                                                                                              |
+| 2026-09-15 | `/api/health` added in Phase 0 instead of Phase 10                                          | The e2e smoke test and the container healthcheck both need it, and it is six lines. Phase 10 still adds the DB ping.                                                                                                                                                                                                          |
+| 2026-09-15 | `pnpm test` passes with zero integration tests (`passWithNoTests`)                          | The integration project is empty until Phase 1 creates the schema and policies.                                                                                                                                                                                                                                               |
+| 2026-09-16 | **The conflict message is redacted in SQL, not only in TypeScript** (`drizzle/0005`)        | A branch admin must be told a teacher is busy without learning whose class or which branch. Doing the redaction in the SECURITY DEFINER function means their server process never holds the other branch's data at all; `redactConflict` in `domain/conflicts.ts` is a second, independently tested layer over the same rule. |
+| 2026-09-16 | A bell schedule that ends **exactly at 24:00 is rejected**                                  | `time` columns carry no date, so 24:00 wraps to `00:00` and `end_time > start_time` fails. Found by a unit test that originally asserted the opposite.                                                                                                                                                                        |
+| 2026-09-16 | Clearing a cell **deactivates** the slot; it is never deleted                               | `class_sessions.timetable_slot_id` references it, and CLAUDE.md forbids hard deletes. Both the unique index and the exclusion constraint are `where (is_active)`, so the cell is genuinely free again.                                                                                                                        |
+| 2026-09-16 | A recompute that would collide **deactivates that slot and reports it**                     | The alternative is letting `no_teacher_overlap` abort the whole settings save with a raw `23P01`. The admin gets a list of what fell out instead of an error in English.                                                                                                                                                      |
+| 2026-09-16 | New permission `settings.read` (all three roles)                                            | Print headers need the centre's name and logo. `settings.manage` stays super-admin only because it carries policy — edit windows, alert thresholds, whether the public lookup is on.                                                                                                                                          |
+| 2026-09-16 | **Marking a register for a FUTURE day is refused**, for every role                          | Rule 10.5 describes a window for editing PAST attendance and says nothing about the future. A register for a lesson that has not happened is not a late edit, it is fiction — so it is blocked and the rule is recorded here rather than invented silently.                                                                   |
+| 2026-09-16 | The roster is the authority; a submitted student not on it is **dropped, not written**      | `attendance_records.branch_id` comes from the session, so RLS would happily accept a row for a student in another branch if the id were smuggled into the payload. `planAttendance` refuses it before the database is asked.                                                                                                  |
+| 2026-09-16 | An extra session is checked for a **time** clash, not only a period-number clash            | The unique key is `(class, date, period)`, so two sessions that overlap on the clock under different period numbers would both be accepted. A class cannot be in two lessons at once either.                                                                                                                                  |
+| 2026-09-16 | Restoring a cancelled session keeps its **original** rate                                   | The rate was snapshotted when the lesson ran. Re-deriving it on restore would quietly pay today's rate for last month's lesson.                                                                                                                                                                                               |
+| 2026-09-16 | Absence alerts ignore students with fewer than **4 recorded sessions**                      | One absence out of one session is 100%, and an alert list topped by arithmetic accidents is one nobody reads. Not in rule 10.7; stated as a named constant so it is a visible policy rather than a magic number.                                                                                                              |
+| 2026-09-16 | `late` and `excused` count as ATTENDING; only `absent` counts against a student             | Rule 10.7 does not say which statuses count. A centre that counted an excused absence against a child would be answering the wrong question to the parent asking it. `attendanceRate` and `absenceRate` are exact complements, so no two screens can disagree.                                                                |
+| 2026-09-16 | The class matrix shows the **worst** status of a day, not one cell per period               | A day holds several periods. The question the grid answers is "which days did this student miss", and a row of six sub-cells per day fits on no screen.                                                                                                                                                                       |
+| 2026-09-16 | The payroll CSV is a **blob**, not a download URL                                           | It lists what people are paid. A URL is something that can be forwarded, cached or logged; the bytes are already in hand.                                                                                                                                                                                                     |
+| 2026-09-16 | **Open question 3 answered by the owner: the lookup shows the first name + family INITIAL** | Narrower than the plan's default of "first two names". The database returns the two parts separately, so the full name never reaches the application and no UI bug can leak it by forgetting to mask.                                                                                                                         |
+| 2026-09-16 | An **archived** student is not publicly reachable                                           | Rule 10.8 does not say. A departed student's record should stop being a live public answer the moment they stop attending; a parent who needs the history can ask the branch.                                                                                                                                                 |
+| 2026-09-16 | A **blocked** lookup is not recorded as an attempt                                          | Otherwise a caller who is already shut out can keep extending their own block, and — worse — can push somebody else's student code over its hourly limit by hammering it.                                                                                                                                                     |
+| 2026-09-16 | `DISABLE_RATE_LIMIT=1` now silences the LOOKUP limiter too, not just sign-in                | The whole e2e suite runs from one address, so a per-IP budget meant for the internet blocks the suite against itself after five deliberately-wrong lookups. Never set in production.                                                                                                                                          |
 
 ## Deviations from PROJECT_PLAN
 
@@ -190,6 +206,18 @@ Phase 8 — Payroll & reports — status: **done, verified in the running app**
   determined attacker gets 20 tries per 5 minutes per IP against a known username. Worth adding a
   failed-attempt counter keyed on the username before go-live, especially for 6-digit teacher codes.
 - **404 and error pages are still the English Next.js defaults.** Phase 10 replaces them.
+- **Server-side PDF generation is NOT built** (Phase 9 task list marks it "optional";
+  its acceptance line is therefore unmet and shown as ⛔ above). A `/api/pdf?path=` route
+  driving Playwright needs a Chromium binary and its font stack inside the deployment
+  image, which is a Phase 10 decision, not a Phase 9 one — and shipping a route that
+  throws in production would be worse than not shipping it. The `/print/*` pages already
+  produce correct A4 output through the browser's own "save as PDF", with Cairo embedded
+  by `next/font`; every one of them is verified in the print-media tests.
+- **The lookup limiter's end-to-end wiring is not covered by e2e**, because the suite
+  disables it (see the decision above). It is covered by unit tests on the decision and
+  integration tests on the counters, and the wiring was verified by hand against a server
+  started without the flag: five wrong lookups are answered generically, the sixth returns
+  "محاولات كثيرة. حاول بعد 15 دقيقة." and is NOT recorded.
 - **The seed's demo payroll is small but correct.** Two weeks of sessions across three branches
   come to 29,450 ج.م; a verification query, the comparison screen and the printed sheet all agree
   on it, branch by branch. Reseed for a longer period before demonstrating a term's payroll.
@@ -238,23 +266,23 @@ Phase 8 — Payroll & reports — status: **done, verified in the running app**
 
 ## Next steps
 
-Phase 9 — Teacher portal, public lookup, PDF. The first phase with a page that is **not behind
-a login**, which changes what every mistake costs.
+Phase 10 — Hardening, performance, deployment. The last phase, and the one that decides
+whether any of the above survives contact with a real server.
 
-Carrying forward:
+Carrying forward, in the order they bite:
 
-1. The public lookup (rule 10.8) takes `student_code` + the last 4 digits of the parent's phone,
-   and returns the SAME generic error for "no such student" and "wrong digits" — anything else is
-   an enumeration oracle for a code that appears on every printed timetable.
-2. Rate limit BOTH ways: per IP (5 failed attempts / 15 min) and per `student_code` (per hour).
-   `lookup_attempts` exists for exactly this and stores a HASHED ip (CLAUDE.md).
-3. It returns no phone numbers and no other student. The result page is `noindex`, uncached, and
-   has no shareable URL carrying the code.
-4. Open question 6 from section 16 is still unanswered and blocks the exact shape of the result:
-   whether the lookup shows a student's full name or only a first name and family initial.
-   Ask before building that page.
-5. The teacher portal already has today, the week and earnings; Phase 9 adds what is missing from
-   rule 10.9 and the optional Playwright PDF generation.
+1. **Per-account failed-attempt lockout** is still missing, and has been since Phase 2.
+   Today a determined attacker gets 20 sign-in tries per 5 minutes per IP against a known
+   username — and teacher access codes are six digits. This is the one outstanding item
+   that is a genuine hole rather than a rough edge.
+2. **404 and error pages are still the English Next.js defaults.** Every other string in
+   the product is Arabic.
+3. The deployment image must decide about **Chromium** — it settles both the optional PDF
+   route and whether e2e can run in CI.
+4. Open questions 4, 7, 8 and 10 from section 16 are still unanswered; 7 (academic terms)
+   is the one that would change a schema, so ask before Phase 10 closes.
+5. **The e2e suite leaves rows behind** in every seeded branch and has done since Phase 4.
+   Either a reseed step before the suite, or a cleanup after it, before this is handed over.
 
 To bring a machine up from scratch:
 

@@ -106,13 +106,17 @@ test.describe("branches", () => {
     await page.goto("/audit?entity=branch");
     await expect(visible(page, "تعديل").first()).toBeVisible();
 
-    // Leave it deactivated rather than littering the switcher for the next run.
+    // Leave it deactivated rather than littering the switcher for the next run —
+    // and tolerate finding it ALREADY deactivated, because the previous run left it
+    // that way and the branch code can only be created once.
     await page.goto("/branches");
-    await page
-      .getByRole("button", { name: `تعطيل ${renamed}` })
-      .last()
-      .click();
-    await page.getByRole("button", { name: "تعطيل", exact: true }).last().click();
+    await findInList(page, "اسم الفرع", renamed);
+
+    const deactivate = page.getByRole("button", { name: `تعطيل ${renamed}` });
+    if ((await deactivate.count()) > 0) {
+      await deactivate.last().click();
+      await page.getByRole("button", { name: "تعطيل", exact: true }).last().click();
+    }
     await expect(visible(page, "غير نشط").first()).toBeVisible();
   });
 

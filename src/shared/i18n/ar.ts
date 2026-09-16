@@ -116,6 +116,7 @@ export const ar = {
     teacherHome: "حصص اليوم",
     teacherTimetable: "جدولي",
     teacherEarnings: "مستحقاتي",
+    changeAccessCode: "تغيير كود الدخول",
   },
 
   auth: {
@@ -704,6 +705,42 @@ export const ar = {
     noAbsences: "لا غياب هذا الأسبوع.",
     branchCount: "عدد الفروع",
     payrollTotal: "إجمالي المستحقات",
+  },
+
+  lookup: {
+    title: "استعلام ولي الأمر",
+    description: "اكتب كود الطالب وآخر 4 أرقام من هاتف ولي الأمر.",
+    studentCode: "كود الطالب",
+    studentCodeHint: "مطبوع على جدول الطالب.",
+    lastFour: "آخر 4 أرقام من هاتف ولي الأمر",
+    submit: "استعلام",
+    searching: "جارٍ البحث…",
+    again: "استعلام آخر",
+
+    /** One message for every failure — see drizzle/0006. */
+    notFound: "لا توجد بيانات مطابقة. تأكد من الكود وآخر 4 أرقام.",
+    rateLimited: "محاولات كثيرة. حاول بعد",
+    minutes: "دقيقة.",
+    disabled: "خدمة الاستعلام متوقفة حالياً.",
+
+    problems: {
+      CODE_REQUIRED: "اكتب كود الطالب.",
+      CODE_MALFORMED: "صيغة كود الطالب غير صحيحة — مثال: NSR-26-00001",
+      DIGITS_REQUIRED: "اكتب 4 أرقام بالضبط.",
+    },
+
+    student: "الطالب",
+    branch: "الفرع",
+    classLabel: "الشعبة",
+    timetable: "الجدول الأسبوعي",
+    noTimetable: "لا يوجد جدول لهذه الشعبة بعد.",
+    thisMonth: "هذا الشهر",
+    thisTerm: "الفترة الحالية",
+    attendancePercent: "نسبة الحضور",
+    recorded: "حصص مسجّلة",
+    absencesTitle: "أيام الغياب والتأخير",
+    noAbsences: "لا غياب ولا تأخير مسجّل.",
+    privacyNote: "هذه الصفحة لا تُحفظ ولا تُفهرس، ولا تعرض أرقام هواتف أو بيانات طلاب آخرين.",
   },
 
   print: {

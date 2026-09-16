@@ -21,7 +21,8 @@ export type NavIconKey =
   | "payroll"
   | "reports"
   | "audit"
-  | "settings";
+  | "settings"
+  | "key";
 
 export type NavItem = {
   href: string;
@@ -62,4 +63,7 @@ export const TEACHER_NAV: NavItem[] = [
   { href: "/teacher", label: ar.nav.teacherHome, icon: "attendance" },
   { href: "/teacher/timetable", label: ar.nav.teacherTimetable, icon: "timetable" },
   { href: "/teacher/earnings", label: ar.nav.teacherEarnings, icon: "payroll" },
+  // A teacher's access code IS their password, so this is the same screen every
+  // other role uses — one flow to keep correct rather than two.
+  { href: "/change-password", label: ar.nav.changeAccessCode, icon: "key" },
 ];

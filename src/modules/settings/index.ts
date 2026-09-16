@@ -8,6 +8,7 @@ export {
   getCenterSettings,
   type CenterIdentity,
 } from "./application/queries/get-settings";
+export { getPublicCenterInfo, type PublicCenterInfo } from "./application/queries/public-info";
 export { updateCenterSettings, uploadCenterLogo } from "./application/use-cases/update-settings";
 export { updateSettingsSchema } from "./application/schemas";
 export { SettingsForm } from "./ui/settings-form";

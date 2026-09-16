@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Loader2, Upload } from "lucide-react";
@@ -14,10 +14,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/sha
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { updateCenterSettings, uploadCenterLogo } from "../application/use-cases/update-settings";
+import { useAction } from "@/shared/ui/use-action";
 
 export function SettingsForm({ settings }: { settings: CenterSettings }) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
   const [error, setError] = useState<AppError | null>(null);
   const [lookupEnabled, setLookupEnabled] = useState(settings.lookupEnabled);
   const [teacherCanMark, setTeacherCanMark] = useState(settings.teacherCanMarkAttendance);
@@ -189,7 +190,7 @@ function Toggle(props: {
 function LogoUploader({ currentPath }: { currentPath: string | null }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
 
   function onFileChosen(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];

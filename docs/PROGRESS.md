@@ -417,6 +417,25 @@ Findings 8, 9 and 10, and a fourteenth found while reading the print routes.
 
 Every finding in `docs/AUDIT-2026-09.md` is closed.
 
+## UX and state management audit — September 2026
+
+Ten findings in `docs/UX-AUDIT-2026-09.md`, four phases.
+
+### Phase A — done (2026-09-16)
+
+- **`useAction` replaces `useTransition`** in all 22 mutating components. They handled a
+  refused `Result` and not a request that never arrived, and React re-throws that into
+  the app-wide error boundary — so a dropped save replaced the whole screen and
+  everything typed into it. Verified by aborting a save in flight before and after.
+- Adoption is one line per component and no action body changed, which is why it was
+  worth doing as a hook rather than wrapping 28 call sites.
+- **The error page stopped asking for a reference number it does not have.** Only a
+  server error carries a digest; every client-side one landed on a screen telling the
+  user to report "الرقم أدناه" with no number on it.
+
+Phases B, C and D are open. B (loading feedback) is the one that decides how the product
+feels on a branch's connection.
+
 ## Next steps
 
 All ten phases are done. What is left is not a phase — it is the handover:

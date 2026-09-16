@@ -68,10 +68,21 @@ on a branch's connection, taps حفظ, the request drops — and the register is
 a full-screen error. The rollback logic that was written so carefully for a refused save
 never runs, because this is not a refused save.
 
-**Shape of the fix:** the action call is the boundary between "the server said no" and
-"the server did not answer", and only the first is being handled. A shared helper that
-catches, keeps the screen, and reports the failure — so a retry is one tap and the typed
-data is still there.
+**Fixed** (phase A). `useAction` in `shared/ui/use-action.ts` is `useTransition` with the
+missing case: it catches, the screen stays, and the failure arrives as a toast rather
+than as a new page. Adoption is one line per component —
+
+```ts
+const [isPending, startTransition] = useAction();
+```
+
+— so not one action body changed, and every existing `setError` and `toast.error` path
+still works exactly as it did. Twenty-two components, including `confirm-dialog`, which
+covers every confirm-driven action at once.
+
+The message does not say whether anything was saved. A request can reach the server,
+commit, and lose its reply on the way back, so "لم يُحفظ" would be a guess; "try again" is
+true either way.
 
 ### 2. There is no loading feedback anywhere — High
 
@@ -111,6 +122,9 @@ the experiment above reads `[error-boundary] no digest`.
 
 So the one screen a user reaches when something has gone wrong asks them for something
 that is not on it.
+
+**Fixed** (phase A): two bodies. With a digest, the text points at it; without one, it
+asks the user to say what they were doing instead.
 
 ### 5. Unsaved work can be walked away from in silence — Medium
 
@@ -172,11 +186,11 @@ almost every assertion.
 
 ## Phases
 
-### Phase A — the failure path (findings 1, 4)
+### Phase A — the failure path (findings 1, 4) — done 2026-09-16
 
-What happens when a request does not arrive. The only High that loses a user's work, and
-the smallest change: one shared helper at the action boundary, and an error page that
-either shows a reference or stops asking for one.
+`tests/e2e/failed-save.spec.ts` aborts the POST in flight and asserts what survives: the
+dialog still open with its values, the register still marked, and a toast instead of a
+new page.
 
 ### Phase B — knowing the app is working (findings 2, 3)
 

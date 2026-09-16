@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -26,6 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { createTeacher, editTeacher } from "../application/use-cases/manage-teacher";
 import type { TeacherRow } from "../application/queries/list-teachers";
 import { AccessCodeDialog } from "./access-code-dialog";
+import { useAction } from "@/shared/ui/use-action";
 
 /**
  * Super-admin only. Rates are entered in pounds and converted to piasters by the
@@ -42,7 +43,7 @@ export function TeacherFormDialog({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
   const [error, setError] = useState<AppError | null>(null);
   const [branchId, setBranchId] = useState("");
   const [code, setCode] = useState<{ phone: string; accessCode: string } | null>(null);

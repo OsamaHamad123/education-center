@@ -1,6 +1,5 @@
 "use client";
 
-import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Building2 } from "lucide-react";
 import { toast } from "sonner";
@@ -9,6 +8,7 @@ import { ar } from "@/shared/i18n/ar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { selectBranch } from "../application/use-cases/select-branch";
 import type { BranchOption } from "../application/queries/list-branches";
+import { useAction } from "@/shared/ui/use-action";
 
 /**
  * Visible only to a super admin (PROJECT_PLAN section 9). A branch admin never
@@ -23,7 +23,7 @@ export function BranchSwitcher({
   selectedBranchId: string | null;
 }) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
 
   function onChange(value: string) {
     startTransition(async () => {

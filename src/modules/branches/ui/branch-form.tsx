@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -21,6 +21,7 @@ import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { createBranch, editBranch } from "../application/use-cases/manage-branch";
 import type { BranchWithCounts } from "../application/queries/list-branches-admin";
+import { useAction } from "@/shared/ui/use-action";
 
 /**
  * Create and edit share one dialog: the fields are identical, and the only difference
@@ -35,7 +36,7 @@ export function BranchFormDialog({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
   const [error, setError] = useState<AppError | null>(null);
 
   const isEdit = Boolean(branch);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { createSubject, renameSubject } from "../application/use-cases/manage-subject";
 import type { SubjectWithUsage } from "../application/queries/list-subjects";
+import { useAction } from "@/shared/ui/use-action";
 
 export function SubjectFormDialog({
   trigger,
@@ -30,7 +31,7 @@ export function SubjectFormDialog({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
   const [error, setError] = useState<AppError | null>(null);
 
   const isEdit = Boolean(subject);

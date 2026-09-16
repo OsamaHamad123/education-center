@@ -31,7 +31,14 @@ export default function ErrorBoundary({
     <main className="flex min-h-svh flex-col items-center justify-center gap-4 p-6 text-center">
       <TriangleAlert className="size-12 text-amber-600" aria-hidden />
       <h1 className="text-2xl font-bold tracking-tight">{ar.errors.unexpectedTitle}</h1>
-      <p className="text-muted-foreground max-w-sm text-sm">{ar.errors.unexpectedBody}</p>
+      {/*
+        Two bodies, because only a SERVER error carries a digest. The one text used to
+        send everybody looking for "الرقم أدناه" on a screen that, for any client-side
+        error, has no number on it (docs/UX-AUDIT-2026-09.md, finding 4).
+      */}
+      <p className="text-muted-foreground max-w-sm text-sm">
+        {error.digest ? ar.errors.unexpectedBody : ar.errors.unexpectedBodyNoDigest}
+      </p>
 
       {error.digest ? (
         <p className="text-muted-foreground font-mono text-xs" dir="ltr">

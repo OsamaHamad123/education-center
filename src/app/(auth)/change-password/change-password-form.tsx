@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ import { readText } from "@/shared/lib/form-data";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import { useAction } from "@/shared/ui/use-action";
 
 /**
  * One call, not two. The old form changed the password in the browser and then asked
@@ -19,7 +20,7 @@ import { Label } from "@/shared/ui/label";
  */
 export function ChangePasswordForm() {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
   const [error, setError] = useState<string | null>(null);
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {

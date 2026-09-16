@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Archive, ArrowLeftRight, Loader2, RotateCcw, Shuffle } from "lucide-react";
 import { toast } from "sonner";
@@ -28,6 +28,7 @@ import {
   restoreStudent,
   transferStudentBranch,
 } from "../application/use-cases/manage-student";
+import { useAction } from "@/shared/ui/use-action";
 
 type Common = {
   studentId: string;
@@ -71,7 +72,7 @@ export function TransferBranchDialog({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
   const [error, setError] = useState<string | null>(null);
   const [branchId, setBranchId] = useState("");
   const [classId, setClassId] = useState("");
@@ -187,7 +188,7 @@ export function TransferBranchDialog({
 export function ArchiveStudentDialog({ studentId }: { studentId: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
   const [error, setError] = useState<string | null>(null);
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -299,7 +300,7 @@ function TransitionDialog({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
   const [error, setError] = useState<string | null>(null);
   const [classId, setClassId] = useState("");
 

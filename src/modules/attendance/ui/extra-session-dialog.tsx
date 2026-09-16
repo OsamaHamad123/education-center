@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -21,6 +21,7 @@ import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { createExtraSession } from "../application/use-cases/manage-session";
+import { useAction } from "@/shared/ui/use-action";
 
 /**
  * A lesson that was never on the weekly plan — a make-up or a revision session
@@ -42,7 +43,7 @@ export function ExtraSessionDialog({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
   const [error, setError] = useState<AppError | null>(null);
   const [teacherId, setTeacherId] = useState("");
   const [subjectId, setSubjectId] = useState("");

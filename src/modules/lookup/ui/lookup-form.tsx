@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { Loader2, Search } from "lucide-react";
 import { ar, weekdayName } from "@/shared/i18n/ar";
 import { readText } from "@/shared/lib/form-data";
@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { lookupStudent, type LookupResult } from "../application/use-cases/lookup-student";
+import { useAction } from "@/shared/ui/use-action";
 
 /**
  * The public lookup (PROJECT_PLAN 10.8), built for a parent on a phone.
@@ -22,7 +23,7 @@ import { lookupStudent, type LookupResult } from "../application/use-cases/looku
  * parent and the centre.
  */
 export function LookupForm() {
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
   const [error, setError] = useState<AppError | null>(null);
   const [result, setResult] = useState<LookupResult | null>(null);
 

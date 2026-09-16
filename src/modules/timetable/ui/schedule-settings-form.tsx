@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ import {
   type ScheduleSaveReport,
 } from "../application/use-cases/manage-schedule-settings";
 import type { TrackSchedule } from "../application/queries/get-schedule-settings";
+import { useAction } from "@/shared/ui/use-action";
 
 /**
  * The bell schedule, one tab per track (PROJECT_PLAN 7.10).
@@ -51,7 +52,7 @@ export function ScheduleSettingsForm({ schedules }: { schedules: TrackSchedule[]
 
 function TrackForm({ schedule }: { schedule: TrackSchedule }) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
   const [error, setError] = useState<AppError | null>(null);
   const [report, setReport] = useState<ScheduleSaveReport | null>(null);
 

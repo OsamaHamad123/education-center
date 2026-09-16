@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { signIn } from "@/shared/auth/client";
@@ -13,6 +13,7 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
+import { useAction } from "@/shared/ui/use-action";
 
 /**
  * One form, two tabs (PROJECT_PLAN section 9): an admin signs in with a username, a
@@ -23,7 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 export function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
   const [error, setError] = useState<string | null>(null);
 
   function submit(rawUsername: string, password: string, isTeacher: boolean) {

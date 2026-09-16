@@ -12,6 +12,8 @@ export type AppErrorCode =
   | "CONFLICT"
   | "BRANCH_REQUIRED"
   | "RATE_LIMITED"
+  /** The request never reached the server, or its answer never came back. */
+  | "NETWORK"
   | "INTERNAL";
 
 export type AppError = {

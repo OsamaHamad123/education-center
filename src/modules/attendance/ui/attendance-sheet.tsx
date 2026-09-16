@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, CheckCheck, Loader2, MessageSquarePlus, Printer } from "lucide-react";
@@ -23,6 +23,7 @@ import { Label } from "@/shared/ui/label";
 import { nextStatus, summarize, type AttendanceStatus } from "../domain/roster";
 import type { AttendanceSheet } from "../application/queries/get-attendance-board";
 import { saveAttendance } from "../application/use-cases/save-attendance";
+import { useAction } from "@/shared/ui/use-action";
 
 /**
  * The register (PROJECT_PLAN 10.5, section 12).
@@ -38,7 +39,7 @@ type Marks = Record<string, { status: AttendanceStatus; notes: string | null }>;
 
 export function AttendanceSheetView({ sheet, backHref }: { sheet: AttendanceSheet; backHref: string }) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
   const [noteFor, setNoteFor] = useState<string | null>(null);
 
   const initial = useMemo(

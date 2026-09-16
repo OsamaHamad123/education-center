@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Link2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ import {
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { linkTeacherByPhone } from "../application/use-cases/manage-teacher";
+import { useAction } from "@/shared/ui/use-action";
 
 /**
  * How a branch admin adds a teacher: by their full phone number. They cannot browse
@@ -27,7 +28,7 @@ import { linkTeacherByPhone } from "../application/use-cases/manage-teacher";
 export function LinkTeacherDialog() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
   const [error, setError] = useState<string | null>(null);
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ import { Label } from "@/shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { copyTimetable, type CopyResult } from "../application/use-cases/manage-slot";
 import type { ClassPickerOption } from "../application/queries/get-class-timetable";
+import { useAction } from "@/shared/ui/use-action";
 
 /**
  * Copying another class's week. The result is deliberately a REPORT, not a toast:
@@ -35,7 +36,7 @@ export function CopyTimetableDialog({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
   const [error, setError] = useState<AppError | null>(null);
   const [sourceClassId, setSourceClassId] = useState("");
   const [report, setReport] = useState<CopyResult | null>(null);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -21,11 +21,12 @@ import { Label } from "@/shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { createClass, editClass } from "../application/use-cases/manage-class";
 import type { ClassWithCounts } from "../application/queries/list-classes";
+import { useAction } from "@/shared/ui/use-action";
 
 export function ClassFormDialog({ trigger, klass }: { trigger: React.ReactNode; klass?: ClassWithCounts }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
   const [error, setError] = useState<AppError | null>(null);
   const [track, setTrack] = useState<string>(klass?.track ?? "scientific");
   const [gender, setGender] = useState<string>(klass?.gender ?? "mixed");

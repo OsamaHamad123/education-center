@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { clearSlot, setSlot } from "../application/use-cases/manage-slot";
 import type { GridCell } from "../application/queries/get-class-timetable";
 import type { SubjectOption, TeacherOption } from "../infrastructure/timetable.repository";
+import { useAction } from "@/shared/ui/use-action";
 
 export type CellTarget = {
   dayOfWeek: number;
@@ -83,7 +84,7 @@ function SlotForm({
   onClose: () => void;
 }) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
   const [error, setError] = useState<AppError | null>(null);
   const [subjectId, setSubjectId] = useState(target.cell?.subjectId ?? "");
   const [teacherId, setTeacherId] = useState(target.cell?.teacherId ?? "");

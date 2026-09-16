@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { ar } from "@/shared/i18n/ar";
@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/shared/ui/dialog";
+import { useAction } from "./use-action";
 
 /**
  * Confirmation for a state change that is awkward to undo — deactivating a branch,
@@ -39,7 +40,7 @@ export function ConfirmDialog({
   successMessage: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
 
   function confirm() {
     startTransition(async () => {

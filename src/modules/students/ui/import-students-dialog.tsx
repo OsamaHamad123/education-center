@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
@@ -22,6 +22,7 @@ import {
   previewStudentImport,
   type ImportPreview,
 } from "../application/use-cases/import-students";
+import { useAction } from "@/shared/ui/use-action";
 
 /**
  * Two steps, deliberately: choose a file and SEE what will happen, then commit.
@@ -30,7 +31,7 @@ import {
 export function ImportStudentsDialog() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);

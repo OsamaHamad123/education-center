@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -16,6 +16,7 @@ import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { createStudent, editStudent } from "../application/use-cases/manage-student";
+import { useAction } from "@/shared/ui/use-action";
 
 /**
  * One form for enrolling and for editing. Class and join date appear only when
@@ -24,7 +25,7 @@ import { createStudent, editStudent } from "../application/use-cases/manage-stud
  */
 export function StudentForm({ classes, student }: { classes: ClassOption[]; student?: Student }) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
   const [error, setError] = useState<AppError | null>(null);
   const [classId, setClassId] = useState(student?.classId ?? classes[0]?.id ?? "");
   const formRef = useRef<HTMLFormElement>(null);

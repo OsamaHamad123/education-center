@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -22,6 +22,7 @@ import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { createBranchAdmin } from "../application/use-cases/manage-branch-admin";
+import { useAction } from "@/shared/ui/use-action";
 
 /**
  * Two steps in one dialog: the form, then the temporary password.
@@ -38,7 +39,7 @@ export function CreateBranchAdminDialog({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
   const [error, setError] = useState<AppError | null>(null);
   const [branchId, setBranchId] = useState("");
   const [created, setCreated] = useState<{ username: string; temporaryPassword: string } | null>(null);

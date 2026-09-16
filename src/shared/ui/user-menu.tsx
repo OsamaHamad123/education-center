@@ -1,6 +1,5 @@
 "use client";
 
-import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { LogOut, UserRound } from "lucide-react";
 import { signOut } from "@/shared/auth/client";
@@ -15,10 +14,11 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
 import { recordLogout } from "./record-logout";
+import { useAction } from "./use-action";
 
 export function UserMenu({ name, roleLabel }: { name: string; roleLabel: string }) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
 
   function logout() {
     startTransition(async () => {

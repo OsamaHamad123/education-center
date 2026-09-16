@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { Ban, Loader2, RotateCcw, UserCog } from "lucide-react";
 import { toast } from "sonner";
 import { ar } from "@/shared/i18n/ar";
@@ -27,6 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { AppColumnDef } from "@/shared/ui/table-hook";
 import type { SessionLogRow } from "../application/queries/list-sessions";
 import { cancelSession, restoreSession, setSubstituteTeacher } from "../application/use-cases/manage-session";
+import { useAction } from "@/shared/ui/use-action";
 
 /**
  * The sessions log (`/attendance/sessions`). What actually ran, and the three things
@@ -220,7 +221,7 @@ function RowActions({
 
 function CancelSessionButton({ row, onDone }: { row: SessionLogRow; onDone: () => void }) {
   const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
   const [error, setError] = useState<AppError | null>(null);
   const [reason, setReason] = useState("");
 
@@ -297,7 +298,7 @@ function SubstituteDialog({
   onClose: () => void;
   onDone: () => void;
 }) {
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useAction();
   const [error, setError] = useState<AppError | null>(null);
   const [teacherId, setTeacherId] = useState("");
 

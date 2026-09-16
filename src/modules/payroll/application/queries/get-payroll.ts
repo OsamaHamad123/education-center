@@ -3,6 +3,7 @@ import { withTenant } from "@/shared/db/with-tenant";
 import { ar } from "@/shared/i18n/ar";
 import { err, ok, type Result } from "@/shared/lib/result";
 import { todayInCairo } from "@/shared/lib/time";
+import { readDateRange, uuidParam } from "@/shared/lib/url-filters";
 import type { BranchEarnings, Earnings } from "../../domain/calculate-earnings";
 import {
   aggregateEarnings,
@@ -57,20 +58,25 @@ export async function getPayrollReport(input: {
   const auth = await requirePermission("payroll.read");
   if (!auth.ok) return auth;
 
+  // Parsed, not trusted: this comes from a query string, and an unusable value is
+  // treated as an absent one (docs/AUDIT-2026-09.md, findings 1 and 2). `?from=abc`
+  // and `?teacherId=not-a-uuid` both used to reach Postgres and surface as a 500.
+  const requested = readDateRange(input);
   const today = todayInCairo();
-  const from = input.from ?? startOfMonth(today);
-  const to = input.to ?? today;
+  const from = requested.from ?? startOfMonth(today);
+  const to = requested.to ?? today;
   if (from > to) return err("VALIDATION_ERROR", ar.payroll.rangeBackwards);
 
+  const teacherId = uuidParam.parse(input.teacherId);
   // A branch admin's own branch is not a "filter" they chose — it is their scope, and
   // passing it explicitly would imply they could pass a different one.
-  const branchId = auth.data.role === "super_admin" ? input.branchId : undefined;
+  const branchId = auth.data.role === "super_admin" ? uuidParam.parse(input.branchId) : undefined;
 
   return withTenant(auth.data, async (tx) => {
     const groups = await aggregateEarnings(auth.data, tx, {
       from,
       to,
-      teacherId: input.teacherId,
+      teacherId,
       branchId,
     });
 
@@ -79,7 +85,7 @@ export async function getPayrollReport(input: {
     return ok({
       from,
       to,
-      teacherId: input.teacherId ?? null,
+      teacherId: teacherId ?? null,
       branchId: branchId ?? null,
       teachers,
       totalSessions: teachers.reduce((total, t) => total + t.earnings.sessions, 0),
@@ -103,20 +109,27 @@ const DRILL_DOWN_LIMIT = 500;
 
 export async function getPayrollSessions(input: {
   teacherId: string;
-  from: string;
-  to: string;
+  from?: string | undefined;
+  to?: string | undefined;
   branchId?: string | undefined;
 }): Promise<Result<PayrollDrillDown>> {
   const auth = await requirePermission("payroll.read");
   if (!auth.ok) return auth;
 
-  const branchId = auth.data.role === "super_admin" ? input.branchId : undefined;
+  const branchId = auth.data.role === "super_admin" ? uuidParam.parse(input.branchId) : undefined;
+
+  // The teacher id is a path segment the page has already validated; the range is a
+  // query string, so it gets the same treatment as everywhere else.
+  const requested = readDateRange(input);
+  const today = todayInCairo();
+  const from = requested.from ?? startOfMonth(today);
+  const to = requested.to ?? today;
 
   return withTenant(auth.data, async (tx) => {
     const sessions = await listPaidSessions(
       auth.data,
       tx,
-      { from: input.from, to: input.to, teacherId: input.teacherId, branchId },
+      { from, to, teacherId: input.teacherId, branchId },
       DRILL_DOWN_LIMIT + 1,
     );
 
@@ -125,8 +138,8 @@ export async function getPayrollSessions(input: {
 
     return ok({
       teacherName: teacher.fullName,
-      from: input.from,
-      to: input.to,
+      from,
+      to,
       sessions: sessions.slice(0, DRILL_DOWN_LIMIT),
       truncated: sessions.length > DRILL_DOWN_LIMIT,
     });

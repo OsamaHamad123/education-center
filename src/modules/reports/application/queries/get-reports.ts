@@ -4,6 +4,7 @@ import { ar } from "@/shared/i18n/ar";
 import { err, ok, type Result } from "@/shared/lib/result";
 import { maskPhone, whatsAppLink } from "@/shared/lib/phone";
 import { isoDayOfWeek, todayInCairo } from "@/shared/lib/time";
+import { readDateRange, uuidParam } from "@/shared/lib/url-filters";
 import {
   absenceAlerts,
   absenceRate,
@@ -43,9 +44,22 @@ function defaultRange(): DateRange {
   return { from: `${today.slice(0, 7)}-01`, to: today };
 }
 
+/**
+ * The range these screens will actually report on.
+ *
+ * The input is a query string, so it is parsed rather than trusted: an unusable date
+ * becomes an absent one and the default fills in (docs/AUDIT-2026-09.md, finding 1).
+ * It used to be passed straight to a `date` comparison, and `?from=abc` was a 500.
+ */
 function resolveRange(input: { from?: string | undefined; to?: string | undefined }): DateRange {
   const fallback = defaultRange();
-  return { from: input.from ?? fallback.from, to: input.to ?? fallback.to };
+  const parsed = readDateRange(input);
+  return { from: parsed.from ?? fallback.from, to: parsed.to ?? fallback.to };
+}
+
+/** Same reasoning for the class filter: a malformed id is no filter, not a crash. */
+function resolveClassId(input: { classId?: string | undefined }): string | undefined {
+  return uuidParam.parse(input.classId);
 }
 
 // --- student attendance -------------------------------------------------------
@@ -75,13 +89,14 @@ export async function getStudentAttendanceReport(input: {
 
   const range = resolveRange(input);
   if (range.from > range.to) return err("VALIDATION_ERROR", ar.payroll.rangeBackwards);
+  const classId = resolveClassId(input);
 
   return withTenant(auth.data, async (tx) => {
-    const rows = await countByStudent(auth.data, tx, range, input.classId);
+    const rows = await countByStudent(auth.data, tx, range, classId);
 
     return ok({
       range,
-      classId: input.classId ?? null,
+      classId: classId ?? null,
       classes: await listReportClasses(auth.data, tx, branchId),
       rows: rows.map(withRates),
     });
@@ -114,7 +129,9 @@ export async function getClassMatrixReport(input: {
 
   return withTenant(auth.data, async (tx) => {
     const classes = await listReportClasses(auth.data, tx, branchId);
-    const classId = input.classId ?? classes[0]?.id;
+    // A malformed id falls back to the first class the viewer can see, exactly as an
+    // absent one does. RLS still decides whether a WELL-formed id is theirs.
+    const classId = resolveClassId(input) ?? classes[0]?.id;
     if (!classId) return ok({ range, classId: null, classes, columns: [], students: [], cells: {} });
 
     const [matrix, students] = await Promise.all([

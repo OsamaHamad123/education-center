@@ -51,6 +51,24 @@ export function parseIsoDate(date: IsoDate): Date {
   return parsed;
 }
 
+/**
+ * Whether a string is a real calendar day, without throwing (docs/AUDIT-2026-09.md,
+ * finding 1).
+ *
+ * The shape is not enough: `2026-02-31` and `2026-13-01` both match the obvious regex
+ * and both make Postgres raise on the cast, which is how a query string became a 500.
+ * `parseIsoDate` rejects them because date-fns checks that the parts round-trip.
+ */
+export function isIsoDate(value: unknown): value is IsoDate {
+  if (typeof value !== "string") return false;
+  try {
+    parseIsoDate(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Formats a calendar day for display: `dd/MM/yyyy` (PROJECT_PLAN section 12). */
 export function formatDisplayDate(date: IsoDate): string {
   return format(parseIsoDate(date), "dd/MM/yyyy");

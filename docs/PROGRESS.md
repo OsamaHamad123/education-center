@@ -338,7 +338,27 @@ Findings 3, 4 and 5 are fixed, and a twelfth was found while fixing the third.
 `tests/e2e/password-change.spec.ts` walks a brand-new admin from a temporary password
 to a working account, and asserts at every refusal that it is the server refusing.
 
-Phases B–E are still open.
+### Phase B — done (2026-09-16)
+
+Findings 1 and 2, on the report and payroll screens.
+
+- **`shared/lib/url-filters.ts`** parses what arrives in a query string: `dateParam`,
+  `uuidParam`, `readDateRange`. Every field has `.catch()`, so an unusable value is
+  treated as an absent one and the screen renders its default range.
+- **The date check is `isIsoDate`, not a regex.** `2026-02-31` and `2026-13-01` both
+  match `\d{4}-\d{2}-\d{2}` and both make Postgres raise — which is how a shape check
+  would have left half the bug in place.
+- **The QUERIES parse, not the pages.** `/print/payroll` passes its whole query string
+  through untouched, so fixing `getPayrollReport` fixed the print sheet too. One place
+  decides what `?from=abc` means.
+- **Half a range still survives.** `?to=2026-09-10` with no `from` has always been a
+  real request; only the unusable half falls back.
+- **A shape check is not an ownership check.** A well-formed id from another branch is
+  still a 404, and `report-filters.spec.ts` asserts it — a fix for a crash must not
+  quietly widen what a viewer can see.
+
+Phases C–E are still open. The attendance screens still answer 500 on
+`?date=not-a-date`; that is phase C.
 
 ## Next steps
 

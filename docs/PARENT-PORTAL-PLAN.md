@@ -1,0 +1,249 @@
+# Parent & student portal — a plan
+
+Written September 2026, after the security, UX and product reviews. It is a plan, not a
+decision: section 1 is the part that has to be settled before any of the rest is worth
+estimating.
+
+---
+
+## 0. Start from what already exists
+
+`/lookup` is not a placeholder. Today, with no account and no session, it already
+returns:
+
+- the student's name, masked to first name + family initial;
+- their branch and class;
+- their **whole weekly timetable**;
+- attendance for the month and for the term, as counts and a percentage;
+- **every absence and late, with the date, the subject, and the teacher's note.**
+
+That is most of what a parent portal shows. So the honest question is not "how do we
+build a portal" but:
+
+> **What does a parent get from an account that they do not get from the lookup?**
+
+There are only four real answers, and they are the whole plan:
+
+| What an account adds                     | Exists today? |
+| ---------------------------------------- | ------------- |
+| Not re-typing a code every time          | no            |
+| All of my children on one screen         | no            |
+| Being **told**, instead of going to look | no            |
+| Things the product does not have yet     | —             |
+
+The fourth is the important one. A parent's two most common questions after "was my
+child there" are **"what do I owe"** and **"how is he doing"**, and this product has
+neither fees nor grades. A portal that cannot answer them is a nicer lookup, and should
+be scoped as one.
+
+---
+
+## 1. Four decisions, before anything is built
+
+### Q1 — Portal, or a better lookup?
+
+If the answer to "what does an account add" is only the first two rows of that table,
+this is **two weeks**, not two months: phases 1–3 below and nothing else. If it is meant
+to carry fees and messages, it is a product of its own and the fee decision has to come
+first.
+
+**My recommendation:** build phases 1–3 and stop. Add phase 4 when there is something
+worth telling parents; add phase 5 only after fees exist in the admin product.
+
+### Q2 — How does a parent prove who they are?
+
+Three options, and this is the one that decides everything else.
+
+**A. Stay anonymous (today).** Code + last four digits, every visit. Cheapest, no
+accounts to support, no passwords to reset. Already built and already hardened.
+
+**B. A one-time code by WhatsApp or SMS.** The parent types their phone; a six-digit
+code arrives; a signed cookie lasts thirty days. **No passwords anywhere.** Costs money
+per message and needs a provider — and §16 question 8 (automatic messaging) is still
+unanswered, so this decision and that one are the same decision.
+
+**C. Usernames and passwords for parents.** Do not. Five hundred parents with passwords
+means the branch office becomes a helpdesk, and the first thing they will all ask is to
+have it reset over the phone — which is a worse authentication path than the one you
+replaced.
+
+**My recommendation: B, and treat it as gated on the messaging decision.** Until that is
+made, A is not a stopgap; it is a defensible product.
+
+### Q3 — Is the user the parent or the student?
+
+They want different things. A parent wants attendance, money and the centre's phone
+number. A student wants their timetable and what they missed.
+
+The credential settles it: the portal is keyed on the **parent's phone**, so it is the
+parent's portal, and a student who wants their timetable can keep using the lookup.
+Deciding otherwise means a second credential per student and doubles phase 1.
+
+### Q4 — Who answers the phone when it does not work?
+
+Not a technical question, and it kills more portals than any technical one. Five hundred
+families is five hundred people who can be locked out on a Saturday morning. Option B
+above exists mainly to make this answer "nobody has to" — there is nothing to reset.
+
+---
+
+## 2. Where it must NOT go: a fourth role
+
+The tempting design is a `parent` role in `user_role`, with RLS policies scoped to a
+student. **Do not.**
+
+Every tenant policy in this product is written as a positive allowance keyed on
+`app_role()` and `app_branch_id()`. A parent's scope is neither: it is one student, which
+is a new dimension that would need a new setting, new policies on five tables, and a
+re-audit of all of them. That is the largest possible change to the part of the system
+that the whole security review rests on.
+
+**The pattern to extend is the one already here.** `app_public_lookup` is a
+`SECURITY DEFINER` function that takes a credential and returns exactly one payload. It
+never grants the caller a tenant context; the function itself is the boundary, and it is
+auditable in one file.
+
+A portal should be more of those: `app_portal_children(phone_hash)`,
+`app_portal_attendance(student_id, from, to)`. Narrow, audited, and reviewable the same
+way — and the answer to "can a parent see another child" stays "read this one function",
+not "read forty policies".
+
+---
+
+## 3. The phases
+
+Each has acceptance criteria in the style of PROJECT_PLAN section 14, so they can be
+worked the way the ten phases before them were.
+
+### Phase P1 — identity without accounts
+
+**Goal:** a parent proves the phone is theirs once, and stays in for thirty days.
+
+- `portal_otp` table: phone hash, code hash, expiry, attempts, created_at. Never the
+  plain code, never the plain phone.
+- A code is six digits, valid for ten minutes, **five attempts** then dead — and a new
+  code invalidates the old one.
+- Rate limits keyed two ways, as the lookup already does: per phone and per IP. An
+  attacker who knows a phone number must not be able to grind codes, and an attacker who
+  knows none must not be able to enumerate which phones exist.
+- **The reply is identical for a phone that exists and one that does not.** "If this
+  number is registered, a code has been sent." Anything else is a way to test whether a
+  family attends this centre.
+- A signed, `httpOnly`, `sameSite=lax` session cookie on success. Not a Better Auth
+  user: no row in `user`, no role, no tenant context.
+- Every issue and every redemption in `audit_logs`, with the phone hashed.
+
+**Done when:** an integration test proves a code cannot be reused, cannot be brute-forced
+past five tries, and that a wrong phone and a right phone are indistinguishable from the
+outside.
+
+### Phase P2 — the shell, and several children
+
+**Goal:** one parent, all their children, on a phone.
+
+- `/portal` with its own layout — no admin chrome, RTL, mobile first, 44px targets.
+- `app_portal_children(phone_hash)` returns every **active** student whose
+  `parent_phone` matches. Siblings come free: the model already allows two students to
+  share a number.
+- A child switcher when there is more than one, and no switcher at all when there is one.
+- Names are **not** masked here. Masking exists because the lookup is anonymous; a parent
+  who has proved the phone has earned their own child's name — and that is a decision to
+  record, not to infer.
+
+**Done when:** a parent with two children sees both, a parent with one sees no switcher,
+and a student who has left the centre is not listed.
+
+### Phase P3 — attendance, properly
+
+**Goal:** everything the lookup shows, plus the things it cannot.
+
+- The month, the term, and **an arbitrary range** — the lookup cannot do this and it is
+  the first thing a parent asks in October about September.
+- Each absence with date, subject, teacher's note.
+- A printable record for the year — the A4 sheet already exists as a pattern in
+  `/print/*`.
+- The centre's phone and branch address on every screen, because the next action after
+  reading a bad number is to ring somebody.
+
+**Done when:** the portal answers every question the lookup answers, plus a custom range,
+and the print sheet is one page for a term.
+
+> **Stop here unless Q1 says otherwise.** P1–P3 is the whole portal for a centre that
+> tracks attendance. What follows needs decisions that have not been made.
+
+### Phase P4 — being told, not asking
+
+**Goal:** the parent hears about an absence on the day, not at the end of the month.
+
+- Depends entirely on Q2/B and on §16 question 8. Without a messaging provider this
+  phase does not exist.
+- A message per absence is wrong — one child, six periods, six messages. **One message a
+  day, after the last period**, naming the periods missed.
+- An opt-out that works, and is honoured, and is tested.
+- Templates, not free text (this is also the cheapest answer to §16 q8 — see the product
+  review).
+
+**Done when:** a day with three absences produces one message, an opted-out parent
+produces none, and a failed send is visible to the office rather than silent.
+
+### Phase P5 — money
+
+**Goal:** "what do I owe" — and it cannot be built until the admin product can answer it.
+
+Blocked on the fee question raised in the earlier review: the system tracks what is paid
+**to teachers** and nothing about what is collected **from students**. Until fees, an
+invoice and a payment exist for the office, there is nothing for a parent to look at.
+
+Scope when unblocked: outstanding balance, what it is for, what has been paid, and a
+receipt. **Not** online payment — that is a different product, a different risk, and a
+different conversation.
+
+### Phase P6 — hardening the new front door
+
+**Goal:** treat the portal as what it is: the first authenticated surface in this product
+that is not staff.
+
+- Its own rate limits, separate from the lookup's, on a separate key.
+- Enumeration review: every reply that differs between "exists" and "does not" is a bug.
+- Session review: length, revocation, what happens when a student transfers or leaves.
+- A security pass in the style of `docs/SECURITY-REVIEW.md`, written the same way —
+  every finding says what an attacker gains.
+- The CSP, the headers and the lockout already apply; the review confirms it rather than
+  assuming it.
+
+### Phase P7 — rollout
+
+**Goal:** five hundred families arriving at once, deliberately.
+
+- The centre's own staff first, with their own children if they have any.
+- One branch, one month.
+- A printed card: the URL, what it does, and the office's number when it does not.
+- A switch in centre settings to turn the whole portal off without a deploy —
+  `lookup_enabled` already exists and is the precedent.
+
+---
+
+## 4. What I would do
+
+**If the messaging decision is made and funded:** P1 → P2 → P3 → P4. That is a portal
+worth the name, and the notification in P4 is the only part parents will actually notice
+day to day.
+
+**If it is not:** do not build P1 at all yet. Spend the same two weeks on the lookup —
+a custom date range, the centre's phone on the page, and a printable record — and the
+parent gets 80% of the portal with no account, no OTP cost, no helpdesk, and no new
+authenticated surface to defend.
+
+That is the recommendation I would argue for: **the cheapest version of this that is
+still useful is not a portal.**
+
+---
+
+## 5. What this plan deliberately leaves out
+
+- **Grades and exams.** Not in the product, and a portal is not where to add them.
+- **Chat between parent and teacher.** A moderation problem wearing a feature's clothes.
+- **A mobile app.** The portal is three screens; a phone browser is the right client.
+- **Parent-initiated anything** — corrections, absence excuses, enrolment. Every one of
+  them is a write path from outside the building, and each needs its own review. The
+  portal as planned is **read-only**, and that is a feature.

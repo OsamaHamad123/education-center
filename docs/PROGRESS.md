@@ -357,8 +357,24 @@ Findings 1 and 2, on the report and payroll screens.
   still a 404, and `report-filters.spec.ts` asserts it — a fix for a crash must not
   quietly widen what a viewer can see.
 
-Phases C–E are still open. The attendance screens still answer 500 on
-`?date=not-a-date`; that is phase C.
+### Phase C — done (2026-09-16)
+
+The rest of findings 1 and 2, on the screens used every day.
+
+- **The board opens on today** when its date is unusable, and the sessions log falls
+  back to its fortnight. `?date=not-a-date` used to reach `isoDayOfWeek`, which throws
+  before a query is even built.
+- **`/attendance/mark` answers 404 instead**, and that difference is the point: it is
+  the screen you WRITE on, and silently opening a register for a day nobody asked for
+  is worse than an error page, because the next tap marks it.
+- **The class redirect no longer carries the bad date.** An unknown class redirects to
+  the first one, and that URL was built from the raw `date`, so the crash just moved to
+  the next request.
+- The `status` filter on the sessions log already dropped a typo rather than refusing
+  it, with the reasoning written at the call site — "it is a URL, and a typo in one
+  should not be an error page". The dates and the ids now agree with it.
+
+Phases D and E are still open.
 
 ## Next steps
 

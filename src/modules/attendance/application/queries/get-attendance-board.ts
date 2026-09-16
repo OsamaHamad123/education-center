@@ -4,7 +4,7 @@ import type { Tx } from "@/shared/db/client";
 import { withTenant } from "@/shared/db/with-tenant";
 import { ar } from "@/shared/i18n/ar";
 import { err, ok, type Result } from "@/shared/lib/result";
-import { isoDayOfWeek, todayInCairo } from "@/shared/lib/time";
+import { isIsoDate, isoDayOfWeek, todayInCairo } from "@/shared/lib/time";
 import { canMarkAttendance, type MarkingViolation } from "../../domain/edit-window";
 import { rosterFor, summarize, type AttendanceStatus } from "../../domain/roster";
 import {
@@ -68,12 +68,19 @@ export async function listAttendanceClasses(): Promise<Result<{ id: string; name
 
 export async function getAttendanceBoard(input: {
   classId: string;
-  sessionDate: string;
+  sessionDate?: string | undefined;
 }): Promise<Result<AttendanceBoard>> {
   const auth = await requirePermission("attendance.read");
   if (!auth.ok) return auth;
   const branchId = auth.data.branchId;
   if (!branchId) return err("BRANCH_REQUIRED", ar.errors.BRANCH_REQUIRED);
+
+  // The board is a read-only overview, so an unusable date behaves like an absent one
+  // and it opens on today (docs/AUDIT-2026-09.md, finding 1). `?date=not-a-date` used
+  // to reach `isoDayOfWeek`, which throws before a query is even built.
+  //
+  // `/attendance/mark` deliberately does NOT do this: see the note there.
+  const sessionDate = isIsoDate(input.sessionDate) ? input.sessionDate : todayInCairo();
 
   return withTenant(auth.data, async (tx) => {
     const classRef = await findClassRef(auth.data, tx, input.classId);
@@ -84,8 +91,8 @@ export async function getAttendanceBoard(input: {
     const policy = await loadMarkingPolicy(auth.data, tx);
 
     const [slots, sessions, enrollments] = await Promise.all([
-      listDayPeriods(auth.data, tx, input.classId, isoDayOfWeek(input.sessionDate)),
-      listSessionsForDay(auth.data, tx, input.classId, input.sessionDate),
+      listDayPeriods(auth.data, tx, input.classId, isoDayOfWeek(sessionDate)),
+      listSessionsForDay(auth.data, tx, input.classId, sessionDate),
       listEnrollmentPeriods(auth.data, tx, input.classId),
     ]);
 
@@ -114,13 +121,13 @@ export async function getAttendanceBoard(input: {
     return ok({
       classRef,
       classes: await listClassOptions(auth.data, tx, branchId),
-      sessionDate: input.sessionDate,
+      sessionDate,
       today,
       periods,
-      rosterSize: rosterFor(enrollments, input.classId, input.sessionDate).size,
+      rosterSize: rosterFor(enrollments, input.classId, sessionDate).size,
       blockedBy: canMarkAttendance({
         role: auth.data.role,
-        sessionDate: input.sessionDate,
+        sessionDate,
         today,
         ...policy,
       }),

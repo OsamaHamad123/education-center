@@ -3,6 +3,7 @@ import { withTenant } from "@/shared/db/with-tenant";
 import type { SessionStatus } from "@/shared/db/schema";
 import { ok, type Result } from "@/shared/lib/result";
 import { todayInCairo } from "@/shared/lib/time";
+import { readDateRange, uuidParam } from "@/shared/lib/url-filters";
 import {
   countMarksBySession,
   listClassOptions,
@@ -51,10 +52,18 @@ export async function getSessionLog(input: {
   const auth = await requirePermission("attendance.read");
   if (!auth.ok) return auth;
 
+  // The `status` filter above the caller has always dropped a typo rather than
+  // refusing it, for the reason written at the call site: it is a URL, and a typo in
+  // one should not be an error page. The dates and the ids now agree with it
+  // (docs/AUDIT-2026-09.md, findings 1 and 2) — they used to reach Postgres and turn
+  // `?from=abc` into a 500.
+  const requested = readDateRange(input);
   const today = todayInCairo();
   // A fortnight is the window an admin actually works in; anything wider is a report.
-  const from = input.from ?? shiftDays(today, -14);
-  const to = input.to ?? today;
+  const from = requested.from ?? shiftDays(today, -14);
+  const to = requested.to ?? today;
+  const classId = uuidParam.parse(input.classId);
+  const teacherId = uuidParam.parse(input.teacherId);
 
   return withTenant(auth.data, async (tx) => {
     const rows = await listSessions(
@@ -63,8 +72,8 @@ export async function getSessionLog(input: {
       {
         from,
         to,
-        classId: input.classId,
-        teacherId: input.teacherId,
+        classId,
+        teacherId,
         status: input.status,
       },
       MAX_ROWS,
@@ -90,8 +99,8 @@ export async function getSessionLog(input: {
       filters: {
         from,
         to,
-        classId: input.classId ?? null,
-        teacherId: input.teacherId ?? null,
+        classId: classId ?? null,
+        teacherId: teacherId ?? null,
         status: input.status ?? null,
       },
       // The pickers are branch-scoped; in "كافة الفروع" mode there is no branch to

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { z } from "zod";
 import { AttendanceSheetView, getAttendanceSheet } from "@/modules/attendance";
 import { ar } from "@/shared/i18n/ar";
-import { todayInCairo } from "@/shared/lib/time";
+import { isIsoDate, todayInCairo } from "@/shared/lib/time";
 
 export const metadata: Metadata = { title: ar.attendance.sheetTitle };
 
@@ -19,10 +19,15 @@ export default async function MarkAttendancePage({
 }) {
   const { classId, date, period } = await searchParams;
 
+  // A 404, not a fallback — and that is the difference from `/attendance`, which opens
+  // on today when its date is unusable. This screen is the one you WRITE on, and
+  // silently marking a register for a day the user did not ask for is worse than an
+  // error page. `isIsoDate` rather than the old regex, which passed `2026-02-31`
+  // straight through to a throw (docs/AUDIT-2026-09.md, finding 1).
   const parsed = z
     .object({
       classId: z.uuid(),
-      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      date: z.string().refine(isIsoDate),
       period: z.coerce.number().int().min(1).max(12),
     })
     .safeParse({ classId, date: date ?? todayInCairo(), period: period ?? "1" });

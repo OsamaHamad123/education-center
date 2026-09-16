@@ -11,7 +11,7 @@ import {
 import { hasPermission } from "@/shared/auth/permissions";
 import { getSessionUser, resolveTenantContext } from "@/shared/auth/session";
 import { ar } from "@/shared/i18n/ar";
-import { todayInCairo } from "@/shared/lib/time";
+import { isIsoDate, todayInCairo } from "@/shared/lib/time";
 import { Button } from "@/shared/ui/button";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { PageHeader } from "@/shared/ui/page-header";
@@ -66,12 +66,12 @@ export default async function AttendancePage({
   const { classId, date } = await searchParams;
   const selected = classes.data.find((option) => option.id === classId);
   // A class from another branch is nothing to explain — open the first one instead.
-  if (!selected) redirect(`/attendance?classId=${classes.data[0]?.id ?? ""}&date=${date ?? todayInCairo()}`);
+  // The date is resolved BEFORE it goes into that URL: the redirect used to carry an
+  // unusable one straight through to the next request, which then crashed on it.
+  const sessionDate = isIsoDate(date) ? date : todayInCairo();
+  if (!selected) redirect(`/attendance?classId=${classes.data[0]?.id ?? ""}&date=${sessionDate}`);
 
-  const board = await getAttendanceBoard({
-    classId: selected.id,
-    sessionDate: date ?? todayInCairo(),
-  });
+  const board = await getAttendanceBoard({ classId: selected.id, sessionDate });
   if (!board.ok) notFound();
 
   // The extra-session dialog needs the branch's teachers and the subject list; the

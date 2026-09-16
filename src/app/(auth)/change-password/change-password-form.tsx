@@ -4,16 +4,19 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { changePassword } from "@/shared/auth/client";
+import { changeOwnPassword } from "@/shared/auth/change-own-password";
 import { ar } from "@/shared/i18n/ar";
 import { readText } from "@/shared/lib/form-data";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
-import { completePasswordChange } from "./complete-password-change";
 
-const MIN_LENGTH = 8;
-
+/**
+ * One call, not two. The old form changed the password in the browser and then asked
+ * a second action to clear `must_change_password` — which could be called on its own
+ * (docs/AUDIT-2026-09.md, finding 3). Every rule that matters now lives in
+ * `changeOwnPassword`; this component only reports what it says.
+ */
 export function ChangePasswordForm() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -22,36 +25,17 @@ export function ChangePasswordForm() {
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    const current = readText(data, "current");
-    const next = readText(data, "next");
-    const confirm = readText(data, "confirm");
-
-    if (next.length < MIN_LENGTH) {
-      setError(ar.auth.passwordTooShort);
-      return;
-    }
-    if (next !== confirm) {
-      setError(ar.auth.passwordsDoNotMatch);
-      return;
-    }
+    const input = {
+      current: readText(data, "current"),
+      next: readText(data, "next"),
+      confirm: readText(data, "confirm"),
+    };
 
     setError(null);
     startTransition(async () => {
-      const { error: authError } = await changePassword({
-        currentPassword: current,
-        newPassword: next,
-        // A password change invalidates every other device (PROJECT_PLAN section 9).
-        revokeOtherSessions: true,
-      });
-
-      if (authError) {
-        setError(ar.auth.invalidCredentials);
-        return;
-      }
-
-      const cleared = await completePasswordChange();
-      if (!cleared.ok) {
-        setError(cleared.error.message);
+      const result = await changeOwnPassword(input);
+      if (!result.ok) {
+        setError(result.error.message);
         return;
       }
 

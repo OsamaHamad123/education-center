@@ -148,7 +148,7 @@ export const ar = {
     newPassword: "كلمة المرور الجديدة",
     confirmPassword: "تأكيد كلمة المرور",
     passwordsDoNotMatch: "كلمتا المرور غير متطابقتين.",
-    passwordTooShort: "كلمة المرور قصيرة جداً (8 أحرف على الأقل).",
+    passwordTooShort: "كلمة المرور قصيرة. الحد الأدنى من الأحرف:",
     passwordChanged: "تم تغيير كلمة المرور.",
   },
 

@@ -232,6 +232,11 @@ no change, so it was reverted. Moving this number means shipping less JavaScript
   reseed that claims to rebuild from scratch. Harmless in practice — the rows expire in 15
   minutes — but it was the one table that could refuse a sign-in on a freshly seeded
   database. Added to the list on 2026-09-16, next to `lookup_attempts`.
+- **The e2e suite only works on the port `BETTER_AUTH_URL` names.** Moving it to
+  another port (`PORT=3100`) to get out of the way of a running `pnpm dev` makes
+  sign-OUT fail with `Invalid origin` and a 403, while sign-in still succeeds — so the
+  suite reports a broken logout and nothing else. Set both:
+  `PORT=3100 BETTER_AUTH_URL=http://localhost:3100 pnpm test:e2e`.
 - **The old e2e rename test creates a branch and leaves it deactivated.** Running the suite many
   times against one database slowly accumulates inactive `فرع اختبار XXXXX` rows. Harmless, but
   worth a cleanup step when the suite grows.
@@ -311,7 +316,29 @@ by area. Branch isolation, RLS and the teacher redirects were pushed at and held
 did not hold is query-string validation on the report, payroll and attendance screens,
 and the split between changing a password and clearing the flag that forced it.
 
-Nothing is fixed yet. Phase A (sign-in and the account) is the one to start with.
+### Phase A — done (2026-09-16)
+
+Findings 3, 4 and 5 are fixed, and a twelfth was found while fixing the third.
+
+- **Changing a password and clearing `must_change_password` are one server action.**
+  They were two calls the browser made in sequence, and the second verified nothing.
+- **The length floor is enforced on the server**, and is now a number per role rather
+  than one inherited from the six-digit teacher access code: `PASSWORD_POLICY` in
+  `shared/config/constants.ts`.
+- **`safeRedirectPath` resolves `?next=` against the origin** instead of checking that
+  it starts with a slash, because `//evil.com` does.
+- **Finding 12:** the flag could never be cleared by a branch admin at all. The write
+  ran inside `withTenant`, and `user_update` does not admit `branch_admin` — RLS
+  filtered it to zero rows, silently, so a new admin changed their password and was
+  sent straight back to the same form. There was no test for that screen; writing one
+  is what found it. The flag is now cleared on the no-role path Better Auth's own
+  writes use, rather than by widening the policy — see the comment at the call site
+  for why widening was the wrong half to change.
+
+`tests/e2e/password-change.spec.ts` walks a brand-new admin from a temporary password
+to a working account, and asserts at every refusal that it is the server refusing.
+
+Phases B–E are still open.
 
 ## Next steps
 

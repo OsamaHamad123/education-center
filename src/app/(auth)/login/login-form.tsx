@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { signIn } from "@/shared/auth/client";
 import { assertNotLockedOut, clearFailedLogins, recordFailedLogin } from "@/shared/auth/login-lockout";
 import { ar } from "@/shared/i18n/ar";
+import { safeRedirectPath } from "@/shared/lib/safe-redirect";
 import { readText } from "@/shared/lib/form-data";
 import { normalizeEgyptianPhone } from "@/shared/lib/phone";
 import { Button } from "@/shared/ui/button";
@@ -62,8 +63,9 @@ export function LoginForm() {
       // Somebody who mistypes twice and then succeeds starts clean.
       await clearFailedLogins(username);
 
-      const next = params.get("next");
-      router.replace(next && next.startsWith("/") ? next : "/");
+      // `startsWith("/")` is not enough: `//evil.com` passes it and is a different
+      // origin (docs/AUDIT-2026-09.md, finding 5).
+      router.replace(safeRedirectPath(params.get("next"), window.location.origin));
       router.refresh();
     });
   }

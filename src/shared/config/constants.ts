@@ -51,6 +51,20 @@ export const LOGIN_LOCKOUT = {
   retentionMinutes: 60,
 } as const;
 
+/**
+ * Minimum password lengths (docs/AUDIT-2026-09.md, finding 4).
+ *
+ * Better Auth's own `minPasswordLength` has to be 6, because a teacher signs in with
+ * a six-digit access code. Admins inherited that floor without anyone choosing it,
+ * and the only check for 8 lived in the browser. These are enforced server-side in
+ * `changeOwnPassword`, which is why they are constants and not a schema: that file is
+ * `"use server"` and may export nothing but async functions.
+ */
+export const PASSWORD_POLICY = {
+  adminMinLength: 8,
+  teacherMinLength: 6,
+} as const;
+
 /** Bounds for the bell schedule (section 7.10). */
 export const SCHEDULE_BOUNDS = {
   minPeriodDurationMin: 20,

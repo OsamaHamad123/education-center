@@ -374,7 +374,28 @@ The rest of findings 1 and 2, on the screens used every day.
   it, with the reasoning written at the call site — "it is a URL, and a typo in one
   should not be an error page". The dates and the ids now agree with it.
 
-Phases D and E are still open.
+### Phase D — done (2026-09-16)
+
+Findings 6, 7 and 11, and a thirteenth found while testing the sixth.
+
+- **`toCsvField` neutralises a formula**, with one exception written into the rule: a
+  sign followed only by digits is left alone, because a phone is stored as
+  `+201012345678` and that is arithmetic. Escaping it would have put an apostrophe in
+  front of every phone in every export — a regression dressed as a fix.
+- **`/uploads/*` gets a second CSP**, not a replacement. Two CSP headers are enforced as
+  an intersection, so it can only narrow what the page-level policy allows. SVG stays in
+  the logo allowlist; a script inside one is now inert.
+- **Finding 13: the export had no BOM by the time it reached the browser.** `toCsv`
+  writes one and its unit test passes; a Next.js server action does not return it. So
+  every exported register was opening in Excel as mojibake — exactly what the BOM was
+  added to prevent. Isolated by downloading a blob built inside the page, which kept its
+  BOM. `ensureBom` now runs where the file is written rather than where it is generated.
+- The import's size error said the **logo** was too large.
+
+The lesson worth keeping: the unit test asserted on the function and passed for months.
+The bug was in the wire, and only a test that read the saved bytes could see it.
+
+Phase E is still open.
 
 ## Next steps
 

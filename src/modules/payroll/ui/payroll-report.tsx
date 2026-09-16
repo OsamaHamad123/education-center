@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ChevronDown, Download, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { ar } from "@/shared/i18n/ar";
+import { ensureBom } from "@/shared/lib/csv";
 import { formatEGP } from "@/shared/lib/money";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -55,7 +56,10 @@ export function PayrollReportView({ report }: { report: PayrollReport }) {
 
       // A blob, not a route: payroll is a list of what people are paid, and a URL is
       // something that can be forwarded or end up in a log.
-      const blob = new Blob([result.data], { type: "text/csv;charset=utf-8" });
+      // `ensureBom`, not `result.data`: a server action does not return the leading
+      // U+FEFF `toCsv` wrote, so without this every export opened in Excel as
+      // mojibake (docs/AUDIT-2026-09.md, finding 13).
+      const blob = new Blob([ensureBom(result.data)], { type: "text/csv;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;

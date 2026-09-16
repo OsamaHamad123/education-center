@@ -96,3 +96,42 @@ describe("toCsv", () => {
     expect(rows[1]).toEqual(["محمد, أحمد", 'he said "hi"']);
   });
 });
+
+describe("formula injection", () => {
+  it("stops a cell Excel would execute", () => {
+    // The payload that matters: a name field is free text typed at the desk, and the
+    // file is opened by the centre's own staff.
+    expect(toCsvField('=HYPERLINK("http://x/","اضغط")')).toBe('"\'=HYPERLINK(""http://x/"",""اضغط"")"');
+    expect(toCsvField("=1+1")).toBe("'=1+1");
+    expect(toCsvField("@SUM(A1:A9)")).toBe("'@SUM(A1:A9)");
+    expect(toCsvField("+cmd|' /C calc'!A0")).toBe(`'+cmd|' /C calc'!A0`);
+    expect(toCsvField("-2+3+cmd|' /C calc'!A0")).toBe(`'-2+3+cmd|' /C calc'!A0`);
+  });
+
+  it("stops a leading tab or carriage return, which Excel also treats as a lead-in", () => {
+    // A tab needs no quoting in a comma-separated file, so it only gains the prefix.
+    expect(toCsvField("\t=1+1")).toBe("'\t=1+1");
+    // A carriage return does need quoting, and gets both.
+    expect(toCsvField("\r=1+1")).toBe('"\'\r=1+1"');
+  });
+
+  it("leaves a phone number alone", () => {
+    // `+201012345678` is arithmetic, not a call. Escaping it would put a visible
+    // apostrophe in front of every phone in the export for no gain.
+    expect(toCsvField("+201012345678")).toBe("+201012345678");
+    expect(toCsvField("+20 102 007 8001")).toBe("+20 102 007 8001");
+    expect(toCsvField("-5")).toBe("-5");
+  });
+
+  it("leaves ordinary content alone", () => {
+    expect(toCsvField("محمد أحمد السيد")).toBe("محمد أحمد السيد");
+    expect(toCsvField("NSR-26-00001")).toBe("NSR-26-00001");
+    expect(toCsvField("2026-09-16")).toBe("2026-09-16");
+    expect(toCsvField(1450)).toBe("1450");
+    expect(toCsvField("علمي 1 - بنين")).toBe("علمي 1 - بنين");
+  });
+
+  it("protects the header row too, not only the cells", () => {
+    expect(toCsv(["=cmd"], [["ok"]])).toContain("'=cmd");
+  });
+});

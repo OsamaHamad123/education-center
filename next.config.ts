@@ -66,6 +66,22 @@ const securityHeaders = [
     : []),
 ];
 
+/**
+ * The uploads directory holds one file: the centre's logo, and SVG is in its allowlist
+ * (docs/AUDIT-2026-09.md, finding 7).
+ *
+ * An SVG is a document, not just a picture. Served from this origin under the app's own
+ * `script-src 'self' 'unsafe-inline'`, a script inside one runs as the app if the file
+ * is opened directly rather than through an `<img>`. Only a super admin can upload it,
+ * so this is not privilege escalation — it is persistence: a compromised session leaves
+ * behind a file that keeps running on the centre's origin afterwards.
+ *
+ * A second policy on these paths rather than a replacement: two CSP headers are enforced
+ * as an intersection, so this can only ever narrow what the page above allows. SVG logos
+ * still render as images, which is why the format stays in the allowlist.
+ */
+const UPLOADS_CSP = ["default-src 'none'", "style-src 'unsafe-inline'", "sandbox"].join("; ");
+
 const nextConfig: NextConfig = {
   // A self-contained server bundle, so the production image carries no node_modules
   // (PROJECT_PLAN 13.3).
@@ -73,7 +89,10 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
 
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      { source: "/uploads/:path*", headers: [{ key: "Content-Security-Policy", value: UPLOADS_CSP }] },
+    ];
   },
 };
 

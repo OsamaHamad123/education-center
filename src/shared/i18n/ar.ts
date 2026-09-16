@@ -385,6 +385,7 @@ export const ar = {
     importInvalid: "صف به خطأ",
     importDone: "تم الاستيراد.",
     importNothing: "لا توجد صفوف صالحة للاستيراد.",
+    importTooLarge: "الملف كبير جداً (الحد الأقصى 2 ميجابايت).",
     duplicateWarning: "قد يكون هذا الطالب مسجلاً بالفعل",
     duplicateContinue: "متابعة على أي حال",
     errors: {

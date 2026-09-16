@@ -6,6 +6,7 @@ import { Download, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import type { ClassOption } from "@/modules/classes";
 import { ar } from "@/shared/i18n/ar";
+import { ensureBom } from "@/shared/lib/csv";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
@@ -54,7 +55,10 @@ export function StudentsFilters({
       }
       // A blob rather than a route: the CSV is already in hand and contains personal
       // data, so it never needs a URL that could be shared or logged.
-      const blob = new Blob([result.data], { type: "text/csv;charset=utf-8" });
+      // `ensureBom`, not `result.data`: a server action does not return the leading
+      // U+FEFF `toCsv` wrote, so without this every export opened in Excel as
+      // mojibake (docs/AUDIT-2026-09.md, finding 13).
+      const blob = new Blob([ensureBom(result.data)], { type: "text/csv;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;

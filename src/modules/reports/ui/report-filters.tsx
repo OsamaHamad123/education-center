@@ -3,9 +3,9 @@
 import { useSearchParams } from "next/navigation";
 import { ar } from "@/shared/i18n/ar";
 import { useNavPending } from "@/shared/ui/use-nav-pending";
-import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
+import { DateField } from "@/shared/ui/date-field";
 
 const ANY = "__any__";
 
@@ -49,24 +49,12 @@ export function ReportFilters({
     >
       <div className="space-y-1.5">
         <Label htmlFor="report-from">{ar.payroll.from}</Label>
-        <Input
-          id="report-from"
-          type="date"
-          dir="ltr"
-          value={range.from}
-          onChange={(event) => event.target.value && setParam("from", event.target.value)}
-        />
+        <DateField id="report-from" value={range.from} onChange={(isoDate) => setParam("from", isoDate)} />
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="report-to">{ar.payroll.to}</Label>
-        <Input
-          id="report-to"
-          type="date"
-          dir="ltr"
-          value={range.to}
-          onChange={(event) => event.target.value && setParam("to", event.target.value)}
-        />
+        <DateField id="report-to" value={range.to} onChange={(isoDate) => setParam("to", isoDate)} />
       </div>
 
       {classes ? (

@@ -18,10 +18,12 @@ import {
   compareBranches,
   countByStudent,
   listReportClasses,
+  openRegistersToday,
   todayPulse,
   type BranchComparisonRow,
   type DayPulse,
   type MatrixSessionColumn,
+  type OpenRegister,
   type StudentAttendanceRow,
 } from "../../infrastructure/reports.repository";
 import { loadAlertSettings } from "./alert-settings";
@@ -254,6 +256,8 @@ export type BranchDashboard = {
   date: string;
   pulse: DayPulse;
   attendancePercent: number;
+  /** Today's periods nobody has marked — the work, not the count of it. */
+  openRegisters: OpenRegister[];
   topAbsent: { fullName: string; className: string; absent: number }[];
 };
 
@@ -266,12 +270,14 @@ export async function getBranchDashboard(): Promise<Result<BranchDashboard>> {
 
   return withTenant(auth.data, async (tx) => {
     const pulse = await todayPulse(auth.data, tx, date, isoDayOfWeek(date));
+    const openRegisters = await openRegistersToday(auth.data, tx, date, isoDayOfWeek(date));
     const week = await countByStudent(auth.data, tx, { from: shiftDays(date, -6), to: date });
 
     return ok({
       date,
       pulse,
       attendancePercent: attendanceRate(pulse.counts),
+      openRegisters,
       topAbsent: week
         .filter((row) => row.counts.absent > 0)
         .sort((a, b) => b.counts.absent - a.counts.absent)

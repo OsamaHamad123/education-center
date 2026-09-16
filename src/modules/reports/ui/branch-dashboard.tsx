@@ -6,18 +6,66 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/sha
 import type { BranchDashboard } from "../application/queries/get-reports";
 
 /**
- * Today, for a branch admin (rule 10.7). Four numbers and a short list — the point of
- * this screen is the GAP between the periods planned and the registers taken, which
- * is the thing somebody has to chase before the day ends.
+ * Today, for a branch admin (rule 10.7).
+ *
+ * It used to be four numbers, and the only one worth acting on — the gap between the
+ * periods planned and the registers taken — was a figure in a box
+ * (docs/PRODUCT-REVIEW-2026-09.md, finding 3). The work comes first now: which period,
+ * which class, which teacher, and a link straight into the register. The numbers stayed;
+ * they moved below it and got smaller.
+ *
+ * The attendance percentage also said "100%" at ten in the morning with a register still
+ * open, because it is the percentage of what has been MARKED. It says so now.
  */
 export function BranchDashboardView({ dashboard }: { dashboard: BranchDashboard }) {
   const remaining = Math.max(dashboard.pulse.sessionsPlanned - dashboard.pulse.sessionsDone, 0);
+  const marked = dashboard.pulse.counts.present + dashboard.pulse.counts.absent;
 
   return (
     <div className="space-y-4">
       <p className="text-muted-foreground text-sm">
         {weekdayNameOf(dashboard.date)} · {formatDisplayDate(dashboard.date)}
       </p>
+
+      {/* The work, before the scoreboard. */}
+      <Card className={dashboard.openRegisters.length > 0 ? "border-amber-300" : undefined}>
+        <CardHeader>
+          <CardTitle className="text-base">{ar.reports.openRegisters}</CardTitle>
+          <CardDescription>{ar.reports.openRegistersDescription}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {dashboard.openRegisters.length === 0 ? (
+            <p className="text-sm font-medium text-emerald-700">{ar.reports.allRegistersDone}</p>
+          ) : (
+            <ul className="divide-y text-sm">
+              {dashboard.openRegisters.map((slot) => (
+                <li key={slot.slotId}>
+                  <Link
+                    href={`/attendance/mark?classId=${slot.classId}&date=${dashboard.date}&period=${slot.periodNumber}`}
+                    className="hover:bg-accent/40 -mx-2 flex items-center gap-3 rounded-md px-2 py-2 transition-colors"
+                  >
+                    <span className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-md text-sm font-bold">
+                      {slot.periodNumber}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium">
+                        {slot.className} — {slot.subjectName}
+                      </span>
+                      <span className="text-muted-foreground block truncate text-xs">
+                        {slot.teacherName} ·{" "}
+                        <span dir="ltr">
+                          {slot.startTime} – {slot.endTime}
+                        </span>
+                      </span>
+                    </span>
+                    <span className="text-muted-foreground shrink-0 text-xs">{ar.attendance.markNow}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi label={ar.reports.sessionsPlanned} value={dashboard.pulse.sessionsPlanned} />
@@ -29,9 +77,11 @@ export function BranchDashboardView({ dashboard }: { dashboard: BranchDashboard 
           emphasis={remaining > 0}
         />
         <Kpi
-          label={ar.reports.todayAttendance}
+          /* "100%" of what has been marked is not "100% attendance today", and at ten in
+             the morning the difference is the whole meaning of the number. */
+          label={marked > 0 ? ar.reports.attendanceOfMarked : ar.reports.todayAttendance}
           value={`${dashboard.attendancePercent}%`}
-          muted={dashboard.pulse.counts.present + dashboard.pulse.counts.absent === 0}
+          muted={marked === 0}
         />
       </div>
 

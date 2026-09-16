@@ -16,6 +16,7 @@ item says who it is for and what it buys, so you can disagree with a reason.
 ## The five that would change the product most
 
 Ranked by how much they change a working day, not by effort.
+**All five are done — 2026-09-16.** Each entry below says what shipped.
 
 | #   | Change                                                       | Who feels it     |
 | --- | ------------------------------------------------------------ | ---------------- |
@@ -37,9 +38,19 @@ case in the first twelve days of a month.
 This is the single highest-value fix in the document because it is everywhere: payroll,
 every report, the attendance board's day picker, joining dates, rate effective-from.
 
-**Suggestion.** One `DateField` component wrapping the native input, showing
-`dd/MM/yyyy`, and keep the native picker behind it. Everything else in the product
-already goes through `formatDisplayDate`; this is the one place that does not.
+**Done.** `shared/ui/date-field.tsx` replaced all fourteen native date inputs. It is a
+text field showing `dd/MM/yyyy` with a calendar beside it, because the format cannot be
+imposed on the native control — it follows the browser, not the page, so on one machine
+it reads one way and on the next it reads the other.
+
+Typing is the fast path and the office types, so the text box comes first;
+`inputMode="numeric"` for the phone. `calendar.tsx` and `popover.tsx` were already in the
+repo and imported by nothing, exactly like `form.tsx` was.
+
+What leaves the component is always ISO — the display is the only thing that changed, and
+a form that read the visible text would submit the wrong thing entirely. `date-text.ts`
+holds the parsing with seven tests, including the one that matters:
+`09/01/2026` reads as **9 January**.
 
 ### 2. Payroll says what is owed, never what was paid
 
@@ -67,8 +78,15 @@ Say `7 من 8 حصص · 100% مما سُجّل`.
 morning, and it is a number in a box. Under it should be the list: which period, which
 class, which teacher, and a link straight into the register.
 
-**Suggestion.** Make the top of the dashboard a worklist, not a scoreboard — unmarked
-registers today, then absences to follow up. The numbers can stay, smaller.
+**Done.** The work comes first now: `openRegistersToday` returns the rows rather than
+counting them, so the card lists which period, which class and which teacher, each one a
+link straight into the register. The four numbers moved below it.
+
+A cancelled session is deliberately NOT open. It was dealt with, and putting it back on
+the morning's list is how a list becomes something people stop reading.
+
+And the percentage relabels itself: with marks in, it reads **حضور المُسجّل حتى الآن**
+rather than "today's attendance".
 
 ### 4. The teacher's home screen cuts off the end time
 
@@ -78,15 +96,17 @@ lesson finishes. This is the screen a teacher opens six times a day.
 
 Below the two cards is an empty two-thirds of a phone screen.
 
-**Suggestions**, in order of value:
+**Done**, three of the five:
 
-- Put the time on its own line and never truncate it. `09:30 – 10:15` is the fact.
-- Mark the **next** lesson. A teacher arriving at 09:20 wants one card emphasised.
-- Show the class size on the card. "15 طالب" tells them what they are walking into.
-- Make an unmarked lesson look unfinished. Right now "مسجّلة" and nothing are similar
-  weights.
-- Use the empty space for this month's earnings — it is the other thing they open the
-  app for, and it is currently a separate page.
+- The time is on its own line and never truncates.
+- The lesson running now — or the next to start — is ringed and badged **الآن**. Only on
+  today: highlighting a period because the clock is past it would be noise on any other
+  day.
+- An unmarked lesson is amber, and one line at the top says how many are still open, so
+  "am I done?" is answered without counting badges.
+
+Not done: the class size on the card, and this month's earnings in the empty space. Both
+need data the query does not fetch, and both are additions rather than corrections.
 
 ### 5. No number pad on the fields that are all numbers
 
@@ -97,8 +117,9 @@ phone, and both rate fields.
 The student form is filled in dozens of times a day, often on a tablet at the desk, and
 every phone number costs a keyboard switch. Four per student.
 
-**Suggestion.** `inputMode="numeric"` on every field whose schema is digits. It is a
-one-line change per field and the most keystrokes-per-effort item in this document.
+**Done.** Nine fields: four phones on the student form plus the national id, the
+teacher's phone and both rates, and the branch phone. The shared `Field` wrappers carry
+the prop now, so the next digit field gets it by saying so.
 
 ---
 
@@ -143,11 +164,9 @@ For most parents it is the same number, and it is currently eleven digits typed 
 **Works:** everyone present by default, one tap for absent, 44px targets, the fixed save
 bar. This is a well-designed screen.
 
-- **The counters vanish on a phone.** `Counters` is `hidden sm:flex` inside the save bar,
-  so while marking, the one number that matters — how many absent — is off-screen above.
-  Move it into the bar at every width.
-- **Say what the save will do.** `حفظ الحضور — 3 غياب` removes the "did I miss someone"
-  re-scroll before every save.
+- ~~**The counters vanish on a phone.**~~ **Done:** they are in the bar at every width,
+  stacked above the button on a narrow screen.
+- ~~**Say what the save will do.**~~ **Done:** the button reads `حفظ الحضور — 3 غياب`.
 - **Tapping to cycle is not discoverable.** A first-run hint, once, is enough.
 - **A class of forty needs a way to jump.** Fifteen is fine today; a search or an
   alphabet rail is what stops this screen aging badly.

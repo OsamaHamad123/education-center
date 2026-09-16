@@ -7,6 +7,8 @@ import {
   classes,
   classSessions,
   students,
+  subjects,
+  teachers,
   timetableSlots,
   type AttendanceStatus,
 } from "@/shared/db/schema";
@@ -291,4 +293,71 @@ export async function listAbsenceDates(
       ),
     )
     .orderBy(desc(classSessions.sessionDate));
+}
+
+export type OpenRegister = {
+  slotId: string;
+  classId: string;
+  className: string;
+  subjectName: string;
+  teacherName: string;
+  periodNumber: number;
+  startTime: string;
+  endTime: string;
+};
+
+/**
+ * Today's periods that nobody has marked yet
+ * (docs/PRODUCT-REVIEW-2026-09.md, finding 3).
+ *
+ * The dashboard already counted these — "متبقية 1" — and a count is not something anyone
+ * can act on. This returns the rows themselves so the screen can say which class, which
+ * period and which teacher, and link straight into the register.
+ *
+ * A slot is open when no session for it exists today, or one exists and has no marks. A
+ * cancelled session is NOT open: it was dealt with, and putting it back on the morning's
+ * list would teach people to ignore the list.
+ */
+export async function openRegistersToday(
+  _ctx: TenantContext,
+  tx: Tx,
+  date: string,
+  dayOfWeek: number,
+): Promise<OpenRegister[]> {
+  const marked = tx
+    .select({ slotId: classSessions.timetableSlotId })
+    .from(classSessions)
+    .where(
+      and(
+        eq(classSessions.sessionDate, date),
+        sql`${classSessions.timetableSlotId} is not null`,
+        sql`(${classSessions.status} = 'cancelled' or exists (
+          select 1 from attendance_records ar where ar.session_id = ${classSessions.id}
+        ))`,
+      ),
+    );
+
+  return tx
+    .select({
+      slotId: timetableSlots.id,
+      classId: timetableSlots.classId,
+      className: classes.name,
+      subjectName: subjects.name,
+      teacherName: teachers.fullName,
+      periodNumber: timetableSlots.periodNumber,
+      startTime: timetableSlots.startTime,
+      endTime: timetableSlots.endTime,
+    })
+    .from(timetableSlots)
+    .innerJoin(classes, eq(classes.id, timetableSlots.classId))
+    .innerJoin(teachers, eq(teachers.id, timetableSlots.teacherId))
+    .innerJoin(subjects, eq(subjects.id, timetableSlots.subjectId))
+    .where(
+      and(
+        eq(timetableSlots.dayOfWeek, dayOfWeek),
+        eq(timetableSlots.isActive, true),
+        sql`${timetableSlots.id} not in ${marked}`,
+      ),
+    )
+    .orderBy(asc(timetableSlots.periodNumber), asc(classes.name));
 }

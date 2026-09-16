@@ -29,6 +29,7 @@ import type { TeacherRow } from "../application/queries/list-teachers";
 import { AccessCodeDialog } from "./access-code-dialog";
 import { useAction } from "@/shared/ui/use-action";
 import { createTeacherSchema, updateTeacherSchema } from "../application/schemas";
+import { DateField } from "@/shared/ui/date-field";
 
 /**
  * Super-admin only. Rates are entered in pounds and converted to piasters by the
@@ -119,6 +120,7 @@ export function TeacherFormDialog({
             {!isEdit ? (
               <Field
                 name="phone"
+                inputMode="numeric"
                 label={ar.teachers.phone}
                 dir="ltr"
                 placeholder="01xxxxxxxxx"
@@ -139,6 +141,7 @@ export function TeacherFormDialog({
             <div className="grid gap-4 sm:grid-cols-2">
               <Field
                 name="rateScientific"
+                inputMode="numeric"
                 label={ar.teachers.rateScientific}
                 type="number"
                 step="0.01"
@@ -151,6 +154,7 @@ export function TeacherFormDialog({
               />
               <Field
                 name="rateLiterary"
+                inputMode="numeric"
                 label={ar.teachers.rateLiterary}
                 type="number"
                 step="0.01"
@@ -220,6 +224,7 @@ function Field(props: {
   name: string;
   label: string;
   type?: string;
+  inputMode?: "numeric" | "decimal" | "tel";
   step?: string;
   min?: string;
   defaultValue?: string | undefined;
@@ -233,20 +238,35 @@ function Field(props: {
   return (
     <div className="space-y-2">
       <Label htmlFor={props.name}>{props.label}</Label>
-      <Input
-        id={props.name}
-        name={props.name}
-        type={props.type}
-        step={props.step}
-        min={props.min}
-        defaultValue={props.defaultValue}
-        required={props.required}
-        disabled={props.disabled}
-        dir={props.dir}
-        placeholder={props.placeholder}
-        className={props.dir === "ltr" ? "text-start" : undefined}
-        aria-invalid={props.error ? true : undefined}
-      />
+      {props.type === "date" ? (
+        // dd/MM/yyyy, because the native input renders in the BROWSER's locale and this
+        // product is read in one order only (docs/PRODUCT-REVIEW-2026-09.md, finding 1).
+        <DateField
+          id={props.name}
+          name={props.name}
+          defaultValue={props.defaultValue}
+          required={props.required}
+          disabled={props.disabled}
+        />
+      ) : (
+        <Input
+          id={props.name}
+          name={props.name}
+          type={props.type}
+          step={props.step}
+          min={props.min}
+          defaultValue={props.defaultValue}
+          required={props.required}
+          disabled={props.disabled}
+          dir={props.dir}
+          // A phone number and a rate are digits; they should open the number pad
+          // (docs/PRODUCT-REVIEW-2026-09.md, finding 5).
+          inputMode={props.inputMode}
+          placeholder={props.placeholder}
+          className={props.dir === "ltr" ? "text-start" : undefined}
+          aria-invalid={props.error ? true : undefined}
+        />
+      )}
       {props.error ? (
         <p role="alert" className="text-destructive text-sm">
           {props.error}

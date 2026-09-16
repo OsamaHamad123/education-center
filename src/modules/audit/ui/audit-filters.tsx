@@ -6,9 +6,9 @@ import type { BranchOption } from "@/modules/branches";
 import { ar } from "@/shared/i18n/ar";
 import { useNavPending } from "@/shared/ui/use-nav-pending";
 import { Button } from "@/shared/ui/button";
-import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
+import { DateField } from "@/shared/ui/date-field";
 
 const ANY = "__any__";
 
@@ -81,21 +81,19 @@ export function AuditFilters({
 
       <div className="space-y-2">
         <Label htmlFor="filter-from">{ar.common.from}</Label>
-        <Input
+        <DateField
           id="filter-from"
-          type="date"
           value={params.get("from") ?? ""}
-          onChange={(event) => setParam("from", event.target.value)}
+          onChange={(isoDate) => setParam("from", isoDate)}
         />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="filter-to">{ar.common.to}</Label>
-        <Input
+        <DateField
           id="filter-to"
-          type="date"
           value={params.get("to") ?? ""}
-          onChange={(event) => setParam("to", event.target.value)}
+          onChange={(isoDate) => setParam("to", isoDate)}
         />
       </div>
 

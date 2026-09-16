@@ -121,6 +121,7 @@ export function BranchFormDialog({
           />
           <Field
             name="phone"
+            inputMode="numeric"
             label={ar.branches.phone}
             defaultValue={branch?.phone ?? ""}
             dir="ltr"
@@ -152,6 +153,7 @@ export function BranchFormDialog({
 function Field(props: {
   name: string;
   label: string;
+  inputMode?: "numeric" | "decimal" | "tel";
   defaultValue?: string | undefined;
   required?: boolean;
   dir?: "ltr";
@@ -169,6 +171,7 @@ function Field(props: {
         required={props.required}
         disabled={props.disabled}
         dir={props.dir}
+        inputMode={props.inputMode}
         className={props.dir === "ltr" ? "text-start" : undefined}
         aria-invalid={props.error ? true : undefined}
         aria-describedby={props.error ? `${props.name}-error` : undefined}

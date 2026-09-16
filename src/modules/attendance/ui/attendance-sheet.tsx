@@ -179,11 +179,18 @@ export function AttendanceSheetView({ sheet, backHref }: { sheet: AttendanceShee
 
       {!readOnly ? (
         <div className="bg-background/95 fixed inset-x-0 bottom-0 border-t p-3 backdrop-blur">
-          <div className="mx-auto flex max-w-3xl items-center gap-3">
-            <Counters summary={summary} className="hidden sm:flex" />
+          {/*
+            The counters used to be `hidden sm:flex`, so on a phone — where the marking
+            actually happens — the one number that matters scrolled off the top and the
+            teacher was marking blind (docs/PRODUCT-REVIEW-2026-09.md).
+          */}
+          <div className="mx-auto flex max-w-3xl flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <Counters summary={summary} className="justify-center sm:justify-start" />
             <Button className="h-12 flex-1 text-base" onClick={onSave} disabled={isPending}>
               {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
               {ar.attendance.save}
+              {/* What the save will do, so nobody scrolls back up to count first. */}
+              {summary.absent > 0 ? ` — ${summary.absent} ${ar.attendance.absentSuffix}` : null}
               {dirty ? " •" : null}
             </Button>
           </div>

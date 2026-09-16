@@ -74,7 +74,7 @@ test.describe("changing a filter on a page you are already on", () => {
     await expect(page.locator("#report-from")).toBeVisible();
 
     await slowDown(page, "**/reports/students**");
-    await page.locator("#report-to").fill("2026-09-20");
+    await page.locator("#report-to").fill("20/09/2026");
 
     // The controls are a disabled group, so nothing can be tapped twice…
     await expect(page.locator("#report-from")).toBeDisabled({ timeout: 10_000 });
@@ -82,7 +82,7 @@ test.describe("changing a filter on a page you are already on", () => {
     await expect(page.getByRole("heading", { name: "حضور الطلاب" })).toBeVisible();
 
     await expect(page.locator("#report-from")).toBeEnabled({ timeout: 20_000 });
-    await expect(page.locator("#report-to")).toHaveValue("2026-09-20");
+    await expect(page.locator("#report-to")).toHaveValue("20/09/2026");
   });
 
   test("stops the attendance date stepper being tapped twice", async ({ page }) => {

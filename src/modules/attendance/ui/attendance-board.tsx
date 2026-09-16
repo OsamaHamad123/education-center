@@ -8,11 +8,11 @@ import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent } from "@/shared/ui/card";
 import { EmptyState } from "@/shared/ui/empty-state";
-import { Input } from "@/shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import type { AttendanceBoard, BoardPeriod } from "../application/queries/get-attendance-board";
 import { ExtraSessionDialog } from "./extra-session-dialog";
 import { useNavPending } from "@/shared/ui/use-nav-pending";
+import { DateField } from "@/shared/ui/date-field";
 
 /**
  * Step two of the flow (rule 10.5): the day's periods, each saying whether it has
@@ -73,15 +73,13 @@ export function AttendanceBoardView({
             <ChevronRight className="size-4" aria-hidden />
           </Button>
 
-          <Input
-            type="date"
+          <DateField
             value={board.sessionDate}
             max={board.today}
-            aria-label={ar.attendance.date}
-            dir="ltr"
-            className="w-40 text-center"
+            ariaLabel={ar.attendance.date}
+            className="w-44"
             disabled={isNavigating}
-            onChange={(event) => event.target.value && go({ date: event.target.value })}
+            onChange={(isoDate) => go({ date: isoDate })}
           />
 
           <Button

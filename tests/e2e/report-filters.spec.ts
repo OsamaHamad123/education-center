@@ -25,8 +25,8 @@ async function signIn(page: Page, username: string) {
 
 /** The first of the month to today — what a screen falls back to. */
 async function expectDefaultRange(page: Page) {
-  await expect(page.locator("#report-from")).toHaveValue(/^\d{4}-\d{2}-01$/);
-  await expect(page.locator("#report-to")).toHaveValue(/^\d{4}-\d{2}-\d{2}$/);
+  await expect(page.locator("#report-from")).toHaveValue(/^01\/\d{2}\/\d{4}$/);
+  await expect(page.locator("#report-to")).toHaveValue(/^\d{2}\/\d{2}\/\d{4}$/);
 }
 
 const BRANCH_ADMIN_URLS = [
@@ -80,16 +80,16 @@ test.describe("a nonsense range or id in the URL", () => {
     // `?to=` on its own has always been a legitimate request, so a broken `from` must
     // fall back WITHOUT taking the good half with it.
     await page.goto("/reports/students?from=abc&to=2026-09-10");
-    await expect(page.locator("#report-from")).toHaveValue(/^\d{4}-\d{2}-01$/);
-    await expect(page.locator("#report-to")).toHaveValue("2026-09-10");
+    await expect(page.locator("#report-from")).toHaveValue(/^01\/\d{2}\/\d{4}$/);
+    await expect(page.locator("#report-to")).toHaveValue("10/09/2026");
   });
 
   test("still reports on a range that was meant", async ({ page }) => {
     await signIn(page, "admin_nsr");
 
     await page.goto("/reports/students?from=2026-09-01&to=2026-09-30");
-    await expect(page.locator("#report-from")).toHaveValue("2026-09-01");
-    await expect(page.locator("#report-to")).toHaveValue("2026-09-30");
+    await expect(page.locator("#report-from")).toHaveValue("01/09/2026");
+    await expect(page.locator("#report-to")).toHaveValue("30/09/2026");
   });
 
   test("does not turn a 404 into a 200: an id that is not theirs still vanishes", async ({ page }) => {

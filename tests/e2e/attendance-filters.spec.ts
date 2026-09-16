@@ -10,7 +10,8 @@ import { expect, test, type Page } from "@playwright/test";
  */
 
 const PASSWORD = "Password123!";
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+/** What a date field SHOWS: dd/MM/yyyy, the one order this product reads. */
+const SHOWN_DATE = /^\d{2}\/\d{2}\/\d{4}$/;
 
 async function signIn(page: Page, username: string) {
   await page.goto("/login");
@@ -39,7 +40,7 @@ test.describe("a nonsense date in the attendance URL", () => {
     for (const date of ["not-a-date", "2026-02-31", "2026-13-01", "..%2F..%2Fetc"]) {
       const response = await page.goto(`/attendance?date=${date}`);
       expect(response?.status(), `?date=${date} should render`).toBe(200);
-      await expect(dateField).toHaveValue(ISO_DATE);
+      await expect(dateField).toHaveValue(SHOWN_DATE);
     }
   });
 
@@ -50,7 +51,8 @@ test.describe("a nonsense date in the attendance URL", () => {
     // raw date, so the crash simply moved to the next request.
     const response = await page.goto("/attendance?classId=not-a-uuid&date=abc");
     expect(response?.status()).toBe(200);
-    expect(new URL(page.url()).searchParams.get("date")).toMatch(ISO_DATE);
+    // The URL still carries ISO — only the DISPLAY is dd/MM/yyyy.
+    expect(new URL(page.url()).searchParams.get("date")).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   test("renders the sessions log with a broken range or filter", async ({ page }) => {
@@ -68,8 +70,8 @@ test.describe("a nonsense date in the attendance URL", () => {
     for (const url of urls) {
       const response = await page.goto(url);
       expect(response?.status(), `${url} should render`).toBe(200);
-      await expect(page.locator("#sessions-from")).toHaveValue(ISO_DATE);
-      await expect(page.locator("#sessions-to")).toHaveValue(ISO_DATE);
+      await expect(page.locator("#sessions-from")).toHaveValue(SHOWN_DATE);
+      await expect(page.locator("#sessions-to")).toHaveValue(SHOWN_DATE);
     }
   });
 
@@ -77,8 +79,8 @@ test.describe("a nonsense date in the attendance URL", () => {
     await signIn(page, "admin_nsr");
 
     await page.goto("/attendance/sessions?from=2026-09-01&to=2026-09-10");
-    await expect(page.locator("#sessions-from")).toHaveValue("2026-09-01");
-    await expect(page.locator("#sessions-to")).toHaveValue("2026-09-10");
+    await expect(page.locator("#sessions-from")).toHaveValue("01/09/2026");
+    await expect(page.locator("#sessions-to")).toHaveValue("10/09/2026");
   });
 });
 

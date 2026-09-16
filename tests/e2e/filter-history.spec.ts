@@ -54,9 +54,9 @@ test.describe("the back button after changing filters", () => {
     await page.getByRole("link", { name: "حضور الطلاب" }).locator("visible=true").first().click();
     await expect(page).toHaveURL(/\/reports\/students/, { timeout: 20_000 });
 
-    await page.locator("#report-to").fill("2026-09-20");
+    await page.locator("#report-to").fill("20/09/2026");
     await expect(page.locator("#report-to")).toBeEnabled({ timeout: 20_000 });
-    await page.locator("#report-from").fill("2026-09-02");
+    await page.locator("#report-from").fill("02/09/2026");
     await expect(page.locator("#report-from")).toBeEnabled({ timeout: 20_000 });
 
     await page.goBack();

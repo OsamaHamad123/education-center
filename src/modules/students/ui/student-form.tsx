@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { createStudent, editStudent } from "../application/use-cases/manage-student";
 import { useAction } from "@/shared/ui/use-action";
 import { createStudentSchema, updateStudentSchema } from "../application/schemas";
+import { DateField } from "@/shared/ui/date-field";
 
 /**
  * One form for enrolling and for editing. Class and join date appear only when
@@ -136,6 +137,7 @@ export function StudentForm({ classes, student }: { classes: ClassOption[]; stud
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
           name="parentPhone"
+          inputMode="numeric"
           label={ar.students.parentPhone}
           defaultValue={student?.parentPhone ?? ""}
           required
@@ -146,6 +148,7 @@ export function StudentForm({ classes, student }: { classes: ClassOption[]; stud
         />
         <Field
           name="parentWhatsapp"
+          inputMode="numeric"
           label={ar.students.parentWhatsapp}
           defaultValue={student?.parentWhatsapp ?? ""}
           dir="ltr"
@@ -154,6 +157,7 @@ export function StudentForm({ classes, student }: { classes: ClassOption[]; stud
         />
         <Field
           name="studentPhone"
+          inputMode="numeric"
           label={ar.students.studentPhone}
           defaultValue={student?.studentPhone ?? ""}
           dir="ltr"
@@ -162,6 +166,7 @@ export function StudentForm({ classes, student }: { classes: ClassOption[]; stud
         />
         <Field
           name="studentWhatsapp"
+          inputMode="numeric"
           label={ar.students.studentWhatsapp}
           defaultValue={student?.studentWhatsapp ?? ""}
           dir="ltr"
@@ -172,6 +177,7 @@ export function StudentForm({ classes, student }: { classes: ClassOption[]; stud
 
       <Field
         name="nationalId"
+        inputMode="numeric"
         label={ar.students.nationalId}
         defaultValue={student?.nationalId ?? ""}
         dir="ltr"
@@ -226,6 +232,7 @@ function Field(props: {
   label: string;
   hint?: string;
   type?: string;
+  inputMode?: "numeric" | "decimal" | "tel";
   defaultValue?: string | undefined;
   required?: boolean;
   dir?: "ltr";
@@ -236,18 +243,33 @@ function Field(props: {
   return (
     <div className="space-y-2">
       <Label htmlFor={props.name}>{props.label}</Label>
-      <Input
-        id={props.name}
-        name={props.name}
-        type={props.type}
-        defaultValue={props.defaultValue}
-        required={props.required}
-        disabled={props.disabled}
-        dir={props.dir}
-        placeholder={props.placeholder}
-        className={props.dir === "ltr" ? "text-start" : undefined}
-        aria-invalid={props.error ? true : undefined}
-      />
+      {props.type === "date" ? (
+        // dd/MM/yyyy, because the native input renders in the BROWSER's locale and this
+        // product is read in one order only (docs/PRODUCT-REVIEW-2026-09.md, finding 1).
+        <DateField
+          id={props.name}
+          name={props.name}
+          defaultValue={props.defaultValue}
+          required={props.required}
+          disabled={props.disabled}
+        />
+      ) : (
+        <Input
+          id={props.name}
+          name={props.name}
+          type={props.type}
+          defaultValue={props.defaultValue}
+          required={props.required}
+          disabled={props.disabled}
+          dir={props.dir}
+          // A field whose schema is digits should open the number pad. Four phone
+          // numbers per student, all day (docs/PRODUCT-REVIEW-2026-09.md, finding 5).
+          inputMode={props.inputMode}
+          placeholder={props.placeholder}
+          className={props.dir === "ltr" ? "text-start" : undefined}
+          aria-invalid={props.error ? true : undefined}
+        />
+      )}
       {props.error ? (
         <FieldError message={props.error} />
       ) : props.hint ? (

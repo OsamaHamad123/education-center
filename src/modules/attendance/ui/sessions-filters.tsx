@@ -3,10 +3,10 @@
 import { useSearchParams } from "next/navigation";
 import { ar } from "@/shared/i18n/ar";
 import { useNavPending } from "@/shared/ui/use-nav-pending";
-import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import type { SessionLog } from "../application/queries/list-sessions";
+import { DateField } from "@/shared/ui/date-field";
 
 const ANY = "__any__";
 
@@ -36,24 +36,16 @@ export function SessionsFilters({ log }: { log: SessionLog }) {
     >
       <div className="space-y-1.5">
         <Label htmlFor="sessions-from">{ar.attendance.from}</Label>
-        <Input
+        <DateField
           id="sessions-from"
-          type="date"
-          dir="ltr"
           value={log.filters.from}
-          onChange={(event) => event.target.value && setParam("from", event.target.value)}
+          onChange={(isoDate) => setParam("from", isoDate)}
         />
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="sessions-to">{ar.attendance.to}</Label>
-        <Input
-          id="sessions-to"
-          type="date"
-          dir="ltr"
-          value={log.filters.to}
-          onChange={(event) => event.target.value && setParam("to", event.target.value)}
-        />
+        <DateField id="sessions-to" value={log.filters.to} onChange={(isoDate) => setParam("to", isoDate)} />
       </div>
 
       <div className="space-y-1.5">

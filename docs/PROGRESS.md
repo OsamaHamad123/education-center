@@ -486,6 +486,34 @@ the stack a reviewer reads described a library the product does not use. Both do
 now say what the forms actually do: plain `FormData` and a Zod schema run on both sides.
 Build, 457 unit and integration tests and 289 e2e all pass without them.
 
+## Product review — the first five (2026-09-16)
+
+`docs/PRODUCT-REVIEW-2026-09.md` ranks ten suggestions from walking every screen. The
+five that change a working day most are done.
+
+- **`DateField`** replaced all fourteen `<input type="date">`. The native control renders
+  in the BROWSER's locale, so the same screen read `09/16/2026` on one machine and
+  `16/09/2026` on the next — and a payroll range read the wrong way round pays the wrong
+  month. It is a text field with a calendar beside it; the value handed up is still ISO
+  and only the display changed. `calendar.tsx` and `popover.tsx` had been in the repo
+  unused since Phase 0, like `form.tsx`.
+- **The dashboard leads with the work.** `openRegistersToday` returns today's unmarked
+  periods as rows, each a link into its register, instead of the number 1 in a box. The
+  attendance figure relabels itself to "حضور المُسجّل حتى الآن", because "100%" at ten in
+  the morning was true and misleading at once.
+- **The teacher's day** puts the time on its own line (it used to truncate, and the end
+  time was what fell off), rings the lesson happening now, and makes an unmarked one
+  amber.
+- **The register's counters** are in the save bar at every width — they were
+  `hidden sm:flex`, so on a phone the teacher was marking blind — and the button says
+  what it will do: `حفظ الحضور — 3 غياب`.
+- **Nine digit fields** open the number pad.
+
+Note on the run: the first full e2e run after this landed showed nine failures, all
+"toast not found" timing in the mutating specs; each passed in isolation and two
+subsequent full runs were clean. Treated as load flakiness, not a regression — recorded
+here rather than glossed over.
+
 ## Next steps
 
 All ten phases are done. What is left is not a phase — it is the handover:

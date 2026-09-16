@@ -13,12 +13,12 @@ import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent } from "@/shared/ui/card";
 import { EmptyState } from "@/shared/ui/empty-state";
-import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 import type { PayrollReport, TeacherEarnings } from "../application/queries/get-payroll";
 import { exportPayrollCsv } from "../application/use-cases/export-payroll";
+import { DateField } from "@/shared/ui/date-field";
 
 const ANY = "__any__";
 
@@ -88,24 +88,16 @@ export function PayrollReportView({ report }: { report: PayrollReport }) {
       >
         <div className="space-y-1.5">
           <Label htmlFor="payroll-from">{ar.payroll.from}</Label>
-          <Input
+          <DateField
             id="payroll-from"
-            type="date"
-            dir="ltr"
             value={report.from}
-            onChange={(event) => event.target.value && setParam("from", event.target.value)}
+            onChange={(isoDate) => setParam("from", isoDate)}
           />
         </div>
 
         <div className="space-y-1.5">
           <Label htmlFor="payroll-to">{ar.payroll.to}</Label>
-          <Input
-            id="payroll-to"
-            type="date"
-            dir="ltr"
-            value={report.to}
-            onChange={(event) => event.target.value && setParam("to", event.target.value)}
-          />
+          <DateField id="payroll-to" value={report.to} onChange={(isoDate) => setParam("to", isoDate)} />
         </div>
 
         <div className="space-y-1.5">

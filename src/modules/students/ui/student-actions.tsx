@@ -29,6 +29,7 @@ import {
   transferStudentBranch,
 } from "../application/use-cases/manage-student";
 import { useAction } from "@/shared/ui/use-action";
+import { DateField } from "@/shared/ui/date-field";
 
 type Common = {
   studentId: string;
@@ -154,10 +155,9 @@ export function TransferBranchDialog({
 
           <div className="space-y-2">
             <Label htmlFor="transfer-date">{ar.students.onDate}</Label>
-            <Input
+            <DateField
               id="transfer-date"
               name="onDate"
-              type="date"
               defaultValue={todayInCairo()}
               required
               disabled={isPending}
@@ -229,10 +229,9 @@ export function ArchiveStudentDialog({ studentId }: { studentId: string }) {
         <form id="archive-form" className="space-y-4" onSubmit={onSubmit}>
           <div className="space-y-2">
             <Label htmlFor="leftDate">{ar.students.leftDate}</Label>
-            <Input
+            <DateField
               id="leftDate"
               name="leftDate"
-              type="date"
               defaultValue={todayInCairo()}
               required
               disabled={isPending}
@@ -354,10 +353,9 @@ function TransitionDialog({
 
           <div className="space-y-2">
             <Label htmlFor="transition-date">{ar.students.onDate}</Label>
-            <Input
+            <DateField
               id="transition-date"
               name="onDate"
-              type="date"
               defaultValue={todayInCairo()}
               required
               disabled={isPending}

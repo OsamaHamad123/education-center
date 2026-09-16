@@ -204,32 +204,42 @@ trusting its own query string — signed out, that URL is a 404, and there is a 
 > **Stop here unless Q1 says otherwise.** P1–P3 is the whole portal for a centre that
 > tracks attendance. What follows needs decisions that have not been made.
 
-### Phase P4 — being told, not asking
+### Phase P4 — being told, not asking — **planned in detail: `docs/MESSAGING-AND-FEES-PLAN.md`**
 
 **Goal:** the parent hears about an absence on the day, not at the end of the month.
 
-- Depends entirely on Q2/B and on §16 question 8. Without a messaging provider this
-  phase does not exist.
 - A message per absence is wrong — one child, six periods, six messages. **One message a
   day, after the last period**, naming the periods missed.
-- An opt-out that works, and is honoured, and is tested.
-- Templates, not free text (this is also the cheapest answer to §16 q8 — see the product
-  review).
+- An opt-out that works, and is honoured, and is tested. It belongs **in the portal**,
+  which is this phase's actual use for P1.
+- Templates, not free text (this is also the cheapest answer to §16 q8).
+
+**What changed since this was written:** the phase is not blocked as a whole. Splitting
+it showed that **P4a (templates) and P4b (one message per family per day) need no
+provider at all** — about two days, available now, and they carry most of the value. Only
+**P4c (automatic sending)** waits on §16 q8, and its hardest question is not technical:
+who reads the replies.
 
 **Done when:** a day with three absences produces one message, an opted-out parent
 produces none, and a failed send is visible to the office rather than silent.
 
-### Phase P5 — money
+### Phase P5 — money — **planned in detail: `docs/MESSAGING-AND-FEES-PLAN.md`**
 
 **Goal:** "what do I owe" — and it cannot be built until the admin product can answer it.
 
-Blocked on the fee question raised in the earlier review: the system tracks what is paid
+Blocked on the fee question raised in the earlier review: the system tracks what is owed
 **to teachers** and nothing about what is collected **from students**. Until fees, an
 invoice and a payment exist for the office, there is nothing for a parent to look at.
 
-Scope when unblocked: outstanding balance, what it is for, what has been paid, and a
-receipt. **Not** online payment — that is a different product, a different risk, and a
-different conversation.
+**What planning it properly showed:** this is not a portal phase. The product has **no
+money ledger at all** — payroll is a computed report, not a record that anyone was paid
+— so P5 is the product's money phase, and the portal is the last two days of it. It
+should be started by answering six questions rather than by writing a migration, and the
+ledger it builds is the same one that finally lets payroll say مدفوع.
+
+Scope for the parent's part when unblocked: outstanding balance, what it is for, what has
+been paid, and a receipt. **Not** online payment — that is a different product, a
+different risk, and a different conversation.
 
 ### Phase P6 — hardening the new front door — **built**
 

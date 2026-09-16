@@ -951,7 +951,7 @@ Implement Phase 10 from docs/PROJECT_PLAN.md (section 13). Produce a security re
 4. Is there a minimum gap between a teacher's sessions in different branches (travel time)? (default: none in v1)
 5. Should an `excused` or `late` student count as present in attendance percentage? (default: late = present, excused excluded from denominator)
 6. Are teacher payments ever per-hour or fixed monthly instead of per session? (default: per session only)
-7. Academic terms/years: do reports need a "term" concept? (default: date ranges only; add `academic_years` later)
+7. ~~Academic terms/years: do reports need a "term" concept?~~ **Answered 2026-09-17 by building it** (`drizzle/0017`): a term is a named date range, centre-wide, offered as a preset on reports and used for the public lookup's "الفصل" figure. Reports still compute on date ranges; fees stay monthly.
 8. Is sending automatic WhatsApp/SMS to parents needed later? (default: manual wa.me links)
 9. Default attendance edit window for branch admins? (default: 7 days)
 10. Hosting preference and budget: VPS in Egypt/EU vs managed cloud?

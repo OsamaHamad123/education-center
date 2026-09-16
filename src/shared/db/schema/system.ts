@@ -1,5 +1,16 @@
 import { sql } from "drizzle-orm";
-import { boolean, check, index, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  check,
+  date,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { branches } from "./branches";
 import { auditActionEnum } from "./enums";
@@ -158,3 +169,30 @@ export type LookupAttempt = typeof lookupAttempts.$inferSelect;
 export type CenterSettings = typeof centerSettings.$inferSelect;
 export type LoginAttempt = typeof loginAttempts.$inferSelect;
 export type PortalSession = typeof portalSessions.$inferSelect;
+
+/**
+ * The centre's academic calendar (§16 question 7; `drizzle/0017`).
+ *
+ * A term is a NAMED DATE RANGE and nothing else: reports keep working on `from` and
+ * `to`, and a term fills them in. Centre-wide, because the calendar comes from the
+ * ministry and the branches share it, and readable by everyone including an anonymous
+ * lookup — the dates are on a poster in the entrance.
+ */
+export const academicTerms = pgTable(
+  "academic_terms",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    /** Free text: an enum would be wrong the first year somebody adds a summer term. */
+    name: text().notNull().unique(),
+    startDate: date().notNull(),
+    endDate: date().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    createdBy: text().references(() => user.id, { onDelete: "set null" }),
+  },
+  (t) => [
+    index("academic_terms_start_idx").on(t.startDate.desc()),
+    check("academic_terms_dates", sql`${t.endDate} >= ${t.startDate}`),
+  ],
+);
+
+export type AcademicTerm = typeof academicTerms.$inferSelect;

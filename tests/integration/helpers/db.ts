@@ -39,7 +39,7 @@ export async function resetDatabase(): Promise<void> {
     branch_schedule_settings, student_enrollments, student_code_counters, students,
     teacher_branches, teacher_rate_history, teachers, classes, subjects,
     payroll_runs, payments, invoices, fee_plans, receipt_counters,
-    audit_logs, lookup_attempts, login_attempts, portal_sessions,
+    academic_terms, audit_logs, lookup_attempts, login_attempts, portal_sessions,
     account, session, verification, "user",
     branches, center_settings
     restart identity cascade`);

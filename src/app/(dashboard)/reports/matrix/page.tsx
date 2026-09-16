@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { ClassMatrix, getClassMatrixReport, ReportFilters } from "@/modules/reports";
+import { getTerms } from "@/modules/settings";
 import { ar } from "@/shared/i18n/ar";
 import { Button } from "@/shared/ui/button";
 import { PageHeader } from "@/shared/ui/page-header";
@@ -17,6 +18,11 @@ export default async function ClassMatrixPage({
   const params = await searchParams;
   const report = await getClassMatrixReport(params);
   if (!report.ok) notFound();
+
+  // The centre's calendar as a date preset (§16 q7). A centre with no terms sees no
+  // picker, and nothing else about the report changes.
+  const termsResult = await getTerms();
+  const terms = termsResult.ok ? termsResult.data.terms : [];
 
   return (
     <>
@@ -37,6 +43,7 @@ export default async function ClassMatrixPage({
           range={report.data.range}
           classes={report.data.classes}
           classId={report.data.classId}
+          terms={terms}
         />
         <ClassMatrix report={report.data} />
       </div>

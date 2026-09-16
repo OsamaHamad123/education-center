@@ -240,7 +240,7 @@ async function main() {
     branch_schedule_settings, student_enrollments, student_code_counters, students,
     teacher_branches, teacher_rate_history, teachers, classes, subjects,
     payroll_runs, payments, invoices, fee_plans, receipt_counters,
-    audit_logs, lookup_attempts, login_attempts, portal_sessions,
+    academic_terms, audit_logs, lookup_attempts, login_attempts, portal_sessions,
     account, session, verification, "user",
     branches, center_settings
     restart identity cascade`);
@@ -539,6 +539,27 @@ async function main() {
       attendanceCount += roster.length;
     }
   }
+
+  // --- the academic calendar (§16 q7) --------------------------------------
+  //
+  // Two terms, the Egyptian shape, with today inside the first — so the lookup's
+  // "الفصل" figure means a term rather than twelve months, and the reports have a
+  // preset to offer.
+  const termYear = Number(todayInCairo().slice(0, 4));
+  await db.insert(schema.academicTerms).values([
+    {
+      name: `الفصل الدراسي الأول ${termYear}/${termYear + 1}`,
+      startDate: `${termYear}-09-01`,
+      endDate: `${termYear + 1}-01-15`,
+      createdBy: "usr_super",
+    },
+    {
+      name: `الفصل الدراسي الثاني ${termYear}/${termYear + 1}`,
+      startDate: `${termYear + 1}-02-01`,
+      endDate: `${termYear + 1}-06-10`,
+      createdBy: "usr_super",
+    },
+  ]);
 
   // --- fees: a centre mid-month (P5) ---------------------------------------
   //

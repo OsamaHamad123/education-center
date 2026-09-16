@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { BranchComparisonView, getBranchComparison, ReportFilters } from "@/modules/reports";
+import { getTerms } from "@/modules/settings";
 import { ar } from "@/shared/i18n/ar";
 import { Button } from "@/shared/ui/button";
 import { PageHeader } from "@/shared/ui/page-header";
@@ -22,6 +23,11 @@ export default async function BranchComparisonPage({
   const comparison = await getBranchComparison(params);
   if (!comparison.ok) notFound();
 
+  // The centre's calendar as a date preset (§16 q7). A centre with no terms sees no
+  // picker, and nothing else about the report changes.
+  const termsResult = await getTerms();
+  const terms = termsResult.ok ? termsResult.data.terms : [];
+
   return (
     <>
       <PageHeader
@@ -37,7 +43,7 @@ export default async function BranchComparisonPage({
         }
       />
       <div className="space-y-4">
-        <ReportFilters range={comparison.data.range} />
+        <ReportFilters range={comparison.data.range} terms={terms} />
         <BranchComparisonView comparison={comparison.data} />
       </div>
     </>

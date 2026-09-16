@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { attendanceRate } from "@/modules/reports";
+import { currentTermRange } from "@/modules/settings";
 import { hashIp, requestMetadata } from "@/shared/actions/audit";
 import { ar } from "@/shared/i18n/ar";
 import { err, ok, type Result } from "@/shared/lib/result";
@@ -62,9 +63,6 @@ export type LookupResult = {
   absences: { date: string; status: "absent" | "late"; notes: string | null; subjectName: string }[];
 };
 
-/** The window the "term" figures cover until §16 question 7 gives us real terms. */
-const TERM_MONTHS = 12;
-
 export async function lookupStudent(raw: unknown): Promise<Result<LookupResult>> {
   const parsed = lookupSchema.safeParse(raw);
   if (!parsed.success) return err("VALIDATION_ERROR", ar.lookup.notFound);
@@ -89,7 +87,12 @@ export async function lookupStudent(raw: unknown): Promise<Result<LookupResult>>
   }
 
   const today = todayInCairo();
-  const document = await runPublicLookup({ code, lastFour, from: termStart(today), to: today });
+  // The centre's own calendar, at last (§16 question 7). This figure has been labelled
+  // "الفصل" since Phase 9 and meant "the last twelve months", because there was
+  // nothing better to ask. A centre with no terms still gets twelve months, so nothing
+  // changes for them; a centre with a calendar gets the truth.
+  const term = await currentTermRange(today);
+  const document = await runPublicLookup({ code, lastFour, from: term.from, to: today });
 
   await recordAttempt({ ipHash, code, success: document !== null });
   // Cheap, indexed, and one less scheduled job to notice has stopped running.
@@ -132,10 +135,4 @@ export async function lookupStudent(raw: unknown): Promise<Result<LookupResult>>
 export async function limitBreach(input: { ipHash: string; code: string }) {
   if (process.env.DISABLE_RATE_LIMIT === "1") return null;
   return checkLookupLimits(await countRecentFailures(input));
-}
-
-function termStart(today: string): string {
-  const start = new Date(`${today}T00:00:00Z`);
-  start.setUTCMonth(start.getUTCMonth() - TERM_MONTHS);
-  return start.toISOString().slice(0, 10);
 }

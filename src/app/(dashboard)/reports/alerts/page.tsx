@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { AbsenceAlertsList, getAbsenceAlerts, ReportFilters } from "@/modules/reports";
+import { getTerms } from "@/modules/settings";
 import { ar } from "@/shared/i18n/ar";
 import { Button } from "@/shared/ui/button";
 import { PageHeader } from "@/shared/ui/page-header";
@@ -26,6 +27,11 @@ export default async function AbsenceAlertsPage({
   });
   if (!report.ok) notFound();
 
+  // The centre's calendar as a date preset (§16 q7). A centre with no terms sees no
+  // picker, and nothing else about the report changes.
+  const termsResult = await getTerms();
+  const terms = termsResult.ok ? termsResult.data.terms : [];
+
   return (
     <>
       <PageHeader
@@ -41,7 +47,7 @@ export default async function AbsenceAlertsPage({
         }
       />
       <div className="space-y-4">
-        <ReportFilters range={report.data.range} />
+        <ReportFilters range={report.data.range} terms={terms} />
         <AbsenceAlertsList report={report.data} />
       </div>
     </>

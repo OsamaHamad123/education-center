@@ -817,6 +817,36 @@ the same first row race by construction — one pays the balance and the other f
 overwrote the results; the two runs after it were clean at 359 passed. Recorded rather
 than smoothed over — this machine's load-sensitivity is already documented above.
 
+## Academic terms — §16 question 7 (2026-09-17)
+
+Roadmap item 4. `drizzle/0017`, the calendar on the settings screen, a term preset on
+every report, and the public lookup's "الفصل" figure finally meaning a term.
+
+**The question is answered by building the smallest version of it.** A term is a NAMED
+DATE RANGE and nothing else: reports keep computing on `from` and `to`, and a term fills
+them in. Nothing downstream learned a new concept, a shared report URL still carries
+plain dates, and a centre that never adds a term sees no picker and no change at all.
+
+**Why it was worth doing:** the product already SAID الفصل in one place and did not
+mean it. The public lookup has shown a parent a "term" percentage since Phase 9 that was
+really the last twelve months — `TERM_MONTHS = 12`, with a comment naming this question.
+It now means the centre's term, and still answers twelve months where there is no
+calendar.
+
+**Two decisions that kept it small**, both recorded in the migration: the calendar is
+**centre-wide**, because it comes from the ministry and three copies would be three
+things to keep in step; and **fees stay monthly** — P5 answered that and built it, and a
+term fee is a different feature rather than a consequence of naming the calendar.
+
+**Terms cannot overlap**, enforced by a GiST exclusion constraint rather than by the
+form: "the current term" has to have exactly one answer, and a calendar that can give two
+is a calendar that will. The form checks it too, so the refusal arrives in Arabic.
+
+**And a term can be DELETED**, which almost nothing else in this codebase can. Nothing is
+stored against a term id — attendance, invoices and payslips are all stored against dates
+— so removing a label mistyped in September changes no figure anywhere. An integration
+test asserts exactly that: the attendance count is the same before and after.
+
 ## Next steps
 
 **See `docs/ROADMAP.md`** — written 2026-09-17, after payroll runs closed the last item

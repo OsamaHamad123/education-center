@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DateField } from "@/shared/ui/date-field";
 
 const ANY = "__any__";
+const CUSTOM = "__custom__";
 
 /**
  * Date range, and optionally a class, kept in the URL so a report someone is looking
@@ -18,12 +19,15 @@ export function ReportFilters({
   classes,
   classId,
   allClassesLabel,
+  terms,
 }: {
   range: { from: string; to: string };
   classes?: { id: string; name: string }[];
   classId?: string | null;
   /** Omitted when a class must be chosen, as in the matrix. */
   allClassesLabel?: string;
+  /** The centre's calendar (§16 q7). Omitted, or empty, and nothing is shown. */
+  terms?: { id: string; name: string; startDate: string; endDate: string }[];
 }) {
   const [isNavigating, navigate] = useNavPending();
   const params = useSearchParams();
@@ -32,6 +36,24 @@ export function ReportFilters({
     const next = new URLSearchParams(params.toString());
     if (!value || value === ANY) next.delete(key);
     else next.set(key, value);
+    navigate(`?${next.toString()}`);
+  }
+
+  /**
+   * A term is a PRESET, not a filter: picking one writes `from` and `to` and then has
+   * nothing more to do with the report. That is the whole design of §16 q7 — nothing
+   * that already computes anything had to learn a new concept, and a shared URL still
+   * carries plain dates.
+   */
+  const selectedTerm =
+    terms?.find((term) => term.startDate === range.from && term.endDate === range.to)?.id ?? CUSTOM;
+
+  function chooseTerm(value: string) {
+    const term = terms?.find((option) => option.id === value);
+    if (!term) return;
+    const next = new URLSearchParams(params.toString());
+    next.set("from", term.startDate);
+    next.set("to", term.endDate);
     navigate(`?${next.toString()}`);
   }
 
@@ -47,6 +69,29 @@ export function ReportFilters({
       aria-busy={isNavigating}
       className="grid gap-3 transition-opacity disabled:opacity-60 sm:grid-cols-2 lg:grid-cols-4"
     >
+      {terms && terms.length > 0 ? (
+        <div className="space-y-1.5">
+          <Label htmlFor="report-term">{ar.terms.title}</Label>
+          <Select value={selectedTerm} onValueChange={chooseTerm}>
+            <SelectTrigger id="report-term" className="w-full">
+              <SelectValue placeholder={ar.terms.choose} />
+            </SelectTrigger>
+            <SelectContent>
+              {/* Shown but not selectable as an action: the dates below ARE the custom
+                  range, so there is nothing for choosing it to do. */}
+              <SelectItem value={CUSTOM} disabled>
+                {ar.terms.custom}
+              </SelectItem>
+              {terms.map((term) => (
+                <SelectItem key={term.id} value={term.id}>
+                  {term.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
+
       <div className="space-y-1.5">
         <Label htmlFor="report-from">{ar.payroll.from}</Label>
         <DateField id="report-from" value={range.from} onChange={(isoDate) => setParam("from", isoDate)} />

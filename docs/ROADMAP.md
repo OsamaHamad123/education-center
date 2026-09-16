@@ -96,7 +96,7 @@ audit log for whether anybody signs in; a flat line means the cards are in a dra
 
 # What I know is missing, in the order I would do it
 
-**Items 1, 2 and 3 were built on 2026-09-17**, ahead of the deployment phases, at the
+**Items 1, 2, 3 and 4 were built on 2026-09-17**, ahead of the deployment phases, at the
 owner's instruction. The recommendation above stands unchanged: they are three more
 pieces of code that have never met a real user, on a deployment that has not happened.
 
@@ -145,13 +145,29 @@ will ask in the first month.
 the books close — with reversals as negative lines carrying their own numbers rather than
 as omissions. A book that quietly skips a cancelled receipt does not reconcile.
 
-### 4. Academic terms — **§16 question 7, 2 to 3 days, and it touches the schema**
+### 4. Academic terms — **built**
 
 Reports, fees and the portal all work on date ranges, which was the plan's own default.
 If the centre genuinely thinks in terms — "الفصل الأول" rather than "من ١ سبتمبر" — this
 is worth doing, and it is the only open question that changes the database.
 
-**Ask before building.** If they answer in dates, this is free.
+**Built**, and deliberately the smallest thing that makes the word true. A term is a
+NAMED DATE RANGE and nothing else: reports keep working on `from` and `to`, and a term
+fills them in. Nothing that already computes anything was rewritten, a shared report URL
+still carries plain dates, and a centre that never adds a term sees no picker and no
+change.
+
+The reason it was worth doing at all is that the product already SAID "الفصل" in one
+place and did not mean it: the public lookup has shown a parent a term percentage since
+Phase 9 that was really the last twelve months, with `TERM_MONTHS = 12` carrying a
+comment naming this very question. It now means the centre's own term — and still falls
+back to twelve months where there is no calendar, so nothing changed for anybody who has
+not filled one in.
+
+Two things kept it small and are worth stating: it is **centre-wide**, because the
+calendar comes from the ministry and three copies of it would be three things to keep in
+step; and **fees stay monthly** — P5 answered that and built it, and a term fee is a
+different feature rather than a consequence of naming the calendar.
 
 ### 5. Automatic messages — **P4c, 2 to 3 weeks, and still blocked**
 

@@ -263,12 +263,22 @@ test.describe("the sessions log", () => {
 
   test("refuses a cancellation with no reason", async ({ page }) => {
     await signIn(page, "admin_nsr");
-    await page.goto("/attendance/sessions");
+    // Filtered to completed sessions: the other project's test cancels one of these
+    // concurrently, and an unfiltered list can hand this test a row whose button has
+    // already become "إعادة تفعيل".
+    await page.goto("/attendance/sessions?status=completed");
 
-    await page
-      .getByRole("button", { name: /^إلغاء الحصة — / })
-      .first()
-      .click();
+    // Retried: the button is in the server-rendered HTML before React has attached
+    // its handler, so under a loaded parallel run the first click can land on a page
+    // that is painted but not yet interactive and simply do nothing.
+    await expect(async () => {
+      await page
+        .getByRole("button", { name: /^إلغاء الحصة — / })
+        .first()
+        .click();
+      await expect(page.getByRole("dialog")).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 15_000 });
+
     // The confirm button stays disabled until a real reason is typed.
     await expect(page.getByRole("dialog").getByRole("button", { name: "إلغاء الحصة" })).toBeDisabled();
   });

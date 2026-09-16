@@ -76,7 +76,25 @@ export const centerSettings = pgTable(
   ],
 );
 
+/**
+ * Per-account sign-in failures (docs/SECURITY-REVIEW.md, finding 1).
+ *
+ * Keyed on the USERNAME, not the address: Better Auth's per-IP budget has to stay
+ * generous because a branch office shares one address, which left a known username
+ * brute-forceable from a botnet. Teacher access codes are six digits.
+ */
+export const loginAttempts = pgTable(
+  "login_attempts",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    username: text().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("login_attempts_username_created_idx").on(t.username, t.createdAt.desc())],
+);
+
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type NewAuditLog = typeof auditLogs.$inferInsert;
 export type LookupAttempt = typeof lookupAttempts.$inferSelect;
 export type CenterSettings = typeof centerSettings.$inferSelect;
+export type LoginAttempt = typeof loginAttempts.$inferSelect;

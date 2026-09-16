@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { signIn } from "@/shared/auth/client";
+import { assertNotLockedOut, clearFailedLogins, recordFailedLogin } from "@/shared/auth/login-lockout";
 import { ar } from "@/shared/i18n/ar";
 import { readText } from "@/shared/lib/form-data";
 import { normalizeEgyptianPhone } from "@/shared/lib/phone";
@@ -37,18 +38,29 @@ export function LoginForm() {
       identifier = phone;
     }
 
+    const username = identifier.toLowerCase();
+
     startTransition(async () => {
-      const { error: authError } = await signIn.username({
-        username: identifier.toLowerCase(),
-        password,
-      });
+      // Asked BEFORE the password is checked, so a locked account costs an attacker a
+      // query and tells them nothing (docs/SECURITY-REVIEW.md, finding 1).
+      const gate = await assertNotLockedOut(username);
+      if (!gate.ok) {
+        setError(gate.error.message);
+        return;
+      }
+
+      const { error: authError } = await signIn.username({ username, password });
 
       if (authError) {
+        await recordFailedLogin(username);
         // The same message for a wrong name and a wrong password: telling them apart
         // would let someone enumerate valid usernames.
         setError(authError.status === 429 ? ar.auth.tooManyAttempts : ar.auth.invalidCredentials);
         return;
       }
+
+      // Somebody who mistypes twice and then succeeds starts clean.
+      await clearFailedLogins(username);
 
       const next = params.get("next");
       router.replace(next && next.startsWith("/") ? next : "/");

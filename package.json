@@ -27,7 +27,9 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx src/shared/db/seed.ts",
     "db:studio": "drizzle-kit studio",
-    "prepare": "husky"
+    "prepare": "husky",
+    "create-super-admin": "tsx scripts/create-super-admin.ts",
+    "db:backup": "docker compose -f docker-compose.prod.yml exec backup sh -c \"BACKUP_DIR=/backups INTERVAL_SECONDS=0 sh /usr/local/bin/backup.sh\" || true"
   },
   "dependencies": {
     "@date-fns/tz": "1.5.0",

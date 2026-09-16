@@ -1,0 +1,30 @@
+# Automatic HTTPS in front of the app (PROJECT_PLAN 13.3).
+#
+# Caddy obtains and renews the certificate itself, which is the whole reason it is
+# here rather than nginx: one less thing that expires silently at 3am.
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# The app sets its own security headers (next.config.ts). Caddy adds nothing, so
+	# there is exactly ONE place to read when asking what this deployment sends.
+	reverse_proxy app:3000 {
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	# The health route is for the container and the load balancer, not the internet.
+	@health path /api/health
+	respond @health 404
+
+	log {
+		output file /data/access.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+		# The lookup page carries a student code in its POST body, never its path, so
+		# a path log is safe — but the query string is dropped regardless.
+		format json
+	}
+}

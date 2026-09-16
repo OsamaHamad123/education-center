@@ -92,6 +92,14 @@ export const ar = {
     BRANCH_REQUIRED: "اختر فرعاً محدداً أولاً — هذا الإجراء غير متاح في وضع «كافة الفروع».",
     RATE_LIMITED: "محاولات كثيرة جداً. انتظر قليلاً ثم أعد المحاولة.",
     INTERNAL: "حدث خطأ غير متوقع. حاول مرة أخرى.",
+
+    /** The 404 and the error boundary (docs/SECURITY-REVIEW.md, finding 6). */
+    notFoundTitle: "الصفحة غير موجودة",
+    notFoundBody: "الرابط غير صحيح، أو أن هذه البيانات ليست ضمن صلاحياتك.",
+    backHome: "العودة للرئيسية",
+    unexpectedTitle: "حدث خطأ غير متوقع",
+    unexpectedBody: "تم تسجيل المشكلة. حاول مرة أخرى، وإن تكررت أبلغ الإدارة العامة بالرقم أدناه.",
+    tryAgain: "إعادة المحاولة",
   },
 
   nav: {
@@ -132,6 +140,7 @@ export const ar = {
     submitting: "جارٍ الدخول…",
     invalidCredentials: "اسم المستخدم أو كلمة المرور غير صحيحة.",
     accountInactive: "هذا الحساب موقوف. راجع الإدارة العامة.",
+    lockedOut: "تم إيقاف هذا الحساب مؤقتاً بعد محاولات فاشلة كثيرة. حاول بعد",
     tooManyAttempts: "محاولات كثيرة. انتظر ربع ساعة ثم أعد المحاولة.",
     changePasswordTitle: "تغيير كلمة المرور",
     changePasswordHint: "كلمة المرور الحالية مؤقتة — اختر كلمة مرور جديدة للمتابعة.",

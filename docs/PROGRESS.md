@@ -2,19 +2,50 @@
 
 ## Current phase
 
-Phase 9 — Teacher portal & public lookup — status: **done, verified in the running app**
+Phase 10 — Hardening, performance, deployment — status: **done**
 
-| Acceptance criterion (section 14)                            | Result                                                                              |
-| ------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
-| The lookup cannot enumerate                                  | ✅ one message and one null for every failure; 14 integration tests, one per attack |
-| Rate limiting works                                          | ✅ blocks on the 6th attempt, verified by hand against a server with the limiter ON |
-| A teacher sees combined + per-branch data, own branches only | ✅ today, week, earnings and the lessons behind them — all scoped by RLS            |
-| PDFs render Arabic with the Cairo font                       | ⛔ **not built** — deliberately deferred, see below                                 |
-| `pnpm typecheck && pnpm lint && pnpm test`                   | ✅ 419 tests (290 unit + 129 integration)                                           |
-| e2e                                                          | ✅ 200 tests, desktop and mobile, passing twice in a row against the same database  |
+| Acceptance criterion (section 14)           | Result                                                                                               |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Security review, findings fixed             | ✅ 8 findings in [`docs/SECURITY-REVIEW.md`](SECURITY-REVIEW.md), all fixed                          |
+| A fresh server deploy from the README works | ⚠️ the stack builds and every step is written out, but it has NOT been run on a real VPS — see below |
+| Backup + restore tested                     | ✅ encrypted dump → decrypt → restore → identical counts (380 / 223 / 3,924)                         |
+| All tests green                             | ✅ 427 tests (298 unit + 129 integration) and 219 e2e, twice in a row                                |
+| Lighthouse mobile ≥ 90                      | ⚠️ accessibility **100**, best practices **100**, performance **85** — measured, not met             |
+
+## The two criteria that are not a tick
+
+**The deploy has not been run on a real server.** Every piece exists and is written
+out in the README — `Dockerfile` (standalone, non-root, healthchecked),
+`docker-compose.prod.yml` (db → migrate → app → caddy → backup, in that order, with no
+default passwords), the Caddyfile, and `pnpm create-super-admin`. What has not happened
+is somebody typing those commands on a fresh VPS, because §16 question 10 (hosting) is
+still unanswered and there is no server to type them on. The backup and restore halves
+WERE exercised for real against the running database.
+
+**Lighthouse performance is 85, not 90.** Accessibility and best practices are both 100.
+The gap is a 4.0s Largest Contentful Paint against a 0.9s first paint with a 20ms server
+response — client-side, and `unused-javascript` names 150 KiB of framework code on a page
+that is one form. Switching the font to `display: "optional"` was tried and measured as
+no change, so it was reverted. Moving this number means shipping less JavaScript to
+`/lookup`, which is a real piece of work, not a setting.
 
 ## Completed
 
+- [x] Phase 10 — hardening, performance and deployment:
+  - [`docs/SECURITY-REVIEW.md`](SECURITY-REVIEW.md): a review of tenant isolation, auth,
+    input validation, the lookup, logging and headers — 8 findings, each with what an
+    attacker gets out of it, all fixed
+  - **Per-account lockout** (`drizzle/0007`), the hole outstanding since Phase 2: 10
+    failures against one username in 15 minutes locks it, keyed on the username so a
+    distributed attack is throttled like a single-host one
+  - Security headers, including `frame-ancestors 'none'` and a referrer policy that
+    stops `wa.me` learning a student's id from the path
+  - Error logs now carry an error's SHAPE, never a Postgres `detail` with a phone in it
+  - Arabic 404 and error pages; `/api/health` pings the database and 503s when it cannot
+  - `Dockerfile`, `docker-compose.prod.yml`, Caddy, encrypted backups with a verified
+    restore drill, `pnpm create-super-admin`, and a CI e2e job that finally has a database
+  - [`docs/RUNBOOK.md`](RUNBOOK.md) for whoever is on the phone at 3am
+  - 8 new unit tests, 8 new integration tests, 10 new e2e specs
 - [x] Phase 9 — teacher portal and the public lookup:
   - `drizzle/0006`: `app_public_lookup`, the one audited hole through RLS for a request
     with no session. It authorises itself (code AND last four digits, in one predicate),
@@ -173,6 +204,9 @@ Phase 9 — Teacher portal & public lookup — status: **done, verified in the r
 | 2026-09-16 | An **archived** student is not publicly reachable                                           | Rule 10.8 does not say. A departed student's record should stop being a live public answer the moment they stop attending; a parent who needs the history can ask the branch.                                                                                                                                                 |
 | 2026-09-16 | A **blocked** lookup is not recorded as an attempt                                          | Otherwise a caller who is already shut out can keep extending their own block, and — worse — can push somebody else's student code over its hourly limit by hammering it.                                                                                                                                                     |
 | 2026-09-16 | `DISABLE_RATE_LIMIT=1` now silences the LOOKUP limiter too, not just sign-in                | The whole e2e suite runs from one address, so a per-IP budget meant for the internet blocks the suite against itself after five deliberately-wrong lookups. Never set in production.                                                                                                                                          |
+| 2026-09-16 | The lookup rate limiter also honours `DISABLE_RATE_LIMIT`, and CI sets it                   | The e2e suite runs from one address; a per-IP budget meant for the internet blocks it against itself. Never set in production.                                                                                                                                                                                                |
+| 2026-09-16 | `display: "optional"` on the Cairo font was tried and **reverted**                          | Measured as no change to the Largest Contentful Paint (4.0s → 4.1s). Keeping it would have changed how the product looks on a first visit for a benefit that did not exist.                                                                                                                                                   |
+| 2026-09-16 | A failed backup encryption DELETES the dump instead of keeping it in plaintext              | `postgres:16-alpine` ships without openssl, so the original fallback would have written plaintext dumps forever while logging a warning nobody reads. Found by running the script for real.                                                                                                                                   |
 
 ## Deviations from PROJECT_PLAN
 
@@ -266,23 +300,22 @@ Phase 9 — Teacher portal & public lookup — status: **done, verified in the r
 
 ## Next steps
 
-Phase 10 — Hardening, performance, deployment. The last phase, and the one that decides
-whether any of the above survives contact with a real server.
+All ten phases are done. What is left is not a phase — it is the handover:
 
-Carrying forward, in the order they bite:
-
-1. **Per-account failed-attempt lockout** is still missing, and has been since Phase 2.
-   Today a determined attacker gets 20 sign-in tries per 5 minutes per IP against a known
-   username — and teacher access codes are six digits. This is the one outstanding item
-   that is a genuine hole rather than a rough edge.
-2. **404 and error pages are still the English Next.js defaults.** Every other string in
-   the product is Arabic.
-3. The deployment image must decide about **Chromium** — it settles both the optional PDF
-   route and whether e2e can run in CI.
-4. Open questions 4, 7, 8 and 10 from section 16 are still unanswered; 7 (academic terms)
-   is the one that would change a schema, so ask before Phase 10 closes.
-5. **The e2e suite leaves rows behind** in every seeded branch and has done since Phase 4.
-   Either a reseed step before the suite, or a cleanup after it, before this is handed over.
+1. **Answer §16 question 10 (hosting)** and run the deploy on a real server. Everything
+   is written out in the README; nobody has typed it on a VPS yet.
+2. **Do the restore drill on that server** before it holds real data, and set
+   `BACKUP_PASSPHRASE` — without it the dumps are plaintext and the log says so daily.
+3. **Copy backups off the box.** The container writes to a local volume only, which is
+   not a backup of the machine it lives on.
+4. **Reseed before handing it over.** The e2e suite has been enrolling students into the
+   seeded branches since Phase 4; أدبي 1 - بنين in مدينة نصر now has over a hundred, and
+   the demo no longer looks like a real class.
+5. **§16 questions 4, 7 and 8 are still unanswered.** Question 7 (academic terms) is the
+   only one that would change the schema — reports work on date ranges today, which was
+   the plan's own default.
+6. **Performance on `/lookup`** if the 90 matters: 150 KiB of framework JavaScript for
+   one form is the whole gap.
 
 To bring a machine up from scratch:
 

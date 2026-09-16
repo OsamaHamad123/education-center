@@ -122,6 +122,30 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     needs: [build]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: school
+          TZ: Africa/Cairo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://school_app:app@localhost:5432/school
+      DATABASE_OWNER_URL: postgresql://school_owner:owner@localhost:5432/school
+      BETTER_AUTH_SECRET: ci-only-secret-not-used-anywhere-else
+      BETTER_AUTH_URL: http://localhost:3000
+      LOOKUP_IP_SALT: ci-only-salt-at-least-16-chars
+      # The whole suite runs from one address; a per-IP budget meant for the internet
+      # would block it against itself. Never set outside CI and local test runs.
+      DISABLE_RATE_LIMIT: "1"
     steps:
       - uses: actions/checkout@v5
 
@@ -134,11 +158,32 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Mirrors docker/postgres/01-init.sh. The app role is NOBYPASSRLS here too, so
+      # the e2e run exercises the real policies rather than a privileged shortcut.
+      - name: Create roles and extensions
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d school -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE school_owner LOGIN PASSWORD 'owner' BYPASSRLS;
+          CREATE ROLE school_app LOGIN PASSWORD 'app' NOBYPASSRLS NOCREATEDB NOCREATEROLE NOSUPERUSER;
+          CREATE EXTENSION IF NOT EXISTS pgcrypto;
+          CREATE EXTENSION IF NOT EXISTS btree_gist;
+          CREATE EXTENSION IF NOT EXISTS pg_trgm;
+          GRANT ALL ON DATABASE school TO school_owner;
+          ALTER SCHEMA public OWNER TO school_owner;
+          GRANT CONNECT ON DATABASE school TO school_app;
+          GRANT USAGE ON SCHEMA public TO school_app;
+          SQL
+
+      - name: Migrate and seed
+        run: |
+          pnpm db:migrate
+          pnpm db:seed
+
       - run: pnpm exec playwright install --with-deps chromium
 
       - name: E2E tests
-        env:
-          SKIP_ENV_VALIDATION: "1"
         run: pnpm test:e2e
 
       - uses: actions/upload-artifact@v4

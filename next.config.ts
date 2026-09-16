@@ -1,5 +1,69 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {/* config options here */};
+/**
+ * Security headers (PROJECT_PLAN 13.1; docs/SECURITY-REVIEW.md, finding 2).
+ *
+ * Each line below is a specific attack it refuses, not a checklist item:
+ *
+ * `frame-ancestors 'none'` — the CSP form of X-Frame-Options, and stricter: nothing
+ *   may frame this app. Without it a clickjacking page could lay an invisible
+ *   `/students/…/edit` over a game and harvest the clicks.
+ *
+ * `Referrer-Policy` — the default sends the full path to any external host a page
+ *   links to. The absence alerts link to `wa.me`, so a referrer carrying
+ *   `/students/<uuid>` was a real leak, not a theoretical one. Origin only, now.
+ *
+ * `X-Content-Type-Options: nosniff` — an uploaded logo served with the wrong type
+ *   must not be sniffed into a script.
+ *
+ * HSTS is production-only: on a developer's machine the app is plain HTTP, and a
+ * browser that has once seen `max-age` will refuse to talk to localhost over HTTP
+ * for a year afterwards.
+ *
+ * The CSP allows `'unsafe-inline'` for styles because Tailwind and `next/font` inject
+ * them, and `'unsafe-eval'` is NOT allowed. Scripts are `'self'` plus the nonce-less
+ * inline bootstrap Next.js emits, which is why `'unsafe-inline'` appears there too —
+ * tightening that needs the nonce plumbing in `proxy.ts` and is recorded as the one
+ * loose thread in docs/SECURITY-REVIEW.md.
+ */
+const CSP = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "object-src 'none'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data:",
+  // The only outbound destination the app has is its own origin; wa.me is opened as
+  // a link, never fetched.
+  "connect-src 'self'",
+  "upgrade-insecure-requests",
+].join("; ");
+
+const securityHeaders = [
+  { key: "Content-Security-Policy", value: CSP },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "X-DNS-Prefetch-Control", value: "off" },
+  // Nothing in this product needs a camera, a microphone or a location.
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
+  ...(process.env.NODE_ENV === "production"
+    ? [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" }]
+    : []),
+];
+
+const nextConfig: NextConfig = {
+  // A self-contained server bundle, so the production image carries no node_modules
+  // (PROJECT_PLAN 13.3).
+  output: "standalone",
+  poweredByHeader: false,
+
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders }];
+  },
+};
 
 export default nextConfig;

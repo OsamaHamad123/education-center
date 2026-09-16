@@ -223,6 +223,6 @@ test.describe("isolation", () => {
 
     // By id: an id they may not read is a 404 — the same answer a nonexistent one gives.
     await page.goto("/students/00000000-0000-4000-8000-000000000000");
-    await expect(page.getByText("404")).toBeVisible();
+    await expect(visible(page, "الصفحة غير موجودة").first()).toBeVisible();
   });
 });

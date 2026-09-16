@@ -1,0 +1,121 @@
+# Production stack (PROJECT_PLAN 13.3): one VPS, four containers.
+#
+#   db       Postgres 16 with a named volume
+#   migrate  a one-shot container that applies migrations as the OWNER, then exits
+#   app      the Next.js standalone server, as the non-owner app role
+#   caddy    automatic HTTPS in front of everything
+#   backup   pg_dump on a schedule, 14-day retention
+#
+# The order matters and is enforced by `depends_on`: the app must not start against a
+# schema it does not recognise, so `migrate` has to exit successfully first.
+#
+# Nothing here has a default password. `docker compose` will refuse to start without
+# the variables, which is the intended behaviour — a production stack that boots with
+# `postgres/postgres` is a production stack somebody will forget to change.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: school
+      TZ: Africa/Cairo
+      PGTZ: Africa/Cairo
+      APP_DB: school
+      TEST_DB: school_test
+      OWNER_ROLE: school_owner
+      OWNER_PASSWORD: ${DB_OWNER_PASSWORD:?set DB_OWNER_PASSWORD}
+      APP_ROLE: school_app
+      APP_PASSWORD: ${DB_APP_PASSWORD:?set DB_APP_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./docker/postgres/01-init.sh:/docker-entrypoint-initdb.d/01-init.sh:ro
+    # No published port: only the other containers on this network may reach it.
+    # Use `docker compose exec db psql` for a shell.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d school"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # The BUILDER stage, not the runtime one: drizzle-kit is a dev dependency and
+      # the standalone bundle deliberately carries no node_modules.
+      target: builder
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # The OWNER url: migrations create tables and policies, which the app role
+      # deliberately cannot do.
+      DATABASE_URL: ${DATABASE_OWNER_URL:?set DATABASE_OWNER_URL}
+      DATABASE_OWNER_URL: ${DATABASE_OWNER_URL}
+      TZ: Africa/Cairo
+    command: ["pnpm", "db:migrate"]
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      # The APP url: a role WITHOUT bypassrls. This is the line that makes every RLS
+      # policy in the product mean something.
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?set BETTER_AUTH_URL}
+      LOOKUP_IP_SALT: ${LOOKUP_IP_SALT:?set LOOKUP_IP_SALT}
+      NODE_ENV: production
+      TZ: Africa/Cairo
+    volumes:
+      # The centre's uploaded logo, kept out of the image so a redeploy does not lose it.
+      - uploads:/app/public/uploads
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN}
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${DB_OWNER_PASSWORD}
+      TZ: Africa/Cairo
+    volumes:
+      - ./docker/backup/backup.sh:/usr/local/bin/backup.sh:ro
+      - backups:/backups
+    entrypoint: ["sh", "/usr/local/bin/backup.sh"]
+
+volumes:
+  db-data:
+  uploads:
+  backups:
+  caddy-data:
+  caddy-config:

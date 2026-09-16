@@ -8,6 +8,9 @@ import "./globals.css";
 const cairo = Cairo({
   subsets: ["arabic", "latin"],
   variable: "--font-sans",
+  // `swap`, deliberately. `optional` was measured as an alternative and moved the
+  // Largest Contentful Paint not at all (4.0s → 4.1s), so it would have changed how
+  // the product looks on a first visit for nothing. See docs/PROGRESS.md.
   display: "swap",
 });
 

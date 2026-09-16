@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { z } from "zod";
 import type { Metadata } from "next";
 import { listClassOptions } from "@/modules/classes";
 import { getStudentProfile, StudentForm } from "@/modules/students";
@@ -9,6 +10,10 @@ export const metadata: Metadata = { title: ar.students.edit };
 
 export default async function EditStudentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  // A non-UUID segment would reach Postgres, fail to cast and surface as a 500 —
+  // an error page nobody wrote, and a difference an attacker can measure against
+  // the 404 a foreign id gets (docs/SECURITY-REVIEW.md, finding 5).
+  if (!z.uuid().safeParse(id).success) notFound();
   const profile = await getStudentProfile(id);
   if (!profile.ok) notFound();
 

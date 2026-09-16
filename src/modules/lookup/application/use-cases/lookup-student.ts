@@ -17,6 +17,7 @@ import {
   countRecentFailures,
   pruneOldAttempts,
   recordAttempt,
+  recordLookupAudit,
   runPublicLookup,
 } from "../../infrastructure/lookup.repository";
 
@@ -95,6 +96,11 @@ export async function lookupStudent(raw: unknown): Promise<Result<LookupResult>>
   await pruneOldAttempts();
 
   if (!document) return err("NOT_FOUND", ar.lookup.notFound);
+
+  // Only a success is audited. `audit_logs` is what an administrator reads when
+  // asking who has been looking at a child's record; `lookup_attempts` already
+  // holds the failures, and flooding this one must cost a valid code (rule 10.8).
+  await recordLookupAudit({ code, ipHash });
 
   return ok({
     // The full name never left the database; this only adds the full stop.

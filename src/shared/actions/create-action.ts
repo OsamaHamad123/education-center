@@ -84,8 +84,12 @@ export function createAction<TSchema extends z.ZodTypeAny, TOutput>(
       });
     } catch (error) {
       if (error instanceof RollbackWith) return error.result as Result<TOutput>;
-      // A thrown error is a bug, not a business outcome (CLAUDE.md rule 6).
-      console.error("[createAction] unexpected error", error);
+      // A thrown error is a bug, not a business outcome (CLAUDE.md rule 6) — but the
+      // error OBJECT is not safe to log. A Postgres unique violation carries
+      // `Key (phone)=(+201012345678) already exists.` in its detail, and logs are
+      // copied and retained far more casually than the database is
+      // (docs/SECURITY-REVIEW.md, finding 3).
+      console.error("[createAction] unexpected error", describeError(error));
       return err("INTERNAL", ar.errors.INTERNAL);
     }
 
@@ -109,6 +113,31 @@ export async function requirePermission(permission: Permission): Promise<Result<
   if (!ctx) return err("UNAUTHORIZED", ar.errors.UNAUTHORIZED);
   if (!hasPermission(ctx.role, permission)) return err("FORBIDDEN", ar.errors.FORBIDDEN);
   return ok(ctx);
+}
+
+/**
+ * The SHAPE of an error, never its contents: enough to find the bug, nothing that
+ * identifies a person. `detail`, `where` and the query parameters are all dropped.
+ */
+/** Only the first line: a driver appends the query and its parameters below it. */
+function firstLine(message: string): string {
+  const [first] = message.split("\n");
+  return first ?? "";
+}
+
+function describeError(error: unknown): Record<string, string> {
+  if (!(error instanceof Error)) return { kind: typeof error };
+
+  const pg = error as Error & { code?: string; constraint_name?: string; table_name?: string };
+  return {
+    name: error.name,
+    // A driver message names the constraint, not the values; the detail is what
+    // carries the row, and it is deliberately absent.
+    message: firstLine(error.message),
+    ...(pg.code ? { code: pg.code } : {}),
+    ...(pg.constraint_name ? { constraint: pg.constraint_name } : {}),
+    ...(pg.table_name ? { table: pg.table_name } : {}),
+  };
 }
 
 /** Carries a failed Result out through the transaction boundary so the tx rolls back. */

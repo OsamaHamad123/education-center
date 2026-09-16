@@ -34,6 +34,23 @@ export const LOGIN_LIMITS = {
   windowMinutes: 5,
 } as const;
 
+/**
+ * The per-ACCOUNT half of the same defence (docs/SECURITY-REVIEW.md, finding 1).
+ *
+ * `LOGIN_LIMITS` above is per address and has to stay generous, because a branch
+ * office shares one. This one is keyed on the username, so an attacker spreading
+ * guesses across a thousand addresses is throttled exactly as one machine would be.
+ *
+ * It lives here rather than beside the code that uses it because that file is
+ * `"use server"`, and such a file may export nothing but async functions.
+ */
+export const LOGIN_LOCKOUT = {
+  maxFailures: 10,
+  windowMinutes: 15,
+  /** Nothing older than this is kept; the window is 15 minutes, an hour is ample. */
+  retentionMinutes: 60,
+} as const;
+
 /** Bounds for the bell schedule (section 7.10). */
 export const SCHEDULE_BOUNDS = {
   minPeriodDurationMin: 20,

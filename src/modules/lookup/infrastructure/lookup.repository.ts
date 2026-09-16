@@ -81,6 +81,18 @@ export async function recordAttempt(input: {
   });
 }
 
+/**
+ * Writes the audit row for a SUCCESSFUL lookup (rule 10.8; SECURITY-REVIEW finding 4).
+ *
+ * Through a SECURITY DEFINER function because `audit_logs_insert` requires a role and
+ * a parent has none — see drizzle/0008 for how narrow the hole is. Failures are not
+ * audited: they live in `lookup_attempts`, and writing every wrong guess here would
+ * let anyone flood the record an administrator reads.
+ */
+export async function recordLookupAudit(input: { code: string; ipHash: string }): Promise<void> {
+  await db.execute(sql`select app_record_lookup_audit(${input.code}, ${input.ipHash})`);
+}
+
 /** PROJECT_PLAN 7.16: nothing older than a week is kept. */
 const RETENTION_DAYS = 7;
 

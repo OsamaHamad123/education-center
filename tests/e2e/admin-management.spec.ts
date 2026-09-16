@@ -137,7 +137,7 @@ test.describe("branches", () => {
     await page.goto("/branches");
 
     // notFound(), not a redirect: the route reveals nothing about other branches.
-    await expect(page.getByText("404")).toBeVisible();
+    await expect(visible(page, "الصفحة غير موجودة").first()).toBeVisible();
   });
 });
 
@@ -166,7 +166,7 @@ test.describe("branch admin accounts", () => {
   test("a branch admin cannot open /users", async ({ page }) => {
     await signIn(page, "admin_nsr");
     await page.goto("/users");
-    await expect(page.getByText("404")).toBeVisible();
+    await expect(visible(page, "الصفحة غير موجودة").first()).toBeVisible();
   });
 });
 
@@ -203,6 +203,6 @@ test.describe("center settings", () => {
   test("a branch admin cannot open /settings", async ({ page }) => {
     await signIn(page, "admin_nsr");
     await page.goto("/settings");
-    await expect(page.getByText("404")).toBeVisible();
+    await expect(visible(page, "الصفحة غير موجودة").first()).toBeVisible();
   });
 });

@@ -302,3 +302,51 @@ describe("the constraints refuse a ledger that would lie", () => {
     await expect(paymentFor(two[0]?.id ?? "", fx.branchA.id, 10_000, 1)).rejects.toThrow();
   });
 });
+
+describe("the centre's money across branches (ROADMAP item 2)", () => {
+  /**
+   * `/fees` and `/payroll/runs` both refuse "كافة الفروع", so the owner's own question
+   * — what did the centre collect this month — needed a screen of its own. What matters
+   * about it is that it stays READ-only and that its arithmetic is the ledger's.
+   */
+  it("sums each branch on its own, and never nets one against another", async () => {
+    const mine = await invoiceFor(fx.branchA.id, fx.studentA.id, fx.classA.id, 50_000);
+    const theirs = await invoiceFor(fx.branchB.id, fx.studentB.id, fx.classB.id, 50_000);
+    await paymentFor(mine.id, fx.branchA.id, 50_000, 1);
+    await paymentFor(theirs.id, fx.branchB.id, 20_000, 1);
+
+    const rows = await asTenant(ctxFor.superAdmin(), (tx) =>
+      tx.execute<{ branch_id: string; collected: number; outstanding: number }>(sql`
+        select i.branch_id,
+               sum(coalesce(p.paid, 0))::int as collected,
+               sum(greatest(i.amount_piasters - i.discount_piasters - coalesce(p.paid, 0), 0))::int
+                 as outstanding
+        from invoices i
+        left join (
+          select invoice_id, sum(amount_piasters)::int as paid from payments group by invoice_id
+        ) p on p.invoice_id = i.id
+        where i.period = ${PERIOD}
+        group by i.branch_id`),
+    );
+
+    const byBranch = new Map(rows.map((row) => [row.branch_id, row]));
+    expect(byBranch.get(fx.branchA.id)?.collected).toBe(50_000);
+    expect(byBranch.get(fx.branchA.id)?.outstanding).toBe(0);
+    // Branch B's arrears stay branch B's: a settled branch must not hide them.
+    expect(byBranch.get(fx.branchB.id)?.outstanding).toBe(30_000);
+  });
+
+  it("shows a branch admin one row — their own — even through the cross-branch query", async () => {
+    await invoiceFor(fx.branchA.id, fx.studentA.id, fx.classA.id);
+    await invoiceFor(fx.branchB.id, fx.studentB.id, fx.classB.id);
+
+    // The screen is gated on `report.cross_branch`, but RLS is what makes the gate
+    // unnecessary: a branch admin running the very same SQL sees one branch.
+    const rows = await asTenant(ctxFor.branchAdmin(fx.branchA.id), (tx) =>
+      tx.execute<{ branch_id: string }>(
+        sql`select distinct branch_id from invoices where period = ${PERIOD}`,
+      ),
+    );
+    expect(rows.map((row) => row.branch_id)).toEqual([fx.branchA.id]);
+  });
+});

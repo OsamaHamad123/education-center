@@ -29,10 +29,12 @@ export {
 } from "./application/queries/get-reports";
 export { getContactList, type ContactList, type ContactRow } from "./application/queries/get-contact-list";
 export { recordParentContact } from "./application/use-cases/record-contact";
+export { getMoneyReport, type MoneyReport } from "./application/queries/get-money";
 export { AbsenceAlertsList } from "./ui/absence-alerts";
 export { ContactListView } from "./ui/contact-list";
 export { ContactDate } from "./ui/contact-date";
 export { BranchComparisonView } from "./ui/branch-comparison";
+export { MoneyReportView } from "./ui/money-report";
 export { BranchDashboardView } from "./ui/branch-dashboard";
 export { ClassMatrix } from "./ui/class-matrix";
 export { ReportFilters } from "./ui/report-filters";

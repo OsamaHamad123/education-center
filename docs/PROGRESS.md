@@ -782,6 +782,41 @@ The freeze e2e runs in **Giza on the desktop project only, and reverses what it 
 the suite shares one database, and a settled month in Nasr City would freeze the
 registers `attendance.spec.ts` is marking at the same moment.
 
+## Roadmap items 1–3 (2026-09-17)
+
+Built ahead of the deployment phases, at the owner's instruction. The roadmap's
+recommendation is unchanged and recorded there: these are three more pieces of code that
+have never met a real user, on a deployment that has not happened.
+
+**1. The register survives a reload.** Marks are drafted to the device as they are
+tapped, and OFFERED back on reload rather than applied — a register that silently
+disagrees with the server is worse than one that lost a tap. Read with
+`useSyncExternalStore`, not an effect: the server snapshot is null, so there is no
+hydration mismatch and no cascading render for the hooks rule to refuse.
+
+_The bug worth recording:_ the first version cleared the draft in the same effect that
+wrote it. A fresh load starts CLEAN, so the effect ran on mount and wiped the draft it
+existed to protect, before the banner could offer it. Found by the e2e, not by reading.
+It is now cleared only on a confirmed save or on تجاهل.
+
+**2. The owner's money screen.** `/reports/money`, read-only and cross-branch. `/fees`
+and `/payroll/runs` both refuse "كافة الفروع" — correctly, a till belongs to one desk —
+and the consequence was that the owner's own question had no screen at all. Outstanding
+is summed per invoice, not from the totals, so an advance payment cannot cover somebody
+else's arrears. A test asserts the screen has nothing to press.
+
+**3. The accounting export.** Every receipt of the month it was received in, on `/fees`.
+Reversals are negative lines with their own numbers, not omissions: a book that quietly
+skips a cancelled receipt does not reconcile.
+
+**Two till tests were narrowed to one browser.** Desktop and mobile both collecting from
+the same first row race by construction — one pays the balance and the other finds no
+تحصيل button. That is a fact about a till, not a bug in one.
+
+**One run in three had a single failure I did not capture** before the next run
+overwrote the results; the two runs after it were clean at 359 passed. Recorded rather
+than smoothed over — this machine's load-sensitivity is already documented above.
+
 ## Next steps
 
 **See `docs/ROADMAP.md`** — written 2026-09-17, after payroll runs closed the last item

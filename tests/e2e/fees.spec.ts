@@ -53,6 +53,13 @@ test.describe("the collection board", () => {
 });
 
 test.describe("taking money", () => {
+  // Desktop only. Two browsers collecting from the same first row race by construction:
+  // one of them pays the balance and the other finds no تحصيل button to press. That is
+  // a fact about the till, not a bug in it.
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "one browser at the till");
+  });
+
   test("records a payment and opens a numbered receipt", async ({ page, context }) => {
     test.setTimeout(120_000);
     await signIn(page, "admin_nsr");
@@ -97,7 +104,8 @@ test.describe("taking money", () => {
 });
 
 test.describe("the statement", () => {
-  test("keeps a cancelled receipt on the page, with its reversal", async ({ page }) => {
+  test("keeps a cancelled receipt on the page, with its reversal", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "one browser: it reverses a real receipt");
     test.setTimeout(120_000);
     await signIn(page, "admin_nsr");
     await page.goto("/fees");
@@ -135,3 +143,28 @@ async function firstStatementHref(page: Page): Promise<string | null> {
     return link?.getAttribute("href") ?? null;
   });
 }
+
+test.describe("the accounting export", () => {
+  test("downloads every receipt of the month, reversals included", async ({ page }) => {
+    test.setTimeout(120_000);
+    await signIn(page, "admin_nsr");
+    await page.goto("/fees");
+
+    const download = page.waitForEvent("download");
+    await page.getByRole("button", { name: ar.common.export }).click();
+    const file = await download;
+
+    expect(file.suggestedFilename()).toMatch(/^payments-\d{4}-\d{2}\.csv$/);
+
+    const chunks: string[] = [];
+    for await (const chunk of await file.createReadStream()) chunks.push(String(chunk));
+    const csv = chunks.join("");
+
+    // The BOM, or Excel opens Arabic as mojibake (docs/AUDIT-2026-09.md, finding 13).
+    expect(csv.charCodeAt(0)).toBe(0xfeff);
+    expect(csv).toContain(ar.fees.receiptNo);
+    // Amounts go out in POUNDS with two decimals: a spreadsheet is where this is going
+    // and nobody reconciles a receipt in piasters.
+    expect(csv).toMatch(/\d+\.\d{2}/);
+  });
+});

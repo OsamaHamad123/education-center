@@ -96,30 +96,54 @@ audit log for whether anybody signs in; a flat line means the cards are in a dra
 
 # What I know is missing, in the order I would do it
 
-These are for **after** phase 3, and phase 3's findings outrank all of them.
+**Items 1, 2 and 3 were built on 2026-09-17**, ahead of the deployment phases, at the
+owner's instruction. The recommendation above stands unchanged: they are three more
+pieces of code that have never met a real user, on a deployment that has not happened.
 
-### 1. A register that survives a bad connection — **half a day**
+The rest are for **after** phase 3, and phase 3's findings outrank all of them.
+
+### 1. A register that survives a bad connection — **built**
 
 A teacher marks thirty students on a branch's wifi and the save fails. The UX audit
 stopped that destroying the screen; a **reload** still loses everything. Write the marks
 to local storage as they are tapped, restore on open, clear on a confirmed save.
 
 This is the product's most-used interaction, on the worst connection it will ever meet.
-It is the one item here I would move ahead of phase 3 if a teacher complains once.
 
-### 2. The owner's money screen, across branches — **a day**
+**Built.** The draft is OFFERED on reload, not applied — a register that silently
+disagrees with the server is worse than one that lost a tap, and nobody chose it. It is
+read with `useSyncExternalStore` rather than an effect, so the server renders no banner
+and there is no hydration mismatch and no cascading render.
+
+The bug worth recording: the first version cleared the draft in the same effect that
+wrote it, `if (dirty) write else clear`. A fresh load starts CLEAN — so the effect ran on
+mount and wiped the draft it existed to protect, before the banner could offer it. The
+draft is now cleared only where it is actually finished with: a confirmed save, or تجاهل.
+
+### 2. The owner's money screen, across branches — **built**
 
 `/fees` and `/payroll/runs` both refuse "كافة الفروع", correctly — a till belongs to one
 desk. But the consequence is that **the owner's own question has no screen**: how much
 did the centre collect this month, and what does it owe its teachers. Today they would
 switch branch three times and add it up on paper.
 
-Read-only, cross-branch, the same shape as the existing branch comparison report.
+**Built** at `/reports/money`: read-only, cross-branch, the same shape as the existing
+branch comparison. Billed, collected, outstanding, payroll owed, payroll paid, and the
+figure the owner asks for first — collected minus paid out, per branch and in total.
 
-### 3. An accounting export — **half a day**
+Outstanding is summed per invoice rather than from the totals, the same rule
+`domain/ledger.ts` states for one branch: a family that paid in advance must not quietly
+cover another family's arrears. And the screen has nothing to press, which a test
+asserts — money is taken and paid out at one desk, in one branch.
 
-Payroll and students export to CSV; payments and invoices do not. Whoever does the
-centre's books will ask in the first month.
+### 3. An accounting export — **built**
+
+Payroll and students export to CSV; payments did not. Whoever does the centre's books
+will ask in the first month.
+
+**Built** on `/fees`: every receipt of the month it was RECEIVED in — that is the month
+the books close — with reversals as negative lines carrying their own numbers rather than
+as omissions. A book that quietly skips a cancelled receipt does not reconcile.
 
 ### 4. Academic terms — **§16 question 7, 2 to 3 days, and it touches the schema**
 

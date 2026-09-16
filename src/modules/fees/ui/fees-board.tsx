@@ -3,9 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, Receipt, Wallet } from "lucide-react";
+import { Download, Loader2, Receipt, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { ar } from "@/shared/i18n/ar";
+import { ensureBom } from "@/shared/lib/csv";
 import { readText } from "@/shared/lib/form-data";
 import { formatEGP } from "@/shared/lib/money";
 import type { AppError } from "@/shared/lib/result";
@@ -28,6 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAction } from "@/shared/ui/use-action";
 import { useNavPending } from "@/shared/ui/use-nav-pending";
 import type { FeeRow, FeesBoard } from "../application/queries/get-fees";
+import { exportPaymentsCsv } from "../application/use-cases/export-fees";
 import { generateInvoices, recordPayment, setDiscount } from "../application/use-cases/manage-fees";
 
 /**
@@ -85,8 +87,9 @@ export function FeesBoardView({ board }: { board: FeesBoard }) {
           </Select>
         </div>
 
-        <div className="flex items-end">
+        <div className="flex items-end gap-2">
           <GenerateButton period={board.period} classId={board.classId} />
+          <ExportButton period={board.period} />
         </div>
       </fieldset>
 
@@ -219,6 +222,49 @@ function GenerateButton({ period, classId }: { period: string; classId: string |
         return result;
       }}
     />
+  );
+}
+
+/**
+ * Every receipt of the month, for whoever keeps the books (docs/ROADMAP.md, item 3).
+ *
+ * A blob rather than a route, like the payroll export: a list of who paid what is not
+ * something to leave behind a URL that can be forwarded or logged.
+ */
+function ExportButton({ period }: { period: string }) {
+  const [isPending, startTransition] = useAction();
+
+  return (
+    <Button
+      variant="outline"
+      disabled={isPending}
+      onClick={() =>
+        startTransition(async () => {
+          const result = await exportPaymentsCsv({ period });
+          if (!result.ok) {
+            toast.error(result.error.message);
+            return;
+          }
+          // `ensureBom`: a server action does not return the leading U+FEFF `toCsv`
+          // wrote, and without it Excel opens the file as mojibake
+          // (docs/AUDIT-2026-09.md, finding 13).
+          const blob = new Blob([ensureBom(result.data)], { type: "text/csv;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `payments-${period}.csv`;
+          link.click();
+          URL.revokeObjectURL(url);
+        })
+      }
+    >
+      {isPending ? (
+        <Loader2 className="size-4 animate-spin" aria-hidden />
+      ) : (
+        <Download className="size-4" aria-hidden />
+      )}
+      {ar.common.export}
+    </Button>
   );
 }
 

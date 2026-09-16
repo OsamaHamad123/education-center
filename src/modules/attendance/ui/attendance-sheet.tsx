@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, CheckCheck, Loader2, MessageSquarePlus, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { ar } from "@/shared/i18n/ar";
 import { UnsavedGuard } from "@/shared/ui/unsaved-guard";
+import { clearDraft, useStoredDraft, writeDraft } from "@/shared/ui/use-draft";
 import { formatDisplayDate } from "@/shared/lib/time";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -55,6 +56,23 @@ export function AttendanceSheetView({ sheet, backHref }: { sheet: AttendanceShee
   const summary = summarize(sheet.students.map((s) => marks[s.studentId]?.status ?? "present"));
   const dirty = JSON.stringify(marks) !== JSON.stringify(committed);
 
+  // One key per register, so two classes drafted on the same office computer do not
+  // overwrite each other (docs/ROADMAP.md, item 1).
+  const draftKey = `ec.register.${sheet.classRef.id}.${sheet.sessionDate}.${sheet.periodNumber}`;
+  const draft = useStoredDraft<Marks>(draftKey);
+  const [draftHandled, setDraftHandled] = useState(false);
+  // Only offer a draft that still says something different from the server's answer.
+  const offerDraft =
+    !readOnly && !draftHandled && draft !== null && JSON.stringify(draft) !== JSON.stringify(committed);
+
+  useEffect(() => {
+    // Writes only. Clearing here looked tidier and was the bug: a fresh load starts
+    // CLEAN, so the effect ran on mount and wiped the draft it was meant to protect
+    // before the banner could offer it back. The draft is cleared where it is actually
+    // finished with — a confirmed save, or the تجاهل button.
+    if (dirty) writeDraft(draftKey, marks);
+  }, [dirty, marks, draftKey]);
+
   function cycle(studentId: string) {
     if (readOnly) return;
     setMarks((current) => {
@@ -93,6 +111,9 @@ export function AttendanceSheetView({ sheet, backHref }: { sheet: AttendanceShee
       }
 
       setCommitted(optimistic);
+      // The work has landed, so the copy on the device has nothing left to protect.
+      clearDraft(draftKey);
+      setDraftHandled(true);
       toast.success(ar.attendance.saved);
       router.refresh();
     });
@@ -111,6 +132,34 @@ export function AttendanceSheetView({ sheet, backHref }: { sheet: AttendanceShee
     <div className="space-y-4 pb-24">
       <SheetHeader sheet={sheet} backHref={backHref} dirty={dirty} />
       <UnsavedGuard when={dirty} />
+
+      {offerDraft ? (
+        <div
+          role="status"
+          className="flex flex-wrap items-center gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
+        >
+          <span className="flex-1">{ar.attendance.draftFound}</span>
+          <Button
+            size="sm"
+            onClick={() => {
+              setMarks(draft);
+              setDraftHandled(true);
+            }}
+          >
+            {ar.attendance.draftRestore}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              clearDraft(draftKey);
+              setDraftHandled(true);
+            }}
+          >
+            {ar.attendance.draftDiscard}
+          </Button>
+        </div>
+      ) : null}
 
       {sheet.blockedBy ? (
         <p role="alert" className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">

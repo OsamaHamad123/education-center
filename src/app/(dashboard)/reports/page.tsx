@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BarChart3, CalendarRange, Grid3x3, TriangleAlert } from "lucide-react";
+import { Banknote, BarChart3, CalendarRange, Grid3x3, TriangleAlert } from "lucide-react";
 import { hasPermission } from "@/shared/auth/permissions";
 import { getSessionUser } from "@/shared/auth/session";
 import { ar } from "@/shared/i18n/ar";
@@ -14,6 +14,7 @@ const ICONS = {
   students: CalendarRange,
   matrix: Grid3x3,
   alerts: TriangleAlert,
+  money: Banknote,
   branches: BarChart3,
 } as const;
 
@@ -42,7 +43,8 @@ export default async function ReportsPage() {
       description: ar.reports.absenceAlertsDescription,
     },
     // A branch admin has no comparison card at all — nothing disabled, nothing
-    // hinting that other branches exist to compare against.
+    // hinting that other branches exist to compare against. The money card is the
+    // same: another branch's takings are not theirs to know about.
     ...(hasPermission(user.role, "report.cross_branch")
       ? [
           {
@@ -50,6 +52,12 @@ export default async function ReportsPage() {
             href: "/reports/branches",
             title: ar.reports.comparison,
             description: ar.reports.comparisonDescription,
+          },
+          {
+            key: "money" as const,
+            href: "/reports/money",
+            title: ar.money.title,
+            description: ar.money.description,
           },
         ]
       : []),

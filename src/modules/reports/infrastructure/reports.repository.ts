@@ -477,3 +477,93 @@ export async function lastContactedAt(
 
 /** The audit entity a contact is written under. One constant, read and written here. */
 export const CONTACT_ENTITY = "student.contact";
+
+// --- the centre's money, by branch --------------------------------------------
+
+export type BranchMoneyRow = {
+  branchId: string;
+  branchName: string;
+  billedPiasters: number;
+  discountedPiasters: number;
+  collectedPiasters: number;
+  outstandingPiasters: number;
+  payrollComputedPiasters: number;
+  payrollPaidPiasters: number;
+};
+
+/**
+ * One row per branch for a month: what was billed and collected from families, and what
+ * is owed to and paid out to teachers (docs/ROADMAP.md, item 2).
+ *
+ * Summed in SQL, and OUTSTANDING is summed per invoice rather than from the totals — a
+ * family that paid in advance must not quietly cover another family's arrears in the
+ * figure the office chases. That is the same rule `domain/ledger.ts` states for one
+ * branch, restated here because this query never loads the invoices themselves.
+ *
+ * Read under RLS like everything else: a branch admin who reached this would see one
+ * row, their own. The permission check above keeps them out of the screen entirely.
+ */
+export async function moneyByBranch(_ctx: TenantContext, tx: Tx, period: string): Promise<BranchMoneyRow[]> {
+  const rows = await tx.execute<{
+    branch_id: string;
+    branch_name: string;
+    billed: number;
+    discounted: number;
+    collected: number;
+    outstanding: number;
+    payroll_computed: number;
+    payroll_paid: number;
+  }>(sql`
+    with invoice_money as (
+      select
+        i.branch_id,
+        sum(i.amount_piasters)::int as billed,
+        sum(i.discount_piasters)::int as discounted,
+        sum(coalesce(p.paid, 0))::int as collected,
+        sum(greatest(i.amount_piasters - i.discount_piasters - coalesce(p.paid, 0), 0))::int as outstanding
+      from invoices i
+      left join (
+        select invoice_id, sum(amount_piasters)::int as paid from payments group by invoice_id
+      ) p on p.invoice_id = i.id
+      where i.period = ${period}
+      group by i.branch_id
+    ),
+    payroll_computed as (
+      select branch_id, sum(rate_applied_piasters)::int as owed
+      from class_sessions
+      where status = 'completed'
+        and session_date >= (${period} || '-01')::date
+        and session_date < ((${period} || '-01')::date + interval '1 month')
+      group by branch_id
+    ),
+    payroll_paid as (
+      select branch_id, sum(amount_piasters)::int as paid
+      from payroll_runs where period = ${period} group by branch_id
+    )
+    select
+      b.id as branch_id,
+      b.name as branch_name,
+      coalesce(im.billed, 0) as billed,
+      coalesce(im.discounted, 0) as discounted,
+      coalesce(im.collected, 0) as collected,
+      coalesce(im.outstanding, 0) as outstanding,
+      coalesce(pc.owed, 0) as payroll_computed,
+      coalesce(pp.paid, 0) as payroll_paid
+    from branches b
+    left join invoice_money im on im.branch_id = b.id
+    left join payroll_computed pc on pc.branch_id = b.id
+    left join payroll_paid pp on pp.branch_id = b.id
+    where b.is_active
+    order by b.name`);
+
+  return rows.map((row) => ({
+    branchId: row.branch_id,
+    branchName: row.branch_name,
+    billedPiasters: Number(row.billed),
+    discountedPiasters: Number(row.discounted),
+    collectedPiasters: Number(row.collected),
+    outstandingPiasters: Number(row.outstanding),
+    payrollComputedPiasters: Number(row.payroll_computed),
+    payrollPaidPiasters: Number(row.payroll_paid),
+  }));
+}

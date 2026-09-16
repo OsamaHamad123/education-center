@@ -23,6 +23,7 @@ export {
   type FeesBoard,
   type Statement,
 } from "./application/queries/get-fees";
+export { exportPaymentsCsv } from "./application/use-cases/export-fees";
 export {
   generateInvoices,
   recordPayment,

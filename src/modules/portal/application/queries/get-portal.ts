@@ -5,8 +5,10 @@ import { readDateRange } from "@/shared/lib/url-filters";
 import { defaultRange, rangeIsSane } from "../../domain/session";
 import {
   attendanceFor,
+  balanceFor,
   childrenOf,
   type PortalAttendance,
+  type PortalBalance,
   type PortalChild,
 } from "../../infrastructure/portal.repository";
 import { currentParent } from "../use-cases/portal-session";
@@ -25,6 +27,8 @@ export type PortalView = {
   selected: PortalChild;
   range: { from: string; to: string };
   attendance: PortalAttendance;
+  /** Null when the centre has not billed this family at all — not zero (P5d). */
+  balance: PortalBalance | null;
 };
 
 export async function getPortalChildren(): Promise<Result<PortalChild[]>> {
@@ -59,10 +63,16 @@ export async function getPortalView(input: {
   // real question a parent has.
   const range = rangeIsSane(from, to) ? { from, to } : fallback;
 
-  const attendance = await attendanceFor(selected.studentId, parent, range.from, range.to);
+  const [attendance, balance] = await Promise.all([
+    attendanceFor(selected.studentId, parent, range.from, range.to),
+    balanceFor(selected.studentId, parent),
+  ]);
   // Null means the database refused the pairing. It is the same reply a tampered id
   // gets, and the same one a child who has just left gets.
   if (!attendance) return err("NOT_FOUND", ar.portal.noChildren);
 
-  return ok({ children, selected, range, attendance });
+  // An empty ledger is not a zero balance: a centre that has not started billing must
+  // not show a family a confident مستحق: 0.00 they might rely on.
+  const hasLedger = balance !== null && balance.months.length > 0;
+  return ok({ children, selected, range, attendance, balance: hasLedger ? balance : null });
 }

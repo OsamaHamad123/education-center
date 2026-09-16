@@ -239,6 +239,7 @@ async function main() {
     attendance_records, class_sessions, timetable_slots, branch_breaks,
     branch_schedule_settings, student_enrollments, student_code_counters, students,
     teacher_branches, teacher_rate_history, teachers, classes, subjects,
+    payments, invoices, fee_plans, receipt_counters,
     audit_logs, lookup_attempts, login_attempts, portal_sessions,
     account, session, verification, "user",
     branches, center_settings
@@ -539,6 +540,82 @@ async function main() {
     }
   }
 
+  // --- fees: a centre mid-month (P5) ---------------------------------------
+  //
+  // A price per class, this month's invoices, and MOST of them paid — because the
+  // interesting screen is the one with a few families still owing, not an empty
+  // ledger and not a settled one.
+  const thisPeriod = todayInCairo().slice(0, 7);
+  const lastPeriod = (() => {
+    const [y, m] = thisPeriod.split("-").map(Number);
+    return m === 1 ? `${(y ?? 2026) - 1}-12` : `${y}-${String((m ?? 1) - 1).padStart(2, "0")}`;
+  })();
+
+  const feePlanRows = [...classById.values()].map((klass) => ({
+    branchId: klass.branchId,
+    classId: klass.id,
+    // 500 or 600 EGP a month, in piasters. Round numbers, like a real price list.
+    amountPiasters: klass.track === "scientific" ? 60_000 : 50_000,
+    effectiveFrom: `${lastPeriod}-01`,
+    createdBy: "usr_super",
+  }));
+  await db.insert(schema.feePlans).values(feePlanRows);
+  const priceByClass = new Map(feePlanRows.map((row) => [row.classId, row.amountPiasters]));
+
+  let invoiceCount = 0;
+  let paymentCount = 0;
+  const receiptByBranch = new Map<string, number>();
+
+  for (const period of [lastPeriod, thisPeriod]) {
+    for (const [classId, roster] of studentsByClass) {
+      const amountPiasters = priceByClass.get(classId);
+      const klass = classById.get(classId);
+      if (!amountPiasters || !klass) continue;
+
+      const issued = await db
+        .insert(schema.invoices)
+        .values(
+          roster.map((student) => ({
+            branchId: klass.branchId,
+            studentId: student.id,
+            classId,
+            period,
+            amountPiasters,
+            createdBy: "usr_super",
+          })),
+        )
+        .returning({ id: schema.invoices.id, branchId: schema.invoices.branchId });
+      invoiceCount += issued.length;
+
+      for (const invoice of issued) {
+        // Last month is settled; this month is still being collected.
+        const roll = nextRandom();
+        const share = period === lastPeriod ? 1 : roll > 0.35 ? 1 : roll > 0.2 ? 0.5 : 0;
+        if (share === 0) continue;
+
+        const next = (receiptByBranch.get(invoice.branchId) ?? 0) + 1;
+        receiptByBranch.set(invoice.branchId, next);
+
+        await db.insert(schema.payments).values({
+          branchId: invoice.branchId,
+          invoiceId: invoice.id,
+          amountPiasters: Math.round(amountPiasters * share),
+          method: roll > 0.8 ? "instapay" : "cash",
+          receiptYear: Number(period.slice(0, 4)),
+          receiptNo: next,
+          receivedBy: "usr_super",
+        });
+        paymentCount += 1;
+      }
+    }
+  }
+
+  for (const [branchId, lastValue] of receiptByBranch) {
+    await db
+      .insert(schema.receiptCounters)
+      .values({ branchId, year: Number(thisPeriod.slice(0, 4)), lastValue });
+  }
+
   const counts = {
     branches: branchRows.length,
     subjects: subjectRows.length,
@@ -548,6 +625,8 @@ async function main() {
     timetableSlots: slots.length,
     sessions: sessionCount,
     attendanceRecords: attendanceCount,
+    invoices: invoiceCount,
+    payments: paymentCount,
   };
 
   console.log("\nSeed complete:");

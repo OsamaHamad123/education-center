@@ -689,6 +689,56 @@ Arabic label existed (so it could never ship as a blank cell), and the first ver
 the e2e removed an anchor's href and then looked the anchor up by ROLE — an anchor without
 an href is not a link, so the locator silently moved to the next family's button.
 
+## Fees and collection — P5 (2026-09-16)
+
+The product's money phase. `drizzle/0013`–`0015`, `src/modules/fees/`, `/fees`,
+`/fees/plans`, `/fees/[studentId]`, `/print/receipt/[id]`, and a balance card in the
+portal. Plan: `docs/MESSAGING-AND-FEES-PLAN.md`.
+
+**The six questions were answered by the defaults, on instruction.** Fee per class per
+month; monthly periods; absence does NOT reduce the fee; discounts are an amount with a
+required reason; branch admins collect and only the super admin sets prices (the price
+list is the owner's, the cash desk is the branch's); receipts numbered per branch per
+year from a locked counter. Every one is cheap to change except the first, which is in
+the shape of `invoices`.
+
+**Four decisions the plan had not made, all in `drizzle/0013`:**
+
+- **`payments` is append-only, enforced by the GRANT.** `school_app` holds SELECT and
+  INSERT and nothing else, so the application literally cannot edit or delete a payment.
+  A mistake is a reversal row with a negative amount pointing at what it undoes. Tested
+  as behaviour, not asserted in prose.
+- **"Paid" is not a column.** It is `sum(payments) >= amount - discount`, computed in
+  `domain/ledger.ts`. A stored status is a second source of truth and it drifts from the
+  first the day somebody inserts a row by hand.
+- **There is no "cancelled" state.** An invoice raised in error is discounted in full
+  with a reason — same outcome, same audit trail, one fewer state.
+- **Overpayment is refused, not flagged.** At a desk it is nearly always a typo (5000 for
+  500), and a ledger that accepts it makes somebody chase a refund that should never have
+  existed.
+
+**One real hole, found by the isolation test rather than by reading.** A branch admin
+could insert a payment carrying THEIR branch id against ANOTHER branch's invoice. RLS
+checked the row's own branch and the foreign key checked the invoice exists — neither
+asked whether the two agreed, and **foreign keys are not subject to RLS**, so an invoice
+the attacker could not see was still a valid target. Not reachable through the
+application (every write reads the invoice through RLS first) and the id is unguessable,
+but this product's claim about isolation is that it is structural. Closed with a
+composite foreign key on `(invoice_id, branch_id)` in `drizzle/0015`.
+
+**The portal got two days at the end, deliberately.** `app_portal_balance` re-verifies
+the parent in the same WHERE clause as every other portal function, caps at twelve
+months, and returns no discount REASON — "منحة حالة" is the centre's note to itself. An
+empty ledger shows NO card rather than a confident مستحق: 0.00.
+
+**The seed is a centre mid-month:** last month settled, this month partly collected, so
+the collection screen has something to work on the moment it is opened.
+
+**Still to do, and now cheap:** payroll runs. The ledger the teacher half needs exists
+and the pattern is set — a settled period per teacher, which also lets a settled month be
+frozen against later attendance edits. That was the biggest functional gap the product
+review found, and it is the obvious next piece of work.
+
 ## Next steps
 
 All ten phases are done. What is left is not a phase — it is the handover:

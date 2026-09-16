@@ -139,3 +139,22 @@ export async function attendanceFor(
   );
   return rows[0]?.report ?? null;
 }
+
+export type PortalBalance = {
+  outstandingPiasters: number;
+  months: { period: string; duePiasters: number; paidPiasters: number }[];
+};
+
+/**
+ * What this child's family owes (P5d), or null when the pairing is refused.
+ *
+ * A separate function from `app_portal_attendance` because the two answer different
+ * questions, and a centre that has not started billing should show attendance without
+ * a money card claiming zero.
+ */
+export async function balanceFor(studentId: string, parentPhoneHash: string): Promise<PortalBalance | null> {
+  const rows = await db.execute<{ balance: PortalBalance | null }>(
+    sql`select app_portal_balance(${studentId}::uuid, ${parentPhoneHash}, ${salt()}) as balance`,
+  );
+  return rows[0]?.balance ?? null;
+}

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   KeyRound,
+  Banknote,
   Building2,
   CalendarDays,
   ClipboardCheck,
@@ -43,6 +44,7 @@ const ICONS: Record<NavIconKey, LucideIcon> = {
   timetable: CalendarDays,
   attendance: ClipboardCheck,
   payroll: Wallet,
+  fees: Banknote,
   reports: FileText,
   audit: ScrollText,
   settings: Settings,

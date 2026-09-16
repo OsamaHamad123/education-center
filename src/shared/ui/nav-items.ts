@@ -19,6 +19,7 @@ export type NavIconKey =
   | "timetable"
   | "attendance"
   | "payroll"
+  | "fees"
   | "reports"
   | "audit"
   | "settings"
@@ -52,6 +53,7 @@ export const DASHBOARD_NAV: NavItem[] = [
     icon: "attendance",
     permission: "attendance.read",
   },
+  { href: "/fees", label: ar.nav.fees, icon: "fees", permission: "fee.read" },
   { href: "/payroll", label: ar.nav.payroll, icon: "payroll", permission: "payroll.read" },
   { href: "/reports", label: ar.nav.reports, icon: "reports", permission: "report.read" },
   { href: "/audit", label: ar.nav.audit, icon: "audit", permission: "audit.read" },

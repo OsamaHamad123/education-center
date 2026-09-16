@@ -231,7 +231,8 @@ Blocked on the fee question raised in the earlier review: the system tracks what
 **to teachers** and nothing about what is collected **from students**. Until fees, an
 invoice and a payment exist for the office, there is nothing for a parent to look at.
 
-**What planning it properly showed:** this is not a portal phase. The product has **no
+**Built (2026-09-16).** What planning it properly showed, and the build confirmed: this
+is not a portal phase. The product has **no
 money ledger at all** — payroll is a computed report, not a record that anyone was paid
 — so P5 is the product's money phase, and the portal is the last two days of it. It
 should be started by answering six questions rather than by writing a migration, and the

@@ -37,7 +37,8 @@ export function ConfirmDialog({
   confirmLabel?: string;
   destructive?: boolean;
   onConfirm: () => Promise<Result<unknown>>;
-  successMessage: string;
+  /** Omit when the caller wants to say something that depends on the result (P5). */
+  successMessage?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useAction();
@@ -49,7 +50,7 @@ export function ConfirmDialog({
         toast.error(result.error.message);
         return;
       }
-      toast.success(successMessage);
+      if (successMessage) toast.success(successMessage);
       setOpen(false);
     });
   }

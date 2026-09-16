@@ -11,3 +11,4 @@ export * from "./students";
 export * from "./timetable";
 export * from "./sessions";
 export * from "./system";
+export * from "./fees";

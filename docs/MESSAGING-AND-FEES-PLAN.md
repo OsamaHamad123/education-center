@@ -8,8 +8,8 @@ worth saying:
 
 - **P4 is blocked on a decision and a bill.** Most of its value was not — **P4a and P4b
   are built (2026-09-16)**, and only automatic sending still waits.
-- **P5 is not really a portal phase at all.** It is the product's money phase. The portal
-  is the last two days of it.
+- **P5 is not really a portal phase at all.** It is the product's money phase, and it is
+  **built (2026-09-16)**. The portal got the last two days of it, as planned.
 
 Both sections below say what to build, in what order, what it costs, and — first — what
 the owner has to decide, because a plan that hides its questions is a plan that discovers
@@ -172,10 +172,11 @@ So P5 is not "add a screen to the portal". It is **the product's money phase**, 
 a consequence worth planning around: _the ledger built for students is the same ledger
 that finally lets payroll say "paid"_. Build it once, for both.
 
-## P5a — the decisions — **blocked on the owner, no work until answered**
+## P5a — the decisions — **answered by the defaults below, and recorded**
 
-Six questions. The defaults are what I would build if told to proceed without answers,
-and each is an argument rather than a guess.
+Six questions. The defaults below are what was BUILT: the instruction was to proceed, and
+each default is an argument rather than a guess. Every one of them is cheap to change
+except the first, which is in the shape of `invoices`.
 
 1. **What is a fee attached to?** Class, subject, or student?
    → _Default: monthly per class (شعبة)_, because that is how Egyptian centres price.
@@ -193,7 +194,7 @@ and each is an argument rather than a guess.
    be per branch, per year, unbroken?
    → _Default: yes, per branch per year, from a counter table._
 
-## P5b — the ledger — **~1 week**
+## P5b — the ledger — **built**
 
 - **`fee_plans`** (branch, class, amount_piasters, period, effective_from) — versioned the
   way `teacher_rate_history` is, because a price rise must not rewrite last month.
@@ -205,20 +206,36 @@ and each is an argument rather than a guess.
   what a ledger is; anything else is how money quietly disappears and nobody can say when.
 - `receipt_counters`, per branch per year, the same pattern as `student_code_counters`.
 
+**Two things the build added that this plan had not thought of.** "Paid" is not a column
+at all — it is `sum(payments) >= amount - discount`, computed in `domain/ledger.ts`,
+because a stored status is a second source of truth that drifts from the first. And there
+is no "cancelled" state: an invoice raised in error is **discounted in full with a
+reason**, which is the same outcome, auditable in the same place, and one fewer state for
+the rest of the product to reason about.
+
+**And one hole the isolation test found that reading would not have.** A branch admin
+could insert a payment carrying THEIR branch id against ANOTHER branch's invoice. RLS
+checked the row's own branch (correct) and the foreign key checked the invoice exists
+(also correct) — neither asked whether the two agreed, and **foreign keys are not subject
+to RLS**, so the invoice the attacker could not see was still a valid target. Closed with
+a composite foreign key in `drizzle/0015`.
+
 All of it under the rules this product already holds: integer **piasters**, `branch_id` on
 every row, RLS enabled and forced, every write through `createAction` and audited, and an
 isolation test per table.
 
-## P5c — the office screens — **~1 week**
+## P5c — the office screens — **built**
 
 - **Per class, this month: who has paid and who has not.** This one screen is what the
-  office actually wants, and it is worth more to the centre than the whole portal.
+  office actually wants, and it is worth more to the centre than the whole portal. It
+  shows the count of students nobody has billed at the top, because that is the question
+  before all the others.
 - Per student: the statement — charged, discounted, paid, outstanding.
 - A printed A5 receipt, reusing `PrintSheet`.
 - A collections report with an export, and the first number on the dashboard the **owner**
   personally cares about.
 
-## P5d — the parent's side — **~2 days, and it is the smallest part**
+## P5d — the parent's side — **built, and it is the smallest part**
 
 Outstanding balance, what it is for, what has been paid, and the receipt — in the portal,
 behind the session that already exists.
@@ -227,12 +244,16 @@ behind the session that already exists.
 data, refunds, disputes, chargebacks), and a different conversation. Say so plainly when
 it is asked for, which it will be.
 
-## The part that pays for itself
+## The part that pays for itself — still to do
 
 Once `payments` exists, teacher payroll gets the same treatment almost free: a settled
 period, per teacher, with the amount, the date and who recorded it. Two consequences the
 review already wanted — a settled month can be **frozen against later attendance edits**,
 and the teacher's مستحقاتي screen can say "شهر ٨: مدفوع" instead of leaving them to ask.
+
+**Not built.** The ledger it needs now exists and the pattern is set, but paying teachers
+is a different conversation from collecting from students and deserves its own. This is
+the obvious next piece of work in the product.
 
 ---
 
@@ -245,7 +266,6 @@ one per family per day, and a record of who was contacted.
 **Now stopped on P4.** P4c is two to three weeks of work whose hardest problem is not code.
 Build it when somebody has answered question 4 above.
 
-**P5 is its own project**, and it should be started by answering six questions rather than
-by writing a migration. When it is started, build the **office** side first and give the
-portal its two days at the end — because a parent who can see a balance the office cannot
-explain is worse than a parent who rings and asks.
+**P5 is built**, office side first and the portal last, for the reason given above: a
+parent who can see a balance the office cannot explain is worse than a parent who rings
+and asks. What remains is payroll runs — the teacher half of the same ledger.

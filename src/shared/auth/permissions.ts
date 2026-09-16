@@ -54,6 +54,12 @@ export const PERMISSIONS = {
 
   // Money and reporting
   "payroll.read": ["super_admin", "branch_admin", "teacher"],
+  /** Reading the fee ledger — what is billed, collected and outstanding (P5). */
+  "fee.read": ["super_admin", "branch_admin"],
+  /** Taking money and discounting an invoice: the cash desk, so the branch has it. */
+  "fee.collect": ["super_admin", "branch_admin"],
+  /** Setting what a class COSTS is the owner's, the same way teacher rates are. */
+  "fee.plan": ["super_admin"],
   "report.read": ["super_admin", "branch_admin"],
   /** Comparing branches against each other only makes sense centrally. */
   "report.cross_branch": ["super_admin"],

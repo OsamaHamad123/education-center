@@ -20,6 +20,9 @@ export const attendanceStatusEnum = pgEnum("attendance_status", ["present", "abs
 
 export const recordStatusEnum = pgEnum("record_status", ["active", "inactive"]);
 
+/** How the office took the money (P5). Cash first, because most of it is cash. */
+export const paymentMethodEnum = pgEnum("payment_method", ["cash", "instapay", "wallet", "bank"]);
+
 export const auditActionEnum = pgEnum("audit_action", [
   "create",
   "update",
@@ -43,3 +46,4 @@ export type SessionStatus = (typeof sessionStatusEnum.enumValues)[number];
 export type AttendanceStatus = (typeof attendanceStatusEnum.enumValues)[number];
 export type RecordStatus = (typeof recordStatusEnum.enumValues)[number];
 export type AuditAction = (typeof auditActionEnum.enumValues)[number];
+export type PaymentMethod = (typeof paymentMethodEnum.enumValues)[number];

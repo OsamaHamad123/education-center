@@ -4,6 +4,7 @@ import { Phone, Printer } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ar } from "@/shared/i18n/ar";
+import { formatEGP } from "@/shared/lib/money";
 import { formatDisplayDate } from "@/shared/lib/time";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -147,6 +148,38 @@ export function PortalView({ view }: { view: PortalView }) {
           )}
         </CardContent>
       </Card>
+
+      {view.balance ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{ar.portal.feesTitle}</CardTitle>
+            <CardDescription>{ar.portal.feesHint}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p
+              className={`text-2xl font-bold ${view.balance.outstandingPiasters > 0 ? "text-destructive" : ""}`}
+              dir="ltr"
+            >
+              {formatEGP(view.balance.outstandingPiasters)}
+            </p>
+            <ul className="divide-y text-sm">
+              {view.balance.months.map((month) => (
+                <li key={month.period} className="flex items-center justify-between gap-2 py-2">
+                  <span className="font-mono" dir="ltr">
+                    {month.period}
+                  </span>
+                  <span className="text-muted-foreground text-xs" dir="ltr">
+                    {formatEGP(month.paidPiasters)} / {formatEGP(month.duePiasters)}
+                  </span>
+                  <Badge variant={month.paidPiasters >= month.duePiasters ? "secondary" : "destructive"}>
+                    {month.paidPiasters >= month.duePiasters ? ar.portal.feePaid : ar.portal.feeDue}
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>

@@ -784,7 +784,10 @@ registers `attendance.spec.ts` is marking at the same moment.
 
 ## Next steps
 
-All ten phases are done. What is left is not a phase — it is the handover:
+**See `docs/ROADMAP.md`** — written 2026-09-17, after payroll runs closed the last item
+the product review had raised. Its recommendation in one line: **stop building and
+deploy**, because nothing here has ever run outside one laptop and the product now holds
+money. The list below is the handover half of that roadmap, unchanged:
 
 1. **Answer §16 question 10 (hosting)** and run the deploy on a real server. Everything
    is written out in the README; nobody has typed it on a VPS yet.

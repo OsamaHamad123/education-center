@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import type { ClassOption } from "@/modules/classes";
 import type { Student } from "@/shared/db/schema";
 import { ar } from "@/shared/i18n/ar";
+import { validate } from "@/shared/lib/validate";
 import { readText } from "@/shared/lib/form-data";
 import type { AppError } from "@/shared/lib/result";
 import { todayInCairo } from "@/shared/lib/time";
@@ -17,6 +18,7 @@ import { Label } from "@/shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { createStudent, editStudent } from "../application/use-cases/manage-student";
 import { useAction } from "@/shared/ui/use-action";
+import { createStudentSchema, updateStudentSchema } from "../application/schemas";
 
 /**
  * One form for enrolling and for editing. Class and join date appear only when
@@ -51,6 +53,21 @@ export function StudentForm({ classes, student }: { classes: ClassOption[]; stud
     };
 
     setError(null);
+
+    // Checked here before the round trip, with the SAME schema the server runs
+    // (docs/UX-AUDIT-2026-09.md, finding 6). The server still validates; this only
+    // spares the person at the desk a wait to be told about a typo.
+    const parsed = validate(
+      student ? updateStudentSchema : createStudentSchema,
+      student
+        ? { ...common, id: student.id }
+        : { ...common, classId, joinDate: readText(data, "joinDate"), confirmDuplicate },
+    );
+    if (!parsed.ok) {
+      setError(parsed.error);
+      return;
+    }
+
     startTransition(async () => {
       const result = student
         ? await editStudent({ ...common, id: student.id })

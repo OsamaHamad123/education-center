@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { ar } from "@/shared/i18n/ar";
+import { validate } from "@/shared/lib/validate";
 import { readText } from "@/shared/lib/form-data";
 import type { AppError } from "@/shared/lib/result";
 import { Button } from "@/shared/ui/button";
@@ -22,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { createClass, editClass } from "../application/use-cases/manage-class";
 import type { ClassWithCounts } from "../application/queries/list-classes";
 import { useAction } from "@/shared/ui/use-action";
+import { createClassSchema, updateClassSchema } from "../application/schemas";
 
 export function ClassFormDialog({ trigger, klass }: { trigger: React.ReactNode; klass?: ClassWithCounts }) {
   const router = useRouter();
@@ -46,6 +48,19 @@ export function ClassFormDialog({ trigger, klass }: { trigger: React.ReactNode; 
     };
 
     setError(null);
+
+    // Checked here before the round trip, with the SAME schema the server runs
+    // (docs/UX-AUDIT-2026-09.md, finding 6). The server still validates; this only
+    // spares the person at the desk a wait to be told about a typo.
+    const parsed = validate(
+      klass ? updateClassSchema : createClassSchema,
+      klass ? { ...payload, id: klass.id } : payload,
+    );
+    if (!parsed.ok) {
+      setError(parsed.error);
+      return;
+    }
+
     startTransition(async () => {
       const result = klass ? await editClass({ ...payload, id: klass.id }) : await createClass(payload);
       if (!result.ok) {

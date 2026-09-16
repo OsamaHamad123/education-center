@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { BranchOption } from "@/modules/branches";
 import { ar } from "@/shared/i18n/ar";
+import { validate } from "@/shared/lib/validate";
 import { readText } from "@/shared/lib/form-data";
 import { piastersToPounds } from "@/shared/lib/money";
 import type { AppError } from "@/shared/lib/result";
@@ -27,6 +28,7 @@ import { createTeacher, editTeacher } from "../application/use-cases/manage-teac
 import type { TeacherRow } from "../application/queries/list-teachers";
 import { AccessCodeDialog } from "./access-code-dialog";
 import { useAction } from "@/shared/ui/use-action";
+import { createTeacherSchema, updateTeacherSchema } from "../application/schemas";
 
 /**
  * Super-admin only. Rates are entered in pounds and converted to piasters by the
@@ -55,25 +57,27 @@ export function TeacherFormDialog({
     const data = new FormData(event.currentTarget);
     setError(null);
 
-    startTransition(async () => {
-      const common = {
-        fullName: readText(data, "fullName"),
-        specialization: readText(data, "specialization") || undefined,
-        ratePiastersScientific: readText(data, "rateScientific"),
-        ratePiastersLiterary: readText(data, "rateLiterary"),
-      };
+    const common = {
+      fullName: readText(data, "fullName"),
+      specialization: readText(data, "specialization") || undefined,
+      ratePiastersScientific: readText(data, "rateScientific"),
+      ratePiastersLiterary: readText(data, "rateLiterary"),
+    };
+    const payload = teacher
+      ? { ...common, id: teacher.id, effectiveFrom: readText(data, "effectiveFrom") }
+      : { ...common, phone: readText(data, "phone"), ...(branchId ? { branchId } : {}) };
 
-      const result = teacher
-        ? await editTeacher({
-            ...common,
-            id: teacher.id,
-            effectiveFrom: readText(data, "effectiveFrom"),
-          })
-        : await createTeacher({
-            ...common,
-            phone: readText(data, "phone"),
-            ...(branchId ? { branchId } : {}),
-          });
+    // Checked here before the round trip, with the SAME schema the server runs
+    // (docs/UX-AUDIT-2026-09.md, finding 6). The server still validates; this only
+    // spares the person at the desk a wait to be told about a typo.
+    const parsed = validate(teacher ? updateTeacherSchema : createTeacherSchema, payload);
+    if (!parsed.ok) {
+      setError(parsed.error);
+      return;
+    }
+
+    startTransition(async () => {
+      const result = teacher ? await editTeacher(payload) : await createTeacher(payload);
 
       if (!result.ok) {
         setError(result.error);

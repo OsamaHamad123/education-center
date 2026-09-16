@@ -162,6 +162,15 @@ discards a half-filled student record without a word.
 
 The knowledge is there. Nothing acts on it.
 
+**Fixed** (phase D) for the register, which is where the work is: the رجوع link asks
+before it leaves, and `UnsavedGuard` covers what an in-app check cannot — closing the
+tab, reloading, typing a different address. A clean register does not nag; there is a
+test for that too, because a guard that fires when there is nothing to lose is the kind
+that gets clicked through without reading.
+
+Form dialogs were left alone. A half-filled dialog is one field and a moment's work, and
+a confirm on every Escape would cost more than it saves.
+
 ### 6. Validation is server-only; the form stack is installed and unused — Medium
 
 `react-hook-form` and `@hookform/resolvers` are dependencies, `src/shared/ui/form.tsx`
@@ -173,6 +182,22 @@ between client and server", and it is shared with nothing: every schema runs on 
 server only. So a four-character student name, a malformed phone, a missing field — each
 costs a full round trip before the person at the desk is told, and the field they got
 wrong is only sometimes marked.
+
+**Fixed** (phase D), and not by adopting react-hook-form. `validate(schema, payload)`
+returns the same `Result` with the same `fieldErrors` that `createAction` returns, so the
+six forms an admin uses all day gained a check before the round trip and **nothing about
+how they display the answer changed**. The messages are the schema's own, so the browser
+and the server say the same words.
+
+`fieldErrorsOf` moved into that shared file and `createAction` now imports it, because
+two implementations of one shape is how a client and a server drift apart.
+
+The server still validates everything. A check in the browser is a courtesy, not a
+control. `tests/e2e/form-validation.spec.ts` counts the POSTs to prove the courtesy is
+real — a bad phone number now costs zero requests.
+
+react-hook-form and `@hookform/resolvers` are still installed and still unused. They
+should be removed, and that is a dependency change rather than a UX one.
 
 ### 7. Every filter change adds history and jumps to the top — Medium
 
@@ -193,8 +218,22 @@ moves you through it pushes.
 ### 8. Errors are reported three different ways — Low
 
 Inline `<p role="alert">` in ten components, `toast.error` in seven places, and — since
-finding 1 — the full-page error boundary. Which one a given failure produces is not
-predictable from the failure.
+finding 1 — the full-page error boundary.
+
+**Correction** (phase D). Read one by one, the seven are not arbitrary: every single one
+is a control with no field to attach a message to — the register's fixed save bar, the
+branch switcher in the header, the CSV export button, the logo picker. There is a rule
+here and the code already follows it:
+
+> A failure that belongs to a field appears at the field. A failure from a control with
+> no field appears as a toast.
+
+What was genuinely inconsistent was the third case, and phase A removed it: a request
+that does not arrive is now a toast like any other control-level failure, instead of
+replacing the page.
+
+So this finding is closed by writing the rule down rather than by changing code. Churning
+seven correct call sites to make a table look tidier would have been the wrong move.
 
 ### 9. `revalidate` paths do nothing, and look like they do — Low
 
@@ -239,12 +278,13 @@ because they are load-bearing for `useSearchParams`. See both findings above.
 button leaves the board, and a filter change from the bottom of a list stays where it
 was.
 
-### Phase D — forms (findings 5, 6, 8)
+### Phase D — forms (findings 5, 6, 8) — done 2026-09-16
 
-Client-side validation from the schemas that already exist, a guard on unsaved work, and
-one answer to "where does a failure appear". The largest phase and the least urgent:
-nothing here loses data or misleads, it just costs the person at the desk a round trip
-and an extra tap.
+Client-side validation from the schemas that already existed, a guard on the register's
+unsaved marks, and — for finding 8 — a rule written down rather than code changed, because
+the code turned out to be following one already.
+
+**All ten findings are closed.**
 
 ### Not scheduled (findings 9, 10)
 

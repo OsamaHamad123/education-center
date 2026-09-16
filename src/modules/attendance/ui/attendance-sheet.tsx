@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, CheckCheck, Loader2, MessageSquarePlus, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { ar } from "@/shared/i18n/ar";
+import { UnsavedGuard } from "@/shared/ui/unsaved-guard";
 import { formatDisplayDate } from "@/shared/lib/time";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -108,7 +109,8 @@ export function AttendanceSheetView({ sheet, backHref }: { sheet: AttendanceShee
 
   return (
     <div className="space-y-4 pb-24">
-      <SheetHeader sheet={sheet} backHref={backHref} />
+      <SheetHeader sheet={sheet} backHref={backHref} dirty={dirty} />
+      <UnsavedGuard when={dirty} />
 
       {sheet.blockedBy ? (
         <p role="alert" className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
@@ -205,11 +207,29 @@ export function AttendanceSheetView({ sheet, backHref }: { sheet: AttendanceShee
   );
 }
 
-function SheetHeader({ sheet, backHref }: { sheet: AttendanceSheet; backHref: string }) {
+function SheetHeader({
+  sheet,
+  backHref,
+  dirty,
+}: {
+  sheet: AttendanceSheet;
+  backHref: string;
+  dirty?: boolean;
+}) {
   return (
     <div className="flex flex-wrap items-start gap-2">
       <Button asChild variant="ghost" size="icon" aria-label={ar.common.back}>
-        <Link href={backHref}>
+        {/*
+          The register knows it has unsaved marks and used to let you walk away from
+          them without a word (docs/UX-AUDIT-2026-09.md, finding 5). Fifteen taps is a
+          lot to lose to one mis-aimed thumb on a phone.
+        */}
+        <Link
+          href={backHref}
+          onClick={(event) => {
+            if (dirty && !window.confirm(ar.attendance.discardChanges)) event.preventDefault();
+          }}
+        >
           <ArrowRight className="size-4" aria-hidden />
         </Link>
       </Button>

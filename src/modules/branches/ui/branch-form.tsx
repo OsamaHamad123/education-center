@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { ar } from "@/shared/i18n/ar";
+import { validate } from "@/shared/lib/validate";
 import { readText } from "@/shared/lib/form-data";
 import type { AppError } from "@/shared/lib/result";
 import { Button } from "@/shared/ui/button";
@@ -22,6 +23,7 @@ import { Label } from "@/shared/ui/label";
 import { createBranch, editBranch } from "../application/use-cases/manage-branch";
 import type { BranchWithCounts } from "../application/queries/list-branches-admin";
 import { useAction } from "@/shared/ui/use-action";
+import { createBranchSchema, updateBranchSchema } from "../application/schemas";
 
 /**
  * Create and edit share one dialog: the fields are identical, and the only difference
@@ -54,6 +56,19 @@ export function BranchFormDialog({
     };
 
     setError(null);
+
+    // Checked here before the round trip, with the SAME schema the server runs
+    // (docs/UX-AUDIT-2026-09.md, finding 6). The server still validates; this only
+    // spares the person at the desk a wait to be told about a typo.
+    const parsed = validate(
+      branch ? updateBranchSchema : createBranchSchema,
+      branch ? { ...payload, id: branch.id } : payload,
+    );
+    if (!parsed.ok) {
+      setError(parsed.error);
+      return;
+    }
+
     startTransition(async () => {
       const result = branch ? await editBranch({ ...payload, id: branch.id }) : await createBranch(payload);
 

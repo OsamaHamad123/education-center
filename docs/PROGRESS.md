@@ -463,7 +463,23 @@ Pagination was deliberately left on `push`: those are real `<Link>`s and walking
 through pages is what a link is for. The line drawn is that a control which changes what
 a list SHOWS replaces, and a link that moves you through it pushes.
 
-Phase D is open.
+### Phase D — done (2026-09-16)
+
+- **`validate(schema, payload)`** runs the module's own Zod schema in the browser and
+  returns the same `Result` shape `createAction` returns, so the six forms an admin uses
+  all day check before the round trip and nothing about how they show the answer changed.
+  `fieldErrorsOf` is now shared by both sides rather than written twice.
+- **The register asks before you walk away from unsaved marks**, and `UnsavedGuard`
+  covers closing the tab. A clean register does not nag — a guard that fires when there
+  is nothing to lose is one people learn to click through.
+- **Finding 8 was closed by a correction, not a change.** The seven `toast.error` calls
+  looked inconsistent and are not: every one is a control with no field to attach a
+  message to. The rule the code already follows, now written down: a failure that belongs
+  to a field appears at the field; a failure from a control with no field is a toast.
+
+Every finding in `docs/UX-AUDIT-2026-09.md` is closed. One loose end it names:
+`react-hook-form` and `@hookform/resolvers` are installed and imported by nothing, and
+`src/shared/ui/form.tsx` with them. Removing them is a dependency change, not a UX one.
 
 ## Next steps
 

@@ -7,6 +7,9 @@ import type { Tx } from "@/shared/db/client";
 import { withTenant } from "@/shared/db/with-tenant";
 import { ar } from "@/shared/i18n/ar";
 import { err, ok, type Result } from "@/shared/lib/result";
+// One implementation, shared with the client: a form that validates before it
+// calls must produce the same shape this does, or the two would drift.
+import { fieldErrorsOf } from "@/shared/lib/validate";
 import { requestMetadata, writeAuditLog, type AuditEntry } from "./audit";
 
 /**
@@ -149,13 +152,4 @@ class RollbackWith extends Error {
   constructor(public readonly result: Result<unknown>) {
     super("rollback");
   }
-}
-
-function fieldErrorsOf(error: z.ZodError): Record<string, string[]> {
-  const fields: Record<string, string[]> = {};
-  for (const issue of error.issues) {
-    const key = issue.path.map(String).join(".") || "_";
-    (fields[key] ??= []).push(issue.message);
-  }
-  return fields;
 }

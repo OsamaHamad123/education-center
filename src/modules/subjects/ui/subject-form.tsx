@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { ar } from "@/shared/i18n/ar";
+import { validate } from "@/shared/lib/validate";
 import { readText } from "@/shared/lib/form-data";
 import type { AppError } from "@/shared/lib/result";
 import { Button } from "@/shared/ui/button";
@@ -21,6 +22,7 @@ import { Label } from "@/shared/ui/label";
 import { createSubject, renameSubject } from "../application/use-cases/manage-subject";
 import type { SubjectWithUsage } from "../application/queries/list-subjects";
 import { useAction } from "@/shared/ui/use-action";
+import { createSubjectSchema, updateSubjectSchema } from "../application/schemas";
 
 export function SubjectFormDialog({
   trigger,
@@ -40,6 +42,18 @@ export function SubjectFormDialog({
     event.preventDefault();
     const name = readText(new FormData(event.currentTarget), "name");
     setError(null);
+
+    // Checked here before the round trip, with the SAME schema the server runs
+    // (docs/UX-AUDIT-2026-09.md, finding 6). The server still validates; this only
+    // spares the person at the desk a wait to be told about a typo.
+    const parsed = validate(
+      subject ? updateSubjectSchema : createSubjectSchema,
+      subject ? { id: subject.id, name } : { name },
+    );
+    if (!parsed.ok) {
+      setError(parsed.error);
+      return;
+    }
 
     startTransition(async () => {
       const result = subject ? await renameSubject({ id: subject.id, name }) : await createSubject({ name });

@@ -6,6 +6,7 @@ import { Check, Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { BranchOption } from "@/modules/branches";
 import { ar } from "@/shared/i18n/ar";
+import { validate } from "@/shared/lib/validate";
 import { readText } from "@/shared/lib/form-data";
 import type { AppError } from "@/shared/lib/result";
 import { Button } from "@/shared/ui/button";
@@ -23,6 +24,7 @@ import { Label } from "@/shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { createBranchAdmin } from "../application/use-cases/manage-branch-admin";
 import { useAction } from "@/shared/ui/use-action";
+import { createBranchAdminSchema } from "../application/schemas";
 
 /**
  * Two steps in one dialog: the form, then the temporary password.
@@ -55,12 +57,23 @@ export function CreateBranchAdminDialog({
     const data = new FormData(event.currentTarget);
     setError(null);
 
+    const payload = {
+      name: readText(data, "name"),
+      username: readText(data, "username"),
+      branchId,
+    };
+
+    // Checked here before the round trip, with the SAME schema the server runs
+    // (docs/UX-AUDIT-2026-09.md, finding 6). The server still validates; this only
+    // spares the person at the desk a wait to be told about a typo.
+    const parsed = validate(createBranchAdminSchema, payload);
+    if (!parsed.ok) {
+      setError(parsed.error);
+      return;
+    }
+
     startTransition(async () => {
-      const result = await createBranchAdmin({
-        name: readText(data, "name"),
-        username: readText(data, "username"),
-        branchId,
-      });
+      const result = await createBranchAdmin(payload);
       if (!result.ok) {
         setError(result.error);
         return;

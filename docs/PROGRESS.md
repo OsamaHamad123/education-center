@@ -227,6 +227,11 @@ no change, so it was reverted. Moving this number means shipping less JavaScript
 - **The e2e suite leaves throwaway rows behind.** Mutating tests enrol their own student
   (and Phase 3's rename test creates its own branch) so the suite is repeatable — verified by
   running it twice — but those students stay in the seeded branches. Reseed periodically.
+- **`pnpm db:seed` did not reset `login_attempts`.** The truncate list was written in
+  Phase 1 and never learned about the table Phase 10 added, so a lockout counter outlived a
+  reseed that claims to rebuild from scratch. Harmless in practice — the rows expire in 15
+  minutes — but it was the one table that could refuse a sign-in on a freshly seeded
+  database. Added to the list on 2026-09-16, next to `lookup_attempts`.
 - **The old e2e rename test creates a branch and leaves it deactivated.** Running the suite many
   times against one database slowly accumulates inactive `فرع اختبار XXXXX` rows. Harmless, but
   worth a cleanup step when the suite grows.
@@ -308,9 +313,11 @@ All ten phases are done. What is left is not a phase — it is the handover:
    `BACKUP_PASSPHRASE` — without it the dumps are plaintext and the log says so daily.
 3. **Copy backups off the box.** The container writes to a local volume only, which is
    not a backup of the machine it lives on.
-4. **Reseed before handing it over.** The e2e suite has been enrolling students into the
-   seeded branches since Phase 4; أدبي 1 - بنين in مدينة نصر now has over a hundred, and
-   the demo no longer looks like a real class.
+4. ~~**Reseed before handing it over.**~~ **Done 2026-09-16.** The database had grown to
+   476 students, 213 teachers and 79 branches against a seed of 180 / 6 / 3 — the e2e
+   suite's residue since Phase 4. `pnpm db:seed` rebuilt it, and `school_app` was
+   re-checked as `rolbypassrls = f` afterwards. **Do it again after the next e2e run**,
+   because every run adds to it.
 5. **§16 questions 4, 7 and 8 are still unanswered.** Question 7 (academic terms) is the
    only one that would change the schema — reports work on date ranges today, which was
    the plan's own default.

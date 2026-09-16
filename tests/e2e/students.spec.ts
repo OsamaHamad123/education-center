@@ -73,12 +73,13 @@ test.describe("students list", () => {
   test("shows the branch's students and searches by code", async ({ page }) => {
     await signIn(page, "admin_nsr");
     await page.goto("/students");
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("الطلاب");
+    // `toContainText`: the heading carries the row count beside the title now.
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("الطلاب");
 
     // A seeded student this suite never mutates, so the count stays 1.
     await page.goto("/students?search=NSR-26-00001");
     await expect(visible(page, "NSR-26-00001").first()).toBeVisible();
-    await expect(visible(page, "الإجمالي: 1").first()).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("1");
   });
 
   test("a profile shows the enrollment history, and no transfer button for a branch admin", async ({

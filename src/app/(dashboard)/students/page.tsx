@@ -27,6 +27,7 @@ export default async function StudentsPage({
     <>
       <PageHeader
         title={ar.students.title}
+        count={page.data.total}
         description={ar.students.description}
         action={
           <div className="flex flex-wrap gap-2">

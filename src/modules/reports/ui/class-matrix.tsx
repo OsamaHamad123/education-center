@@ -28,6 +28,14 @@ export function ClassMatrix({ report }: { report: ClassMatrixReport }) {
                 {column.sessionDate.slice(8, 10)}/{column.sessionDate.slice(5, 7)}
               </th>
             ))}
+            {/*
+              A total, so the eye does not have to count pink cells
+              (docs/PRODUCT-REVIEW-2026-09.md). It is what turns this picture into a
+              decision about who to ring.
+            */}
+            <th scope="col" className="bg-background sticky end-0 border p-2 text-xs whitespace-nowrap">
+              {ar.attendanceStatus.absent}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -51,6 +59,9 @@ export function ClassMatrix({ report }: { report: ClassMatrixReport }) {
                   </td>
                 );
               })}
+              <td className="bg-background sticky end-0 border p-2 text-center text-xs font-medium">
+                {absencesOf(report, student.studentId) || ""}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -59,6 +70,12 @@ export function ClassMatrix({ report }: { report: ClassMatrixReport }) {
       <Legend />
     </div>
   );
+}
+
+/** How many days in this range the student was absent — counted from the cells shown. */
+function absencesOf(report: ClassMatrixReport, studentId: string): number {
+  return report.columns.filter((column) => report.cells[`${studentId}|${column.sessionDate}`] === "absent")
+    .length;
 }
 
 /**

@@ -4,7 +4,7 @@ import type { Tx } from "@/shared/db/client";
 import { withTenant } from "@/shared/db/with-tenant";
 import { ar } from "@/shared/i18n/ar";
 import { err, ok, type Result } from "@/shared/lib/result";
-import { isIsoDate, isoDayOfWeek, todayInCairo } from "@/shared/lib/time";
+import { isIsoDate, isoDayOfWeek, nowTimeInCairo, todayInCairo } from "@/shared/lib/time";
 import { canMarkAttendance, type MarkingViolation } from "../../domain/edit-window";
 import { rosterFor, summarize, type AttendanceStatus } from "../../domain/roster";
 import {
@@ -51,6 +51,14 @@ export type AttendanceBoard = {
   sessionDate: string;
   today: string;
   periods: BoardPeriod[];
+  /**
+   * The period happening as this was rendered, or null.
+   *
+   * Computed here rather than in the component: the board is a client component, and a
+   * clock read during hydration can disagree with the one read during the server render.
+   * Null on any day but today, where "now" says nothing about the timetable.
+   */
+  nowPeriodNumber: number | null;
   rosterSize: number;
   /** Null when this viewer may write on this day; otherwise why not. */
   blockedBy: MarkingViolation | null;
@@ -124,6 +132,7 @@ export async function getAttendanceBoard(input: {
       sessionDate,
       today,
       periods,
+      nowPeriodNumber: sessionDate === today ? periodAt(periods, nowTimeInCairo()) : null,
       rosterSize: rosterFor(enrollments, input.classId, sessionDate).size,
       blockedBy: canMarkAttendance({
         role: auth.data.role,
@@ -287,4 +296,9 @@ function toBoardPeriod(
     isExtra: session?.isExtra ?? false,
     cancelReason: session?.cancelReason ?? null,
   };
+}
+
+/** The period a time falls inside, if any. */
+function periodAt(periods: BoardPeriod[], time: string): number | null {
+  return periods.find((period) => period.startTime <= time && time < period.endTime)?.periodNumber ?? null;
 }

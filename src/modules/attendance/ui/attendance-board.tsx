@@ -135,7 +135,11 @@ export function AttendanceBoardView({
         <ul className="space-y-2">
           {board.periods.map((period) => (
             <li key={period.periodNumber}>
-              <PeriodRow board={board} period={period} />
+              <PeriodRow
+                board={board}
+                period={period}
+                isNow={period.periodNumber === board.nowPeriodNumber}
+              />
             </li>
           ))}
         </ul>
@@ -144,9 +148,25 @@ export function AttendanceBoardView({
   );
 }
 
-function PeriodRow({ board, period }: { board: AttendanceBoard; period: BoardPeriod }) {
+function PeriodRow({
+  board,
+  period,
+  isNow,
+}: {
+  board: AttendanceBoard;
+  period: BoardPeriod;
+  isNow: boolean;
+}) {
+  // The unmarked one is the only row that needs the eye, and it used to look like all
+  // the others (docs/PRODUCT-REVIEW-2026-09.md).
+  const needsMarking = period.status === "unmarked";
+
   return (
-    <Card className="hover:bg-accent/40 transition-colors">
+    <Card
+      className={`hover:bg-accent/40 transition-colors ${
+        isNow ? "border-primary ring-primary/20 ring-2" : needsMarking ? "border-amber-300" : ""
+      }`}
+    >
       <CardContent className="p-0">
         <Link
           href={`/attendance/mark?classId=${board.classRef.id}&date=${board.sessionDate}&period=${period.periodNumber}`}
@@ -158,7 +178,14 @@ function PeriodRow({ board, period }: { board: AttendanceBoard; period: BoardPer
           </span>
 
           <span className="min-w-0 flex-1">
-            <span className="block truncate font-medium">{period.subjectName}</span>
+            <span className="flex items-center gap-2">
+              <span className="truncate font-medium">{period.subjectName}</span>
+              {isNow ? (
+                <Badge variant="default" className="shrink-0">
+                  {ar.attendance.now}
+                </Badge>
+              ) : null}
+            </span>
             <span className="text-muted-foreground block truncate text-sm">
               {period.teacherName} ·{" "}
               <span dir="ltr">
@@ -182,7 +209,11 @@ function StatusBadge({ period, rosterSize }: { period: BoardPeriod; rosterSize: 
     return <Badge variant="destructive">{ar.attendance.cancelledBadge}</Badge>;
   }
   if (period.status === "unmarked") {
-    return <Badge variant="outline">{ar.attendance.unmarked}</Badge>;
+    return (
+      <Badge variant="outline" className="border-amber-400 text-amber-700">
+        {ar.attendance.unmarked}
+      </Badge>
+    );
   }
   return (
     <Badge variant="secondary" dir="ltr">

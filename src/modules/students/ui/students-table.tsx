@@ -44,6 +44,14 @@ export function StudentsTable({
   /** A student whose current branch is not the viewer's has transferred out. */
   const isTransferredOut = (branchId: string) => viewerBranchId !== null && branchId !== viewerBranchId;
 
+  /*
+   * The branch column carried the same value on every row for a branch admin, who has
+   * exactly one branch (docs/PRODUCT-REVIEW-2026-09.md). It exists for the transferred-out
+   * case, so it appears only when there is something to tell apart: a super admin looking
+   * across branches, or a list that actually contains someone else's student.
+   */
+  const showBranch = viewerBranchId === null || page.rows.some((row) => isTransferredOut(row.branchId));
+
   return (
     <div className="space-y-3">
       <ul className="space-y-2 md:hidden">
@@ -60,7 +68,8 @@ export function StudentsTable({
                   </span>
                 </div>
                 <p className="text-muted-foreground text-sm">
-                  {row.className} · {row.branchName}
+                  {row.className}
+                  {showBranch ? ` · ${row.branchName}` : ""}
                 </p>
                 <p className="text-muted-foreground font-mono text-xs" dir="ltr">
                   {formatPhoneForDisplay(row.parentPhone)}
@@ -81,7 +90,7 @@ export function StudentsTable({
               <TableHead>{ar.students.code}</TableHead>
               <TableHead>{ar.students.fullName}</TableHead>
               <TableHead>{ar.students.class}</TableHead>
-              <TableHead>{ar.students.branch}</TableHead>
+              {showBranch ? <TableHead>{ar.students.branch}</TableHead> : null}
               <TableHead>{ar.students.parentPhone}</TableHead>
               <TableHead>{ar.students.joinDate}</TableHead>
             </TableRow>
@@ -103,7 +112,7 @@ export function StudentsTable({
                   ) : null}
                 </TableCell>
                 <TableCell>{row.className}</TableCell>
-                <TableCell>{row.branchName}</TableCell>
+                {showBranch ? <TableCell>{row.branchName}</TableCell> : null}
                 <TableCell className="font-mono text-xs" dir="ltr">
                   {formatPhoneForDisplay(row.parentPhone)}
                 </TableCell>
@@ -116,7 +125,12 @@ export function StudentsTable({
 
       <div className="flex items-center justify-between gap-2">
         <p className="text-muted-foreground text-sm">
-          {ar.common.total}: {page.total} · {page.page} / {lastPage}
+          {/*
+            The total moved to the page title, where it is asked — it used to be here,
+            below twenty-five rows (docs/PRODUCT-REVIEW-2026-09.md). What is left is the
+            position, which is the thing this line is actually for.
+          */}
+          {page.page} / {lastPage}
         </p>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" asChild disabled={page.page <= 1}>

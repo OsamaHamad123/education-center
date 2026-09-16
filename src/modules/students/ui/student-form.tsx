@@ -39,6 +39,17 @@ export function StudentForm({ classes, student }: { classes: ClassOption[]; stud
   const isEdit = Boolean(student);
   const duplicates = error?.fieldErrors?._duplicates ?? null;
 
+  /** Copies the parent's number into the WhatsApp field, which is usually the same. */
+  function copyParentPhone() {
+    const form = formRef.current;
+    if (!form) return;
+    const phone = form.elements.namedItem("parentPhone");
+    const whatsapp = form.elements.namedItem("parentWhatsapp");
+    if (phone instanceof HTMLInputElement && whatsapp instanceof HTMLInputElement) {
+      whatsapp.value = phone.value;
+    }
+  }
+
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const confirmDuplicate = confirmRef.current;
@@ -146,15 +157,33 @@ export function StudentForm({ classes, student }: { classes: ClassOption[]; stud
           disabled={isPending}
           error={fieldError("parentPhone")}
         />
-        <Field
-          name="parentWhatsapp"
-          inputMode="numeric"
-          label={ar.students.parentWhatsapp}
-          defaultValue={student?.parentWhatsapp ?? ""}
-          dir="ltr"
-          disabled={isPending}
-          error={fieldError("parentWhatsapp")}
-        />
+        <div className="space-y-2">
+          <Field
+            name="parentWhatsapp"
+            inputMode="numeric"
+            label={ar.students.parentWhatsapp}
+            defaultValue={student?.parentWhatsapp ?? ""}
+            dir="ltr"
+            disabled={isPending}
+            error={fieldError("parentWhatsapp")}
+          />
+          {/*
+            For most parents it is the same number, and it was eleven digits typed twice
+            (docs/PRODUCT-REVIEW-2026-09.md). A button rather than a checkbox: a checkbox
+            implies a state to keep in step with the other field afterwards, and this is
+            a one-off copy.
+          */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-auto p-0 text-xs"
+            disabled={isPending}
+            onClick={copyParentPhone}
+          >
+            {ar.students.sameAsParentPhone}
+          </Button>
+        </div>
         <Field
           name="studentPhone"
           inputMode="numeric"

@@ -134,27 +134,32 @@ would be better spent on the date, which is currently small grey text.
 
 **Works:** the search, the formatted phone, the note that a student code never changes.
 
-- **The الفرع column is the same value on every row.** A branch admin has one branch; the
-  column exists for the transferred-out case. Show it only when the row's branch differs
-  from the viewer's, and give the width back to the name.
-- **No total.** "180 طالب" belongs next to the title; it is the first thing anyone asks.
-- **The whole row should open the profile,** not only the name.
-- **A "بيانات ناقصة" filter** — no parent phone, no national id. Missing data is invisible
-  until the day you need to call somebody, and then it is too late to fix.
+- ~~**The الفرع column is the same value on every row.**~~ **Done:** it appears only when
+  it distinguishes something — a super admin across branches, or a list that actually
+  holds somebody else's student.
+- ~~**No total.**~~ **Half wrong, and fixed anyway.** The total was there, at the FOOT of
+  the list, below twenty-five rows. It moved next to the title, and the footer kept what
+  it is really for: the page position.
+- **The whole row should open the profile,** not only the name. Not done — nesting a row
+  link around cells that already contain links needs more care than it looks.
+- **A "بيانات ناقصة" filter.** Not done: it needs a schema question answered first — is a
+  national id ever required? — which is the owner's call, not a refinement.
 
 ### `/students/new` — see finding 5
 
-One more, worth more than it sounds: **"واتساب ولي الأمر = نفس الرقم"** as a checkbox.
-For most parents it is the same number, and it is currently eleven digits typed twice.
+~~One more: **"واتساب ولي الأمر = نفس الرقم"** as a checkbox.~~ **Done**, as a button
+rather than a checkbox: a checkbox implies a state to keep in step afterwards, and this is
+a one-off copy of eleven digits that were being typed twice.
 
 ### `/attendance` — the board
 
 **Works:** the marked/total chip per period, lazy sessions, the extra-session button.
 
-- **An unmarked period should look unfinished.** "لم تُسجّل" is styled like everything
-  else; it is the only row that needs the eye.
-- **Nothing shows which period is happening now.** A line or a marker on the current one
-  would orient the user before they read anything.
+- ~~**An unmarked period should look unfinished.**~~ **Done:** amber border and badge.
+- ~~**Nothing shows which period is happening now.**~~ **Done:** the running period is
+  ringed and badged الآن. Computed in the QUERY, not the component — the board is a client
+  component, and a clock read during hydration can disagree with the one read during the
+  server render.
 - **The day arrows are an RTL trap.** Confirm with a real user which of `‹ ›` they read as
   "yesterday" — this is the kind of thing that is obvious to whoever built it and a
   coin-flip for everyone else.
@@ -176,28 +181,35 @@ bar. This is a well-designed screen.
 The grid is genuinely good: times computed from the bell schedule, teacher under subject,
 empty cells that invite a click.
 
-- **Colour by subject.** A week of identically-styled cells hides the pattern. Colour
-  makes "the same teacher twice on Sunday" visible without reading.
-- **A teacher's week, from here.** The question "when is سارة free?" is asked while
-  looking at this grid and currently requires leaving it.
-- **Sticky header row** once a branch uses eight periods.
+- ~~**Colour by subject.**~~ **Done:** a dot per subject, coloured from a hash of the
+  name, so a new subject needs no configuration and is the same colour on every screen. A
+  dot rather than a filled cell, because colour must not be the only carrier of meaning —
+  and the palette leaves out red and amber, which mean "cancelled" and "unmarked" here.
+- **A teacher's week, from here.** Not done — a new view, not a refinement.
+- **Sticky header row.** Not done.
 
 ### `/payroll` — see finding 2
 
-- **Default to the last complete month.** It opens on month-to-date, which is the one
-  range you never pay on. Add الشهر الماضي · هذا الشهر presets.
-- **The الفرع column** is the same value on every row, as on students.
-- **A per-teacher sheet to hand over** — currently the print is the whole branch.
+- ~~**Default to the last complete month.**~~ **Done, as presets rather than a new
+  default.** الشهر الماضي · الشهر الحالي. Month-to-date is genuinely useful mid-month for
+  "what is this costing so far", so taking it away to fix the other thing would have been
+  a trade, not a fix.
+- **The الفرع column.** Not done: unlike students, a payroll row genuinely can span
+  branches for a shared teacher, so the same conditional is not safe here without reading
+  the grouping more carefully.
+- **A per-teacher sheet to hand over.** Not done — a new print route rather than a
+  refinement.
 
 ### `/reports/matrix` — the class register
 
 Dense, colour-coded and readable. Two things stop it being actionable:
 
-- **No total per student.** The eye has to count pink cells. A غياب column at the end
-  turns a picture into a decision.
-- **The name column must stick** when scrolling a month sideways.
-- **A cell should be clickable** — seeing that Tuesday was wrong and being unable to go
-  and fix it from here is the frustration this screen creates.
+- ~~**No total per student.**~~ **Done:** a غياب column, stuck to the end of each row,
+  so the eye does not count pink cells.
+- ~~**The name column must stick.**~~ **Wrong — it already does**, and there is already a
+  legend. Both were missed by reading a screenshot rather than the markup.
+- **A cell should be clickable.** Not done: it needs the attendance edit window applied
+  per cell, which is a behaviour question rather than a layout one.
 
 ### `/lookup` — the parent's screen
 

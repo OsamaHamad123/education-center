@@ -514,6 +514,30 @@ Note on the run: the first full e2e run after this landed showed nine failures, 
 subsequent full runs were clean. Treated as load flakiness, not a regression — recorded
 here rather than glossed over.
 
+## Product review — the rest (2026-09-16)
+
+- **The branch column** on the students list appears only when it distinguishes
+  something; **the total** moved from the foot of the list to beside the title.
+- **Payroll presets** — الشهر الماضي / الشهر الحالي — rather than a new default, because
+  month-to-date is genuinely useful mid-month.
+- **The class matrix** gained a غياب total stuck to the end of each row.
+- **The timetable** shows a coloured dot per subject, hashed from the name so nothing
+  needs configuring; red and amber are left out, they mean something else here.
+- **The attendance board** rings the period happening now and makes an unmarked one
+  amber. The "now" is computed in the QUERY: the board is a client component, and a clock
+  read at hydration can disagree with the one read during the server render.
+- **نفس رقم ولي الأمر** copies the phone into the WhatsApp field — eleven digits that were
+  being typed twice.
+
+**Two review points were wrong and are corrected in the document**: the students list
+already had a total (at the foot), and the matrix name column was already sticky and
+already had a legend. Both came from reading a screenshot rather than the markup.
+
+Deliberately not done, with reasons in the document: a "بيانات ناقصة" filter (needs an
+owner decision about required fields), clickable matrix cells (needs the edit window
+applied per cell), a teacher's week on the timetable screen, a per-teacher payroll sheet,
+and whole-row links on the students table.
+
 ## Next steps
 
 All ten phases are done. What is left is not a phase — it is the handover:

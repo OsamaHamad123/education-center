@@ -30,6 +30,7 @@ export default async function StudentsArchivePage({
     <>
       <PageHeader
         title={ar.students.archiveTitle}
+        count={page.data.total}
         description={ar.students.archiveDescription}
         action={
           <Button variant="ghost" asChild>

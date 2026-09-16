@@ -19,6 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { PayrollReport, TeacherEarnings } from "../application/queries/get-payroll";
 import { exportPayrollCsv } from "../application/use-cases/export-payroll";
 import { DateField } from "@/shared/ui/date-field";
+import { todayInCairo } from "@/shared/lib/time";
 
 const ANY = "__any__";
 
@@ -34,6 +35,14 @@ export function PayrollReportView({ report }: { report: PayrollReport }) {
   const [isNavigating, navigate] = useNavPending();
   const params = useSearchParams();
   const [isExporting, startExport] = useTransition();
+
+  /** Both ends at once, so a preset is one navigation rather than two. */
+  function setRange(range: { from: string; to: string }) {
+    const next = new URLSearchParams(params.toString());
+    next.set("from", range.from);
+    next.set("to", range.to);
+    navigate(`?${next.toString()}`);
+  }
 
   function setParam(key: string, value: string | undefined) {
     const next = new URLSearchParams(params.toString());
@@ -137,6 +146,34 @@ export function PayrollReportView({ report }: { report: PayrollReport }) {
           </div>
         ) : null}
       </fieldset>
+
+      {/*
+        Payroll is run on a whole month, and the screen opens on month-to-date — the one
+        range nobody ever pays on (docs/PRODUCT-REVIEW-2026-09.md). Two buttons, rather
+        than changing the default: the month-to-date view is genuinely useful mid-month
+        for "what is this costing so far", and taking it away to fix the other thing
+        would have been a trade rather than a fix.
+      */}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={isNavigating}
+          onClick={() => setRange(lastMonth())}
+        >
+          {ar.payroll.lastMonth}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={isNavigating}
+          onClick={() => setRange(thisMonth())}
+        >
+          {ar.payroll.thisMonth}
+        </Button>
+      </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="secondary">
@@ -327,4 +364,28 @@ export function PayrollSessionsView({
       ) : null}
     </div>
   );
+}
+
+/** The month that has finished — what a payroll run is actually for. */
+function lastMonth(): { from: string; to: string } {
+  const today = todayInCairo();
+  const year = Number(today.slice(0, 4));
+  const month = Number(today.slice(5, 7));
+  const startYear = month === 1 ? year - 1 : year;
+  const startMonth = month === 1 ? 12 : month - 1;
+  const from = `${startYear}-${String(startMonth).padStart(2, "0")}-01`;
+  // The last day of that month is the day before the first of this one.
+  const to = `${year}-${String(month).padStart(2, "0")}-01`;
+  return { from, to: shiftOneDayBack(to) };
+}
+
+function thisMonth(): { from: string; to: string } {
+  const today = todayInCairo();
+  return { from: `${today.slice(0, 7)}-01`, to: today };
+}
+
+function shiftOneDayBack(isoDate: string): string {
+  const date = new Date(`${isoDate}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() - 1);
+  return date.toISOString().slice(0, 10);
 }

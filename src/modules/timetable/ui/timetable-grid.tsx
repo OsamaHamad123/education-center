@@ -213,7 +213,17 @@ function CellButton({
 }) {
   const content = cell ? (
     <>
-      <span className="block truncate font-medium">{cell.subjectName}</span>
+      <span className="flex items-center gap-1.5">
+        {/*
+          A colour per subject (docs/PRODUCT-REVIEW-2026-09.md). A week of identically
+          styled cells hides its own pattern; a dot lets the eye read "the same subject
+          twice on Sunday" without reading a word. A dot rather than a filled cell,
+          because colour must not be the only thing carrying the meaning — the subject
+          name is right beside it.
+        */}
+        <span className={`size-2 shrink-0 rounded-full ${subjectColour(cell.subjectName)}`} aria-hidden />
+        <span className="block truncate font-medium">{cell.subjectName}</span>
+      </span>
       <span className="text-muted-foreground block truncate text-xs">{cell.teacherName}</span>
     </>
   ) : (
@@ -237,4 +247,29 @@ function CellButton({
       {content}
     </button>
   );
+}
+
+/**
+ * A stable colour for a subject name.
+ *
+ * Derived from the name rather than stored, so a centre that adds a subject gets a
+ * colour without anyone configuring one, and the same subject is the same colour on
+ * every screen and every branch. The palette avoids red and amber, which mean
+ * "cancelled" and "unmarked" elsewhere in the product.
+ */
+const SUBJECT_COLOURS = [
+  "bg-sky-500",
+  "bg-emerald-500",
+  "bg-violet-500",
+  "bg-teal-500",
+  "bg-indigo-500",
+  "bg-fuchsia-500",
+  "bg-cyan-500",
+  "bg-lime-600",
+];
+
+function subjectColour(subjectName: string): string {
+  let hash = 0;
+  for (const character of subjectName) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+  return SUBJECT_COLOURS[hash % SUBJECT_COLOURS.length] ?? "bg-slate-400";
 }

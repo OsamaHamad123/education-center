@@ -112,7 +112,7 @@ export type Permission = keyof typeof PERMISSIONS;
 | Validation | Zod |
 | Env validation | `@t3-oss/env-nextjs` |
 | UI | Tailwind CSS + shadcn/ui (RTL enabled), lucide-react icons, sonner toasts |
-| Forms | react-hook-form + @hookform/resolvers/zod |
+| Forms | plain `FormData` + Zod, validated in the browser and again on the server |
 | Tables | @tanstack/react-table |
 | Dates | date-fns + @date-fns/tz (`Africa/Cairo`) |
 | Charts (reports) | recharts |

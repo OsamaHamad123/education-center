@@ -17,7 +17,9 @@ and a public parent/student lookup page.
 - Better Auth (Drizzle adapter, username plugin) for authentication
 - Zod for all validation (shared between client and server)
 - Tailwind CSS + shadcn/ui (RTL), font: Cairo via next/font
-- TanStack Table for data tables, React Hook Form + Zod resolver for forms
+- TanStack Table for data tables; forms are plain `FormData` + a Zod schema run on both
+  sides (`shared/lib/validate.ts`). React Hook Form was in this list and in
+  `package.json` for ten phases without a single import, and was removed.
 - date-fns + @date-fns/tz, timezone ALWAYS `Africa/Cairo`
 - Vitest (unit + integration against real Postgres), Playwright (e2e)
 - pnpm, Docker Compose for local DB

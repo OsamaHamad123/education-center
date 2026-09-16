@@ -477,9 +477,14 @@ a list SHOWS replaces, and a link that moves you through it pushes.
   message to. The rule the code already follows, now written down: a failure that belongs
   to a field appears at the field; a failure from a control with no field is a toast.
 
-Every finding in `docs/UX-AUDIT-2026-09.md` is closed. One loose end it names:
-`react-hook-form` and `@hookform/resolvers` are installed and imported by nothing, and
-`src/shared/ui/form.tsx` with them. Removing them is a dependency change, not a UX one.
+Every finding in `docs/UX-AUDIT-2026-09.md` is closed.
+
+**The loose end is gone too (2026-09-16):** `react-hook-form`, `@hookform/resolvers` and
+`src/shared/ui/form.tsx` were removed. They had been in `package.json` and in the stack
+list in CLAUDE.md since Phase 0, and in ten phases not one line ever imported them — so
+the stack a reviewer reads described a library the product does not use. Both documents
+now say what the forms actually do: plain `FormData` and a Zod schema run on both sides.
+Build, 457 unit and integration tests and 289 e2e all pass without them.
 
 ## Next steps
 

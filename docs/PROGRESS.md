@@ -395,7 +395,27 @@ Findings 6, 7 and 11, and a thirteenth found while testing the sixth.
 The lesson worth keeping: the unit test asserted on the function and passed for months.
 The bug was in the wire, and only a test that read the saved bytes could see it.
 
-Phase E is still open.
+### Phase E — done (2026-09-16)
+
+Findings 8, 9 and 10, and a fourteenth found while reading the print routes.
+
+- **`/print/payroll` checks the role.** Not a blanket teacher redirect on the layout,
+  which is what the audit first suggested and would have been wrong: a teacher prints
+  their own week and the register they just marked, so two doors that are meant to be
+  open would have closed. The layout did gain `mustChangePassword`, which it was missing
+  while both other shells had it.
+- **Finding 14: the attendance sheet could not be printed once the log scrolled past
+  it.** The page found its session by scanning `getSessionLog` over a century — capped
+  at 300 rows, newest first. A branch runs roughly four hundred sessions a week, so the
+  button worked for about four days of history and then answered 404, which is also what
+  it answers for another branch's session. The seed has 103 sessions in its largest
+  branch, which is why the suite never saw it. Now looked up by id, with an integration
+  test that builds 301 sessions.
+- **`describeError` is shared**, so the two functions closest to authentication stop
+  logging the error object whole.
+- **`likeTerm` escapes the search.** `%` used to return the whole register.
+
+Every finding in `docs/AUDIT-2026-09.md` is closed.
 
 ## Next steps
 

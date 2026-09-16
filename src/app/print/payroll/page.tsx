@@ -16,6 +16,11 @@ export default async function PrintPayrollPage({
   const params = await searchParams;
   const ctx = await resolveTenantContext();
   if (!ctx) notFound();
+  // `payroll.read` includes teachers, because they see their own earnings at
+  // `/teacher/earnings`. RLS kept this sheet to their own rows, so nothing leaked — but
+  // it is the OFFICE's document, signature column and all, and this was the one route
+  // group with no role gate (docs/AUDIT-2026-09.md, finding 8).
+  if (ctx.role === "teacher") notFound();
 
   const [report, identity, branches] = await Promise.all([
     getPayrollReport(params),

@@ -1,6 +1,7 @@
 import { and, asc, count, desc, eq, exists, ilike, ne, or, sql, type SQL } from "drizzle-orm";
 import type { TenantContext } from "@/shared/auth/tenant-context";
 import type { Tx } from "@/shared/db/client";
+import { likeTerm } from "@/shared/lib/sql-text";
 import {
   branches,
   classes,
@@ -66,7 +67,8 @@ function buildWhere(ctx: TenantContext, filters: StudentListFilters): SQL | unde
   if (filters.classId) clauses.push(eq(students.classId, filters.classId));
 
   if (filters.search) {
-    const term = `%${filters.search}%`;
+    // `likeTerm`, not interpolation: `%` and `_` are the pattern's, not the typist's.
+    const term = likeTerm(filters.search);
     const match = or(
       // pg_trgm makes this ILIKE an index scan rather than a table scan (7.5).
       ilike(students.fullName, term),

@@ -13,6 +13,7 @@ import {
 import * as schema from "@/shared/db/schema";
 import { expectConstraintViolation, expectRlsViolation } from "../helpers/errors";
 import { todayInCairo } from "@/shared/lib/time";
+import { findSessionById, listSessions } from "@/modules/attendance";
 
 /**
  * Sessions and attendance isolation (PROJECT_PLAN 7.13, 7.14, section 8, rule 10.5).
@@ -439,5 +440,58 @@ describe("a transferred student's attendance", () => {
 
     // One continuous history, so the new branch can see what they missed before.
     expect(rows).toHaveLength(1);
+  });
+});
+
+describe("printing a sheet older than the log's cap", () => {
+  /**
+   * docs/AUDIT-2026-09.md, finding 14. The print page used to find its session by
+   * scanning `getSessionLog` over a century, which returns the 300 most recent rows.
+   * A branch runs a few hundred sessions a week, so the button stopped working within
+   * days — and answered 404, the same reply a session in another branch gets.
+   */
+  it("finds a session the capped log has scrolled past", async () => {
+    const oldest = await makeSession({
+      branchId: fx.branchA.id,
+      classId: fx.classA.id,
+      teacherId: fx.teacherA.id,
+      sessionDate: shiftDays(TODAY, -400),
+    });
+
+    // 300 newer sessions: exactly the cap, so the oldest falls off the end.
+    for (let day = 0; day < 300; day++) {
+      await makeSession({
+        branchId: fx.branchA.id,
+        classId: fx.classA.id,
+        teacherId: fx.teacherA.id,
+        sessionDate: shiftDays(TODAY, -day),
+        periodNumber: 2,
+      });
+    }
+
+    const ctx = ctxFor.branchAdmin(fx.branchA.id);
+
+    const log = await asTenant(ctx, (tx) =>
+      listSessions(ctx, tx, { from: "2000-01-01", to: "2100-01-01" }, 300),
+    );
+    expect(log.some((row) => row.id === oldest.id)).toBe(false);
+
+    // …and the lookup the print page uses now finds it anyway.
+    const found = await asTenant(ctx, (tx) => findSessionById(ctx, tx, oldest.id));
+    expect(found?.id).toBe(oldest.id);
+  });
+
+  it("still refuses a session in another branch", async () => {
+    const theirs = await makeSession({
+      branchId: fx.branchB.id,
+      classId: fx.classB.id,
+      teacherId: fx.teacherB.id,
+    });
+
+    // The scoping is RLS's, not the query's, and that has to stay true after the change.
+    const found = await asTenant(ctxFor.branchAdmin(fx.branchA.id), (tx) =>
+      findSessionById(ctxFor.branchAdmin(fx.branchA.id), tx, theirs.id),
+    );
+    expect(found).toBeNull();
   });
 });

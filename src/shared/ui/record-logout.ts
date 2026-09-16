@@ -2,6 +2,7 @@
 
 import { requestMetadata, writeAuditLog } from "@/shared/actions/audit";
 import { resolveTenantContext } from "@/shared/auth/session";
+import { describeError } from "@/shared/actions/create-action";
 import { withTenant } from "@/shared/db/with-tenant";
 
 /**
@@ -17,6 +18,6 @@ export async function recordLogout(): Promise<void> {
       await writeAuditLog(tx, ctx, { action: "login", entity: "session.logout" }, await requestMetadata());
     });
   } catch (error) {
-    console.error("[recordLogout] failed to audit logout", error);
+    console.error("[recordLogout] failed to audit logout", describeError(error));
   }
 }

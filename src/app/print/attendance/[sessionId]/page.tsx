@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { z } from "zod";
-import { AttendanceSheetPrint, getAttendanceSheet, getSessionLog } from "@/modules/attendance";
+import { AttendanceSheetPrint, getAttendanceSheet, getSessionForPrint } from "@/modules/attendance";
 import { listVisibleBranches } from "@/modules/branches";
 import { getCenterIdentity } from "@/modules/settings";
 import { ar } from "@/shared/i18n/ar";
@@ -17,13 +17,16 @@ export default async function PrintAttendancePage({ params }: { params: Promise<
   const { sessionId } = await params;
   if (!z.uuid().safeParse(sessionId).success) notFound();
 
-  // The log is already scoped by RLS, so a session in another branch is simply not
-  // in it — no separate authorisation check to keep in step with the policy.
-  const log = await getSessionLog({ from: "2000-01-01", to: "2100-01-01" });
-  if (!log.ok) notFound();
-
-  const session = log.data.rows.find((row) => row.id === sessionId);
-  if (!session) notFound();
+  // By id, not by scanning the log. That scan asked for a century of sessions and got
+  // the 300 most recent, so the sheet stopped printing once the branch was a few days
+  // past them — and said 404, which is also what a session in another branch says
+  // (docs/AUDIT-2026-09.md, finding 14).
+  //
+  // Scoping is unchanged: the query runs under RLS, so a session in another branch is
+  // still simply not there.
+  const found = await getSessionForPrint(sessionId);
+  if (!found.ok) notFound();
+  const session = found.data;
 
   const [sheet, identity, branches] = await Promise.all([
     getAttendanceSheet({

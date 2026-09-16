@@ -118,6 +118,10 @@ export async function requirePermission(permission: Permission): Promise<Result<
 /**
  * The SHAPE of an error, never its contents: enough to find the bug, nothing that
  * identifies a person. `detail`, `where` and the query parameters are all dropped.
+ *
+ * Exported because `record-login` and `record-logout` were still logging the error
+ * object whole (docs/AUDIT-2026-09.md, finding 9) — the two functions closest to
+ * authentication, where the row being written carries the client's address.
  */
 /** Only the first line: a driver appends the query and its parameters below it. */
 function firstLine(message: string): string {
@@ -125,7 +129,7 @@ function firstLine(message: string): string {
   return first ?? "";
 }
 
-function describeError(error: unknown): Record<string, string> {
+export function describeError(error: unknown): Record<string, string> {
   if (!(error instanceof Error)) return { kind: typeof error };
 
   const pg = error as Error & { code?: string; constraint_name?: string; table_name?: string };

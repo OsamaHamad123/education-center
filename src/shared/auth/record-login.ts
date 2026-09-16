@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { requestMetadata, writeAuditLog } from "@/shared/actions/audit";
 import { db } from "@/shared/db/client";
 import { user } from "@/shared/db/schema";
+import { describeError } from "@/shared/actions/create-action";
 import { withTenant } from "@/shared/db/with-tenant";
 
 /**
@@ -42,6 +43,6 @@ export async function recordLogin(userId: string): Promise<void> {
       );
     });
   } catch (error) {
-    console.error("[recordLogin] failed to audit login", error);
+    console.error("[recordLogin] failed to audit login", describeError(error));
   }
 }

@@ -1,11 +1,13 @@
 import { requirePermission } from "@/shared/actions/create-action";
 import { withTenant } from "@/shared/db/with-tenant";
 import type { SessionStatus } from "@/shared/db/schema";
-import { ok, type Result } from "@/shared/lib/result";
+import { err, ok, type Result } from "@/shared/lib/result";
+import { ar } from "@/shared/i18n/ar";
 import { todayInCairo } from "@/shared/lib/time";
 import { readDateRange, uuidParam } from "@/shared/lib/url-filters";
 import {
   countMarksBySession,
+  findSessionById,
   listClassOptions,
   listSessions,
   listSubjectOptions,
@@ -118,4 +120,26 @@ function shiftDays(date: string, days: number): string {
   const shifted = new Date(`${date}T00:00:00Z`);
   shifted.setUTCDate(shifted.getUTCDate() + days);
   return shifted.toISOString().slice(0, 10);
+}
+
+/**
+ * One session, by its id (docs/AUDIT-2026-09.md, finding 14).
+ *
+ * The print sheet used to find its session by scanning `getSessionLog` over a range of
+ * a century — which is capped at 300 rows, newest first. A branch runs roughly four
+ * hundred sessions a week, so the button quietly stopped working for anything more than
+ * a few days old, and answered 404: the same reply as a session in another branch.
+ *
+ * Scoping is still RLS's. A session in another branch is not visible to this query, so
+ * `null` means the same thing it always did.
+ */
+export async function getSessionForPrint(sessionId: string): Promise<Result<SessionRow>> {
+  const auth = await requirePermission("attendance.read");
+  if (!auth.ok) return auth;
+
+  return withTenant(auth.data, async (tx) => {
+    const session = await findSessionById(auth.data, tx, sessionId);
+    if (!session) return err("NOT_FOUND", ar.errors.NOT_FOUND);
+    return ok(session);
+  });
 }

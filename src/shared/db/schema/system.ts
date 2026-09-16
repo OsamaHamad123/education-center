@@ -94,12 +94,16 @@ export const loginAttempts = pgTable(
 );
 
 /**
- * A parent's portal session (docs/PARENT-PORTAL-PLAN.md, P1).
+ * A parent's portal session (docs/PARENT-PORTAL-PLAN.md, P1 and P6).
  *
- * No RLS: like `login_attempts` and `lookup_attempts` this is not tenant data, it is
- * reached before anybody has a tenant context at all, and only the app role can touch
- * it. Nothing here identifies a person — the phone and the token are both salted
- * hashes, so a stolen copy of this table is a list of hashes and no way to use them.
+ * RLS, despite there being no tenant — see `drizzle/0010`. The policy admits only
+ * statements with NO `app.user_role`, which is the portal and nothing else: every staff
+ * query runs inside `withTenant` and therefore carries a role, so none of them can read
+ * a live session token hash even by accident. P1 reasoned by analogy with
+ * `login_attempts` and got this wrong; a username somebody typed into a public form and
+ * a live session token are not the same kind of secret.
+ *
+ * The phone and the token are both salted hashes, so the rows name nobody.
  */
 export const portalSessions = pgTable(
   "portal_sessions",
@@ -111,7 +115,6 @@ export const portalSessions = pgTable(
     parentPhoneHash: text().notNull(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     expiresAt: timestamp({ withTimezone: true }).notNull(),
-    lastSeenAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     index("portal_sessions_token_idx").on(t.tokenHash),

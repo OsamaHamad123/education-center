@@ -65,10 +65,33 @@ export async function createSession(parentPhoneHash: string): Promise<string> {
     expiresAt: expiryFrom(new Date()),
   });
 
+  await capSessionsFor(parentPhoneHash);
   // Opportunistic prune, as the lookup and the lockout both do: one fewer scheduled job
   // to notice has stopped running.
   await db.delete(portalSessions).where(lt(portalSessions.expiresAt, new Date()));
   return token;
+}
+
+/**
+ * Keeps the newest few sessions for one phone and drops the rest
+ * (docs/PORTAL-REVIEW-2026-09.md, finding 3).
+ *
+ * The credential is a code printed on a timetable, so it will be typed on more devices
+ * than the family owns — a tutor's laptop, the office computer, a phone that was
+ * later sold. Each of those was a thirty-day session that nobody could end. This is the
+ * ceiling: sign in on a sixth device and the oldest one stops working, which is both the
+ * eviction path the portal was missing and a bound on how much a leaked code is worth.
+ */
+async function capSessionsFor(parentPhoneHash: string): Promise<void> {
+  await db.execute(sql`
+    DELETE FROM portal_sessions
+    WHERE parent_phone_hash = ${parentPhoneHash}
+      AND id NOT IN (
+        SELECT id FROM portal_sessions
+        WHERE parent_phone_hash = ${parentPhoneHash}
+        ORDER BY created_at DESC
+        LIMIT ${PORTAL_SESSION.maxPerParent}
+      )`);
 }
 
 /** The parent behind a cookie, or null if it is unknown, expired or forged. */
@@ -82,15 +105,18 @@ export async function parentFor(token: string): Promise<string | null> {
   return row?.hash ?? null;
 }
 
-export async function touchSession(token: string): Promise<void> {
-  await db
-    .update(portalSessions)
-    .set({ lastSeenAt: new Date() })
-    .where(eq(portalSessions.tokenHash, sha256(token)));
-}
-
 export async function destroySession(token: string): Promise<void> {
   await db.delete(portalSessions).where(eq(portalSessions.tokenHash, sha256(token)));
+}
+
+/**
+ * The audit row for a successful sign-in (docs/PORTAL-REVIEW-2026-09.md, finding 5).
+ *
+ * Through a SECURITY DEFINER function for the same reason the lookup's is: writing to
+ * `audit_logs` requires a role and a parent has none. See `drizzle/0010`.
+ */
+export async function recordPortalAudit(input: { code: string; ipHash: string }): Promise<void> {
+  await db.execute(sql`select app_record_portal_audit(${input.code}, ${input.ipHash})`);
 }
 
 /** Every active student behind one phone. Siblings included, by definition. */

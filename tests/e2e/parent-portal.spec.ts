@@ -19,6 +19,11 @@ async function signIn(page: Page, credentials: { code: string; lastFour: string 
   await page.getByRole("button", { name: "دخول" }).click();
 }
 
+async function portalCookies(page: Page) {
+  const jar = await page.context().cookies();
+  return jar.filter((cookie) => cookie.name === "ec.portal");
+}
+
 test.describe("signing in", () => {
   test("opens the child's record and stays open", async ({ page }) => {
     test.setTimeout(120_000);
@@ -118,6 +123,23 @@ test.describe("signing out", () => {
 
     await page.getByRole("button", { name: "خروج" }).click();
     await expect(page.locator("#studentCode")).toBeVisible({ timeout: 20_000 });
+  });
+
+  test("and takes the cookie with it", async ({ page }) => {
+    test.setTimeout(120_000);
+    await signIn(page, CHILD);
+    await expect(page.getByText(CHILD.code)).toBeVisible({ timeout: 20_000 });
+    expect(await portalCookies(page)).toHaveLength(1);
+
+    await page.getByRole("button", { name: "خروج" }).click();
+    await expect(page.locator("#studentCode")).toBeVisible({ timeout: 20_000 });
+
+    // P6, finding 1. This failed before `drizzle/0010`'s sibling fix: `cookies().delete`
+    // expires a cookie at the request's default path, the portal's lives at `/portal`,
+    // and a cookie is keyed on its path — so the credential sat in the browser for
+    // thirty days and only the server-side row delete was ending anything. On a phone
+    // shared between a family and a tutor, that is the whole point of the button.
+    expect(await portalCookies(page)).toHaveLength(0);
   });
 });
 

@@ -146,6 +146,44 @@ docker compose -f docker-compose.prod.yml exec db psql -U postgres -d school -c 
 The per-code limit is 5 failures an hour. If a real parent is stuck behind somebody
 else's guessing, that is the limit doing its job — and it is worth knowing about.
 
+### A parent says somebody else can see their child's record
+
+The portal's identity is the parent's **phone**, not an account, so revocation is a data
+change rather than a button. Two levers, smallest first:
+
+**One family.** Change the parent's phone on the student (الطلاب → تعديل). The phone is
+the identity, so every portal session behind the old number stops working immediately —
+including the one on the handset that was lost. Siblings follow the same number, so this
+covers the whole family at once.
+
+**The whole centre.** Switch `lookup_enabled` off in settings. It closes the lookup and
+the portal together, at the data layer, with no deploy:
+
+```bash
+docker compose -f docker-compose.prod.yml exec db psql -U postgres -d school -c   "update center_settings set lookup_enabled = false;"
+```
+
+To see how many sessions are live at all (the rows name nobody — both columns are salted
+hashes):
+
+```bash
+docker compose -f docker-compose.prod.yml exec db psql -U postgres -d school -c   "select count(*) from portal_sessions where expires_at > now();"
+```
+
+Sessions last thirty days and are capped at five per phone, so a code typed on a sixth
+device evicts the oldest by itself.
+
+### Never set `log_statement = 'all'` on the production database
+
+The portal passes `PORTAL_PHONE_SALT` to Postgres as a bind parameter. Bind parameters
+stay out of `pg_stat_statements`, but `log_statement = 'all'` writes them to the log —
+and that salt is the only thing stopping `portal_sessions.parent_phone_hash` being
+reversed back into a phone number, because Egyptian mobiles are a small enough space to
+exhaust in seconds.
+
+The default is `none`. Leave it there. If a query has to be traced, trace it with
+`auto_explain` or for a single session, never database-wide.
+
 ### A migration failed on deploy
 
 The `migrate` container exits non-zero and the app never starts, which is deliberate:

@@ -10,6 +10,12 @@ export const PORTAL_SESSION = {
   cookie: "ec.portal",
   /** Bytes of randomness in the token. 32 bytes is 256 bits; guessing is not a threat. */
   tokenBytes: 32,
+  /**
+   * Live sessions kept per phone (P6, finding 3). A family has a phone, a tablet and a
+   * father's work computer; five is generous for that and small enough that a code which
+   * has leaked cannot quietly accumulate an audience.
+   */
+  maxPerParent: 5,
 } as const;
 
 /** When a session created now should stop working. */

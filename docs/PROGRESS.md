@@ -580,6 +580,45 @@ the first page.
 Next server ran on port 3000. At `--workers=2` it is 309 passed, 0 failed. Recorded rather
 than glossed over.
 
+## Parent portal — P6, hardening (2026-09-16)
+
+`docs/PORTAL-REVIEW-2026-09.md`, seven findings, all fixed. `drizzle/0010`,
+`portal-session.ts`, `portal.repository.ts`, `seed.ts`, and
+`tests/integration/tenant-isolation/portal-sessions.test.ts`.
+
+**Sign-out never removed the cookie.** `cookies().delete(name)` expires a cookie at the
+request's default path, `/`; the portal's lives at `/portal`, and a cookie is keyed on
+its path. Reproduced in a live browser before it was fixed — same value before and
+after خروج. The server-side row delete was the only thing ending a session, so on a
+shared phone the button left the credential in place for thirty days.
+
+**`portal_sessions` was readable by every staff query.** P1 reasoned by analogy with
+`login_attempts` and gave it no RLS; a username typed into a public form and a live
+session token hash are not the same kind of secret. The policy in `drizzle/0010` admits
+only statements with NO `app.user_role` — which is the portal and nothing else, because
+every staff query runs inside `withTenant`. Staff cannot read it, rather than being
+merely not supposed to.
+
+Also fixed: a sign-in now ends the session that browser already had and only the newest
+five per phone survive (nothing capped them before, and nobody could end them); the
+sign-in action now parses with Zod like every other mutation; successful sign-ins write
+an `audit_logs` row through `app_record_portal_audit`, because the door that shows the
+UNMASKED name was the one with no trace; the dead `touchSession`, its column and its
+UPDATE grant are gone; and `portal_sessions` is in both truncate lists, so a re-seed no
+longer leaves live parent sessions behind.
+
+**Two things were judged and deliberately left alone**, both recorded in the review
+rather than buried. The plan's "separate rate-limit key" bullet is refused: sign-in and
+lookup are the same guess against the same secret, and two counters would double an
+attacker's budget. And the phone salt travels as a bind parameter, which is an accepted
+risk with an operational control — `log_statement` must not be `'all'`, and that is now
+in the runbook along with the two revocation levers.
+
+**Measured, not assumed.** The headers were read off a production build on port 3100:
+CSP with no `'unsafe-eval'`, and `Cache-Control: private, no-cache, no-store` — which is
+the one that mattered, because a portal page is about one child and must never sit in a
+shared proxy.
+
 ## Next steps
 
 All ten phases are done. What is left is not a phase — it is the handover:

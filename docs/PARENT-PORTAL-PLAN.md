@@ -2,9 +2,9 @@
 
 Written September 2026, after the security, UX and product reviews.
 
-**P1, P2 and P3 are built (2026-09-16).** What shipped differs from what this planned in
-one place, and section 3 says where. P4–P7 remain a plan, and section 1 is still the part
-that has to be settled before they are worth estimating.
+**P1, P2, P3 and P6 are built (2026-09-16).** What shipped differs from what this planned
+in two places, and section 3 says where. P4, P5 and P7 remain a plan, and section 1 is
+still the part that has to be settled before they are worth estimating.
 
 ---
 
@@ -230,18 +230,36 @@ Scope when unblocked: outstanding balance, what it is for, what has been paid, a
 receipt. **Not** online payment — that is a different product, a different risk, and a
 different conversation.
 
-### Phase P6 — hardening the new front door
+### Phase P6 — hardening the new front door — **built**
 
 **Goal:** treat the portal as what it is: the first authenticated surface in this product
 that is not staff.
 
-- Its own rate limits, separate from the lookup's, on a separate key.
-- Enumeration review: every reply that differs between "exists" and "does not" is a bug.
-- Session review: length, revocation, what happens when a student transfers or leaves.
-- A security pass in the style of `docs/SECURITY-REVIEW.md`, written the same way —
-  every finding says what an attacker gains.
-- The CSP, the headers and the lockout already apply; the review confirms it rather than
-  assuming it.
+The review is `docs/PORTAL-REVIEW-2026-09.md`: seven findings, all fixed, plus the two
+things that were judged and deliberately left alone. Against the bullets below:
+
+- ~~Its own rate limits, separate from the lookup's, on a separate key.~~ **Refused, and
+  the review says why.** This bullet was written when P1 was still an OTP. It is not:
+  sign-in and lookup are the same guess against the same secret, so two counters would
+  hand an attacker twice the budget by alternating between two doors. One limiter, one
+  budget. When the OTP arrives it is a different secret and this bullet comes back.
+- Enumeration review: **done.** Every failure returns one string, and the suite compares
+  two of them character for character rather than trusting the code path.
+- Session review: **done**, and the answers are in the review — thirty days absolute, two
+  revocation levers (change the phone for one family, `lookup_enabled` for the centre),
+  and a session that names a phone rather than a list of students, so leaving,
+  transferring and switching the portal off all take effect on the next page load.
+- A security pass in the style of `docs/SECURITY-REVIEW.md`: **done**, and every finding
+  says what an attacker gains.
+- The CSP, the headers and the lockout already apply: **confirmed by measuring a
+  production build**, not by reading the config. The one that mattered was
+  `Cache-Control: no-store` — a portal page is about one child and must never sit in a
+  shared proxy.
+
+The two findings worth knowing without opening the review: sign-out never removed the
+cookie from the browser (the delete used the wrong path, proved in a live browser before
+it was fixed), and `portal_sessions` was readable by every staff query in the product
+until `drizzle/0010` made it invisible to anything carrying a tenant role.
 
 ### Phase P7 — rollout
 

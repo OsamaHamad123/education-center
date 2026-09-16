@@ -160,10 +160,17 @@ comparison and the payroll range scan.
 
 The CSP allows `'unsafe-inline'` for scripts, because Next.js emits an inline
 bootstrap on every page. Tightening it needs a per-request nonce threaded through
-`proxy.ts` and into the framework's script tags. `'unsafe-eval'` is **not** allowed,
-which is the half that blocks most injected payloads; the inline allowance would only
-matter to an attacker who could already inject markup, which nothing in the review
-found a way to do.
+`proxy.ts` and into the framework's script tags. `'unsafe-eval'` is **not** allowed in
+production, which is the half that blocks most injected payloads; the inline allowance
+would only matter to an attacker who could already inject markup, which nothing in the
+review found a way to do.
+
+`'unsafe-eval'` **is** allowed under `next dev`, added on 2026-09-16: React's
+development build uses `eval` to rebuild stack traces across the server/client
+boundary, and refusing it logged a console error on every page and pointed the error
+overlay at the wrong line. The gate is `NODE_ENV`, which Next sets itself, so `next
+build` cannot emit the development allowance — and `tests/e2e/hardening` asserts on
+the header a real build serves, not on the config that produces it.
 
 ## Measured
 

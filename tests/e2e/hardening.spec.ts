@@ -51,6 +51,9 @@ test.describe("security headers", () => {
 
   test("forbid eval, which is the one CSP line that stops most injected payloads", async ({ page }) => {
     const response = await page.goto("/lookup");
+    // Development DOES allow it — React's dev build needs `eval` to rebuild stack
+    // traces. So this failing usually means the suite reused a `pnpm dev` server
+    // already on the port rather than building one: stop it and run again.
     expect(response?.headers()["content-security-policy"]).not.toContain("unsafe-eval");
   });
 });

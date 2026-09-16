@@ -1,5 +1,6 @@
 "use server";
 
+import { isPeriodSettled } from "@/modules/payroll";
 import { createAction } from "@/shared/actions/create-action";
 import type { TenantContext } from "@/shared/auth/tenant-context";
 import type { Tx } from "@/shared/db/client";
@@ -68,6 +69,14 @@ export const saveAttendance = createAction({
 
     if (session.data.status === "cancelled") {
       return err("CONFLICT", ar.attendance.sessionCancelled);
+    }
+
+    // The freeze (drizzle/0016). Once this teacher's month has been paid, its registers
+    // stop being editable — the money is out the door and a quiet correction afterwards
+    // is the difference between a ledger and a spreadsheet. Reversing the settlement,
+    // which somebody signs their name to, opens the month again.
+    if (await isPeriodSettled(ctx, tx, session.data.branchId, session.data.teacherId, input.sessionDate)) {
+      return err("CONFLICT", ar.payroll.periodSettled);
     }
 
     // The roster is the authority, not the payload: a student who was not enrolled in

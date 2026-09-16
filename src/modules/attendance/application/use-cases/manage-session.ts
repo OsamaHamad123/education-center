@@ -1,5 +1,6 @@
 "use server";
 
+import { isPeriodSettled } from "@/modules/payroll";
 import { createAction } from "@/shared/actions/create-action";
 import type { ClassSession } from "@/shared/db/schema";
 import { ar } from "@/shared/i18n/ar";
@@ -41,6 +42,12 @@ export const cancelSession = createAction({
     const session = await findSessionById(ctx, tx, input.sessionId);
     if (!session) return err("NOT_FOUND", ar.errors.NOT_FOUND);
 
+    // Cancelling a lesson in a settled month would reduce what was owed AFTER it was
+    // paid. Same freeze as the register itself.
+    if (await isPeriodSettled(ctx, tx, session.branchId, session.teacherId, session.sessionDate)) {
+      return err("CONFLICT", ar.payroll.periodSettled);
+    }
+
     const violation = validateCancellation({ status: session.status, reason: input.reason });
     if (violation === "ALREADY_CANCELLED") return err("CONFLICT", ar.attendance.alreadyCancelled);
     if (violation === "REASON_REQUIRED") {
@@ -69,6 +76,10 @@ export const restoreSession = createAction({
     const session = await findSessionById(ctx, tx, input.sessionId);
     if (!session) return err("NOT_FOUND", ar.errors.NOT_FOUND);
     if (session.status !== "cancelled") return err("CONFLICT", ar.attendance.notCancelled);
+    // And restoring one would increase it. Both directions, same rule.
+    if (await isPeriodSettled(ctx, tx, session.branchId, session.teacherId, session.sessionDate)) {
+      return err("CONFLICT", ar.payroll.periodSettled);
+    }
 
     // The CHECK constraint pairs the status with the reason, so the reason must go.
     const updated = await updateSession(ctx, tx, input.sessionId, {

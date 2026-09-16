@@ -1,7 +1,15 @@
 import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import type { TenantContext } from "@/shared/auth/tenant-context";
 import type { Tx } from "@/shared/db/client";
-import { branches, classes, classSessions, teacherBranches, teachers, type Track } from "@/shared/db/schema";
+import {
+  branches,
+  classes,
+  classSessions,
+  payrollRuns,
+  teacherBranches,
+  teachers,
+  type Track,
+} from "@/shared/db/schema";
 
 /**
  * Payroll reads `class_sessions` and nothing else that carries money. The rate and
@@ -196,4 +204,157 @@ export async function findBranchNames(
     .from(branches)
     .where(inArray(branches.id, [...ids]));
   return new Map(rows.map((row) => [row.id, row.name]));
+}
+
+// --- settlements: what has actually been PAID ---------------------------------
+
+/**
+ * Every settlement row for a month, keyed `branchId:teacherId` (`drizzle/0016`).
+ *
+ * Reversals come back with the settlements they undo, because "is this month settled"
+ * is the SUM of both and not the presence of either.
+ */
+export async function listRunsForPeriod(
+  _ctx: TenantContext,
+  tx: Tx,
+  period: string,
+): Promise<Map<string, RunRow[]>> {
+  const rows = await tx
+    .select({
+      id: payrollRuns.id,
+      branchId: payrollRuns.branchId,
+      teacherId: payrollRuns.teacherId,
+      amountPiasters: payrollRuns.amountPiasters,
+      sessionsCount: payrollRuns.sessionsCount,
+      reversesId: payrollRuns.reversesId,
+      paidAt: payrollRuns.paidAt,
+      note: payrollRuns.note,
+    })
+    .from(payrollRuns)
+    .where(eq(payrollRuns.period, period))
+    .orderBy(desc(payrollRuns.paidAt));
+
+  const byPair = new Map<string, RunRow[]>();
+  for (const row of rows) {
+    const key = `${row.branchId}:${row.teacherId}`;
+    byPair.set(key, [...(byPair.get(key) ?? []), row]);
+  }
+  return byPair;
+}
+
+export type RunRow = {
+  id: string;
+  branchId: string;
+  teacherId: string;
+  amountPiasters: number;
+  sessionsCount: number;
+  reversesId: string | null;
+  paidAt: Date;
+  note: string | null;
+};
+
+/** The settlements for ONE teacher's month — what the freeze and the badge both read. */
+export async function listRunsFor(
+  _ctx: TenantContext,
+  tx: Tx,
+  branchId: string,
+  teacherId: string,
+  period: string,
+): Promise<RunRow[]> {
+  return tx
+    .select({
+      id: payrollRuns.id,
+      branchId: payrollRuns.branchId,
+      teacherId: payrollRuns.teacherId,
+      amountPiasters: payrollRuns.amountPiasters,
+      sessionsCount: payrollRuns.sessionsCount,
+      reversesId: payrollRuns.reversesId,
+      paidAt: payrollRuns.paidAt,
+      note: payrollRuns.note,
+    })
+    .from(payrollRuns)
+    .where(
+      and(
+        eq(payrollRuns.branchId, branchId),
+        eq(payrollRuns.teacherId, teacherId),
+        eq(payrollRuns.period, period),
+      ),
+    );
+}
+
+/** Every settlement a teacher can see for themselves, newest month first. */
+export async function listRunsForTeacher(
+  _ctx: TenantContext,
+  tx: Tx,
+  teacherId: string,
+): Promise<(RunRow & { period: string })[]> {
+  return tx
+    .select({
+      id: payrollRuns.id,
+      branchId: payrollRuns.branchId,
+      teacherId: payrollRuns.teacherId,
+      period: payrollRuns.period,
+      amountPiasters: payrollRuns.amountPiasters,
+      sessionsCount: payrollRuns.sessionsCount,
+      reversesId: payrollRuns.reversesId,
+      paidAt: payrollRuns.paidAt,
+      note: payrollRuns.note,
+    })
+    .from(payrollRuns)
+    .where(eq(payrollRuns.teacherId, teacherId))
+    .orderBy(desc(payrollRuns.period), desc(payrollRuns.paidAt));
+}
+
+export async function insertRun(
+  ctx: TenantContext,
+  tx: Tx,
+  values: {
+    branchId: string;
+    teacherId: string;
+    period: string;
+    amountPiasters: number;
+    sessionsCount: number;
+    note: string | null;
+    reversesId?: string | null;
+  },
+): Promise<{ id: string }> {
+  const [row] = await tx
+    .insert(payrollRuns)
+    .values({ ...values, paidBy: ctx.userId })
+    .returning({ id: payrollRuns.id });
+  if (!row) throw new Error("insertRun returned no row");
+  return row;
+}
+
+export async function findRun(
+  _ctx: TenantContext,
+  tx: Tx,
+  runId: string,
+): Promise<(RunRow & { period: string }) | null> {
+  const [row] = await tx
+    .select({
+      id: payrollRuns.id,
+      branchId: payrollRuns.branchId,
+      teacherId: payrollRuns.teacherId,
+      amountPiasters: payrollRuns.amountPiasters,
+      sessionsCount: payrollRuns.sessionsCount,
+      reversesId: payrollRuns.reversesId,
+      paidAt: payrollRuns.paidAt,
+      note: payrollRuns.note,
+      period: payrollRuns.period,
+    })
+    .from(payrollRuns)
+    .where(eq(payrollRuns.id, runId))
+    .limit(1);
+  return row ?? null;
+}
+
+/** The period a run covers — needed when reversing one. */
+export async function findRunPeriod(_ctx: TenantContext, tx: Tx, runId: string): Promise<string | null> {
+  const [row] = await tx
+    .select({ period: payrollRuns.period })
+    .from(payrollRuns)
+    .where(eq(payrollRuns.id, runId))
+    .limit(1);
+  return row?.period ?? null;
 }

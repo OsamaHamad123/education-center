@@ -1,11 +1,13 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import {
+  getMyPayouts,
   getPayrollReport,
   getPayrollSessions,
   PayrollReportView,
   PayrollSessionsView,
   startOfMonth,
+  TeacherPayouts,
 } from "@/modules/payroll";
 import { getSessionUser } from "@/shared/auth/session";
 import { ar } from "@/shared/i18n/ar";
@@ -34,10 +36,11 @@ export default async function TeacherEarningsPage({
   const from = params.from ?? startOfMonth(today);
   const to = params.to ?? today;
 
-  const [report, sessions] = await Promise.all([
+  const [report, sessions, payouts] = await Promise.all([
     // Belt and braces over the policy: a teacher asks only about themselves.
     getPayrollReport({ from, to, teacherId: user.teacherId }),
     getPayrollSessions({ teacherId: user.teacherId, from, to }),
+    getMyPayouts(user.teacherId),
   ]);
   if (!report.ok) notFound();
 
@@ -47,6 +50,9 @@ export default async function TeacherEarningsPage({
 
       <div className="space-y-6">
         <PayrollReportView report={report.data} />
+
+        {/* "شهر ٨: مدفوع" — the question a teacher used to have to ASK. */}
+        {payouts.ok ? <TeacherPayouts payouts={payouts.data} /> : null}
 
         {sessions.ok ? (
           <section className="space-y-2">

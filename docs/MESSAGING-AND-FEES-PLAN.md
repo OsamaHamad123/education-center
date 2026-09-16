@@ -244,16 +244,26 @@ behind the session that already exists.
 data, refunds, disputes, chargebacks), and a different conversation. Say so plainly when
 it is asked for, which it will be.
 
-## The part that pays for itself — still to do
+## The part that pays for itself — **built (2026-09-17)**
 
 Once `payments` exists, teacher payroll gets the same treatment almost free: a settled
 period, per teacher, with the amount, the date and who recorded it. Two consequences the
 review already wanted — a settled month can be **frozen against later attendance edits**,
 and the teacher's مستحقاتي screen can say "شهر ٨: مدفوع" instead of leaving them to ask.
 
-**Not built.** The ledger it needs now exists and the pattern is set, but paying teachers
-is a different conversation from collecting from students and deserves its own. This is
-the obvious next piece of work in the product.
+**Built**, in `drizzle/0016`, the same shape as `payments`: append-only, enforced by the
+GRANT, with a reversal instead of an edit. Both consequences shipped with it — the
+teacher's مستحقاتي screen now says مدفوع against the months it has been paid for, and
+a settled month's registers are FROZEN for that teacher until the settlement is reversed.
+
+Two things the build decided that this paragraph had not:
+
+- **The amount is a snapshot, not a reference.** `amount_piasters` and `sessions_count`
+  are what the system computed at the moment the money changed hands. If a register is
+  corrected afterwards, the screen shows تغيّر بعد الصرف rather than quietly restating
+  what was paid — the discrepancy is the thing somebody needs to see.
+- **A reversal reopens the month.** "Settled" is `sum(runs) > 0`, not "a run exists", so
+  a payout recorded by mistake does not lock a register for ever.
 
 ---
 
@@ -268,4 +278,5 @@ Build it when somebody has answered question 4 above.
 
 **P5 is built**, office side first and the portal last, for the reason given above: a
 parent who can see a balance the office cannot explain is worse than a parent who rings
-and asks. What remains is payroll runs — the teacher half of the same ledger.
+and asks. **Payroll runs — the teacher half of the same ledger — followed it**, and with
+them the biggest functional gap the product review had found.

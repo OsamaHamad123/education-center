@@ -21,6 +21,27 @@ export {
 } from "./application/queries/get-payroll";
 export { reconcileEarnings, type EarningsReconciliation } from "./application/queries/reconcile-earnings";
 export type { EarningsGroup, PayrollFilters } from "./infrastructure/payroll.repository";
+export {
+  canEditSettledPeriod,
+  isSettled,
+  paidTotal,
+  settlementState,
+  type SettlementState,
+} from "./domain/settlement";
+export {
+  getMyPayouts,
+  getSettlements,
+  /**
+   * Called by the ATTENDANCE module inside its own transaction: a month whose money
+   * has been handed over stops being quietly rewritable (drizzle/0016).
+   */
+  isPeriodSettled,
+  type SettlementRow,
+  type SettlementsView,
+} from "./application/queries/get-settlements";
+export { reversePayrollRun, settlePayroll } from "./application/use-cases/settle-payroll";
 export { exportPayrollCsv } from "./application/use-cases/export-payroll";
 export { PayrollReportView, PayrollSessionsView } from "./ui/payroll-report";
 export { PayrollPrint } from "./ui/payroll-print";
+export { SettlementsScreen } from "./ui/settlements";
+export { TeacherPayouts } from "./ui/teacher-payouts";

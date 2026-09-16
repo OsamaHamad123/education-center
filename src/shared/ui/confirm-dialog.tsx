@@ -30,6 +30,7 @@ export function ConfirmDialog({
   destructive,
   onConfirm,
   successMessage,
+  body,
 }: {
   trigger: ReactNode;
   title: string;
@@ -39,6 +40,8 @@ export function ConfirmDialog({
   onConfirm: () => Promise<Result<unknown>>;
   /** Omit when the caller wants to say something that depends on the result (P5). */
   successMessage?: string;
+  /** One field the confirmation needs — a reason, usually. Rendered above the buttons. */
+  body?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useAction();
@@ -63,6 +66,7 @@ export function ConfirmDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
+        {body}
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
             {ar.common.cancel}

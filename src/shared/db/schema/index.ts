@@ -12,3 +12,4 @@ export * from "./timetable";
 export * from "./sessions";
 export * from "./system";
 export * from "./fees";
+export * from "./payroll";

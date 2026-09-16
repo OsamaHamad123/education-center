@@ -739,6 +739,49 @@ and the pattern is set — a settled period per teacher, which also lets a settl
 frozen against later attendance edits. That was the biggest functional gap the product
 review found, and it is the obvious next piece of work.
 
+## Payroll runs — paying the teachers (2026-09-17)
+
+`docs/PRODUCT-REVIEW-2026-09.md` finding 2, which called this "the biggest functional
+gap in the product that is not already written down as an open question". `drizzle/0016`,
+`/payroll/runs`, and مدفوع on the teacher's own screen.
+
+Payroll always computed the month correctly and printed it beautifully. Then the money
+was handed over and the system learned nothing: next month nobody could answer "did we
+settle September?" from the product, only from the paper it printed.
+
+**The same shape as `payments`, deliberately** — it is the same kind of fact.
+Append-only, enforced by the GRANT (`school_app` has SELECT and INSERT and nothing else),
+with a reversal row instead of an edit.
+
+**The freeze is the point.** Once a teacher's month is settled, that month's registers
+stop being editable for their lessons — saving one, cancelling a session and restoring a
+cancelled one all refuse. Reversing the settlement, which somebody signs their name to,
+opens the month again. "Settled" is `sum(runs) > 0` rather than "a run exists", so a
+payout recorded by mistake does not lock a register for ever.
+
+**The amount is a snapshot, not a reference.** `amount_piasters` and `sessions_count` are
+what the system computed at the moment the money changed hands, and the amount is
+recomputed server-side rather than accepted from the client. If a register is corrected
+afterwards the screen says تغيّر بعد الصرف — the discrepancy is the thing somebody has
+to look at, and the only reason the count is stored at all.
+
+**A teacher reads their own settlements and writes none.** The RLS policy has a second
+arm for `app_teacher_id()`, which is what makes مدفوع possible without giving them a
+branch. The settlements SCREEN is gated on `payroll.settle`, not `payroll.read`: reading
+your own payslip and deciding it are not the same permission.
+
+Two things the tests caught:
+
+- The settlement dialog's confirm button and the row's trigger were both reachable as
+  "صرف", so a single locator matched a closing dialog's disabled button and waited for
+  ever. The trigger carries the teacher's name; the two are now told apart by that.
+- A teacher hitting `/payroll/runs` is REDIRECTED to their own portal by the admin
+  shell rather than 404'd. That is the better behaviour, so the test asserts it instead.
+
+The freeze e2e runs in **Giza on the desktop project only, and reverses what it settles**:
+the suite shares one database, and a settled month in Nasr City would freeze the
+registers `attendance.spec.ts` is marking at the same moment.
+
 ## Next steps
 
 All ten phases are done. What is left is not a phase — it is the handover:

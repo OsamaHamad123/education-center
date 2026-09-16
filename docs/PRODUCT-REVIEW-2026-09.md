@@ -52,7 +52,7 @@ a form that read the visible text would submit the wrong thing entirely. `date-t
 holds the parsing with seven tests, including the one that matters:
 `09/01/2026` reads as **9 January**.
 
-### 2. Payroll says what is owed, never what was paid
+### 2. Payroll says what is owed, never what was paid — **fixed (2026-09-17)**
 
 The sheet computes the month correctly and prints beautifully. Then the money is handed
 over and the system learns nothing. Next month nobody can answer "did we settle
@@ -65,6 +65,12 @@ that is settled can be frozen against later attendance edits, and the teacher's 
 
 This is the biggest functional gap in the product that is not already written down as an
 open question.
+
+**Built** in `drizzle/0016`, on the ledger P5 introduced: `payroll_runs`, append-only,
+with a reversal instead of an edit. Both consequences shipped — the freeze, and مدفوع on
+the teacher's own screen. The one thing the suggestion above had not thought of: the
+amount is SNAPSHOTTED, so a register corrected after the money went out shows as
+تغيّر بعد الصرف rather than silently restating what was paid.
 
 ### 3. The dashboard reports; it does not direct
 

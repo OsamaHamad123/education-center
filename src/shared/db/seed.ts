@@ -239,7 +239,7 @@ async function main() {
     attendance_records, class_sessions, timetable_slots, branch_breaks,
     branch_schedule_settings, student_enrollments, student_code_counters, students,
     teacher_branches, teacher_rate_history, teachers, classes, subjects,
-    payments, invoices, fee_plans, receipt_counters,
+    payroll_runs, payments, invoices, fee_plans, receipt_counters,
     audit_logs, lookup_attempts, login_attempts, portal_sessions,
     account, session, verification, "user",
     branches, center_settings

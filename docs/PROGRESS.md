@@ -303,6 +303,16 @@ no change, so it was reverted. Moving this number means shipping less JavaScript
   Windows cannot delete them; renaming the containing folder and restarting Docker fixes it. Those
   folders are now `*.broken-<timestamp>` and can be deleted once Docker is confirmed healthy.
 
+## Audit — September 2026
+
+A second review, screen by screen, asking what each page does with input it did not
+expect. Eleven findings, one High, in `docs/AUDIT-2026-09.md`, grouped into five phases
+by area. Branch isolation, RLS and the teacher redirects were pushed at and held; what
+did not hold is query-string validation on the report, payroll and attendance screens,
+and the split between changing a password and clearing the flag that forced it.
+
+Nothing is fixed yet. Phase A (sign-in and the account) is the one to start with.
+
 ## Next steps
 
 All ten phases are done. What is left is not a phase — it is the handover:

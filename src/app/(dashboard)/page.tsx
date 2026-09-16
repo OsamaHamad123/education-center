@@ -1,44 +1,76 @@
+import Link from "next/link";
+import { BarChart3, Wallet } from "lucide-react";
+import {
+  BranchComparisonView,
+  BranchDashboardView,
+  getBranchComparison,
+  getBranchDashboard,
+} from "@/modules/reports";
 import { getSessionUser, resolveTenantContext } from "@/shared/auth/session";
 import { ar } from "@/shared/i18n/ar";
-import { permissionsFor } from "@/shared/auth/permissions";
-import { Badge } from "@/shared/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
+import { Button } from "@/shared/ui/button";
+import { EmptyState } from "@/shared/ui/empty-state";
+import { PageHeader } from "@/shared/ui/page-header";
 
 /**
- * Dashboard placeholder. Phase 8 replaces the body with the real KPIs (rule 10.7);
- * what it proves today is that the session, role and tenant scope all resolve.
+ * The dashboard (rule 10.7). What it shows depends on scope, not on role:
+ *
+ *   a branch selected  → today's pulse for that branch;
+ *   "كافة الفروع"      → the cross-branch comparison, which is the only thing that
+ *                        makes sense when no branch is selected.
  */
 export default async function DashboardPage() {
   const user = await getSessionUser();
   const ctx = await resolveTenantContext();
   if (!user || !ctx) return null;
 
-  return (
-    <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">
-          {ar.dashboard.welcome}، {user.name}
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          {ar.roles[user.role]} · {ctx.branchId ? ar.banners.activeBranch : ar.nav.allBranches}
-        </p>
-      </div>
+  const header = (
+    <PageHeader
+      title={`${ar.dashboard.welcome}، ${user.name}`}
+      description={ar.roles[user.role]}
+      action={
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline">
+            <Link href="/reports">
+              <BarChart3 className="size-4" aria-hidden />
+              {ar.reports.title}
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/payroll">
+              <Wallet className="size-4" aria-hidden />
+              {ar.payroll.title}
+            </Link>
+          </Button>
+        </div>
+      }
+    />
+  );
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{ar.entities.reports}</CardTitle>
-          <CardDescription>{ar.dashboard.comingSoon}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {permissionsFor(user.role).map((permission) => (
-              <Badge key={permission} variant="outline" className="font-mono text-xs">
-                {permission}
-              </Badge>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+  if (ctx.branchId === null) {
+    const comparison = await getBranchComparison({});
+    return (
+      <>
+        {header}
+        {comparison.ok ? (
+          <BranchComparisonView comparison={comparison.data} />
+        ) : (
+          <EmptyState title={ar.banners.allBranchesReadOnly} description={ar.reports.description} />
+        )}
+      </>
+    );
+  }
+
+  const dashboard = await getBranchDashboard();
+
+  return (
+    <>
+      {header}
+      {dashboard.ok ? (
+        <BranchDashboardView dashboard={dashboard.data} />
+      ) : (
+        <EmptyState title={ar.reports.empty} description={ar.reports.emptyHint} />
+      )}
+    </>
   );
 }

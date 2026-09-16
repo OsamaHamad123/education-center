@@ -6,7 +6,7 @@ import type { TenantContext } from "@/shared/auth/tenant-context";
 import { withTenant } from "@/shared/db/with-tenant";
 import { ar } from "@/shared/i18n/ar";
 import { err, ok, type Result } from "@/shared/lib/result";
-import { parseCsv, readHeaders, toCsv, toRows } from "../../domain/csv";
+import { parseCsv, readHeaders, toCsv, toRows } from "@/shared/lib/csv";
 import { academicYearOf, formatStudentCode } from "../../domain/student-code";
 import {
   findBranchCode,

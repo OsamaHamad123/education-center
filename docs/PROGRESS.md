@@ -2,19 +2,32 @@
 
 ## Current phase
 
-Phase 7 — Attendance & sessions — status: **done, verified in the running app**
+Phase 8 — Payroll & reports — status: **done, verified in the running app**
 
-| Acceptance criterion (section 14)          | Result                                                                                           |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------ |
-| Rules 10.5 tested                          | ✅ lazy session, idempotent save, roster from enrolments, edit window, cancel, substitute, extra |
-| Rate snapshot verified                     | ✅ survives a rate change, a cancellation and a restore — integration test                       |
-| A full class marked in under 30s at 390px  | ✅ measured at **0.5s** of the 30s budget, and the figure is recorded by the test                |
-| Isolation tests incl. the teacher scope    | ✅ 18 integration tests: branch, teacher, today-only, and the marking setting                    |
-| `pnpm typecheck && pnpm lint && pnpm test` | ✅ 337 tests (241 unit + 96 integration)                                                         |
-| e2e                                        | ✅ 144 tests, desktop and mobile, passing twice in a row against the same database               |
+| Acceptance criterion (section 14)           | Result                                                                                                  |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Rules 10.6–10.7                             | ✅ payroll teacher→branch→track with drill-down, CSV and print; four reports; dashboards                |
+| A rate change does not move a past total    | ✅ integration test; the report reads only `rate_applied_piasters`                                      |
+| A branch admin cannot filter other branches | ✅ they are sent no branch picker, and RLS refuses one smuggled past the query                          |
+| Numbers match a seed verification query     | ✅ GIZ 7,250 · OBR 8,150 · NSR 14,050 ج.م — hand-written SQL, the screen, and the print sheet all agree |
+| `pnpm typecheck && pnpm lint && pnpm test`  | ✅ 381 tests (267 unit + 114 integration)                                                               |
+| e2e                                         | ✅ 178 tests, desktop and mobile, passing twice in a row against the same database                      |
 
 ## Completed
 
+- [x] Phase 8 — payroll and reports:
+  - `payroll/domain/calculate-earnings`: the money rules, exactly the signature in 10.6 —
+    completed sessions only, grouped by branch and track, integer piasters throughout
+  - The report aggregates in **SQL**; `reconcileEarnings` runs both paths over the same
+    rows and an integration test asserts they agree
+  - Payroll screen with per-role filters, drill-down to the lessons behind a total,
+    CSV export (pounds, at the very edge) and an A4 sheet with signature columns
+  - `reports/domain/attendance-rates`: one definition of a percentage, used by four screens
+  - Student attendance report, class matrix, absence alerts with click-to-chat wa.me links,
+    and the super admin's branch comparison with charts
+  - Dashboard: today's planned-versus-done gap for a branch, the comparison for «كافة الفروع»
+  - `shared/lib/csv.ts` moved out of `students/domain` — CSV is a file format, not a student rule
+  - 29 new unit tests, 16 new integration tests, 19 new e2e specs
 - [x] Phase 7 — attendance and sessions:
   - `attendance/domain`: `edit-window` (who may write which day), `roster` (who is on the
     register, what a save writes, the status cycle, the summary), `session-plan`
@@ -140,6 +153,10 @@ Phase 7 — Attendance & sessions — status: **done, verified in the running ap
 | 2026-09-16 | The roster is the authority; a submitted student not on it is **dropped, not written**   | `attendance_records.branch_id` comes from the session, so RLS would happily accept a row for a student in another branch if the id were smuggled into the payload. `planAttendance` refuses it before the database is asked.                                                                                                  |
 | 2026-09-16 | An extra session is checked for a **time** clash, not only a period-number clash         | The unique key is `(class, date, period)`, so two sessions that overlap on the clock under different period numbers would both be accepted. A class cannot be in two lessons at once either.                                                                                                                                  |
 | 2026-09-16 | Restoring a cancelled session keeps its **original** rate                                | The rate was snapshotted when the lesson ran. Re-deriving it on restore would quietly pay today's rate for last month's lesson.                                                                                                                                                                                               |
+| 2026-09-16 | Absence alerts ignore students with fewer than **4 recorded sessions**                   | One absence out of one session is 100%, and an alert list topped by arithmetic accidents is one nobody reads. Not in rule 10.7; stated as a named constant so it is a visible policy rather than a magic number.                                                                                                              |
+| 2026-09-16 | `late` and `excused` count as ATTENDING; only `absent` counts against a student          | Rule 10.7 does not say which statuses count. A centre that counted an excused absence against a child would be answering the wrong question to the parent asking it. `attendanceRate` and `absenceRate` are exact complements, so no two screens can disagree.                                                                |
+| 2026-09-16 | The class matrix shows the **worst** status of a day, not one cell per period            | A day holds several periods. The question the grid answers is "which days did this student miss", and a row of six sub-cells per day fits on no screen.                                                                                                                                                                       |
+| 2026-09-16 | The payroll CSV is a **blob**, not a download URL                                        | It lists what people are paid. A URL is something that can be forwarded, cached or logged; the bytes are already in hand.                                                                                                                                                                                                     |
 
 ## Deviations from PROJECT_PLAN
 
@@ -173,6 +190,12 @@ Phase 7 — Attendance & sessions — status: **done, verified in the running ap
   determined attacker gets 20 tries per 5 minutes per IP against a known username. Worth adding a
   failed-attempt counter keyed on the username before go-live, especially for 6-digit teacher codes.
 - **404 and error pages are still the English Next.js defaults.** Phase 10 replaces them.
+- **The seed's demo payroll is small but correct.** Two weeks of sessions across three branches
+  come to 29,450 ج.م; a verification query, the comparison screen and the printed sheet all agree
+  on it, branch by branch. Reseed for a longer period before demonstrating a term's payroll.
+- **`recharts` renders client-side only.** The comparison charts are in a `"use client"` component
+  and do not appear in the print sheet, which is deliberate — the table beside them is the record,
+  and a chart rasterised at print resolution is not worth the page.
 - **A class's register can be long.** The e2e suite has been enrolling students into the seeded
   classes since Phase 4, so أدبي 1 - بنين in مدينة نصر now has well over a hundred. The screen
   handles it, but the demo data no longer looks like a real class — reseed before showing it.
@@ -215,24 +238,23 @@ Phase 7 — Attendance & sessions — status: **done, verified in the running ap
 
 ## Next steps
 
-Phase 8 — Payroll and reports. The first phase whose output is money, so the domain function
-comes first and everything else reads it.
+Phase 9 — Teacher portal, public lookup, PDF. The first phase with a page that is **not behind
+a login**, which changes what every mistake costs.
 
 Carrying forward:
 
-1. `calculateEarnings` is a **pure function over snapshots** (rule 10.6): it reads
-   `rate_applied_piasters` and `track_applied` from `class_sessions`, never the teacher's
-   current rate. Phase 7's integration test already fixes that a rate change, a cancellation
-   and a restore all leave the snapshot alone.
-2. **Cancelled sessions are excluded from payroll** but keep their attendance. That pairing is
-   the whole point of `status`, and a report that forgets it overpays.
-3. Money stays in integer piasters end to end and is formatted only at the edge with
-   `formatEGP()`. Nothing above the domain sees a float.
-4. A branch admin's payroll is their branch's half of a shared teacher's earnings — the same
-   redaction problem Phase 6 solved for conflicts (`drizzle/0005`). Grouping by teacher → branch
-   → track must not let one branch total another's.
-5. Absence alerts use `center_settings.absence_alert_threshold_percent` and wa.me links built by
-   `whatsAppLink()` in `shared/lib/phone.ts`; CLAUDE.md forbids logging a full phone number.
+1. The public lookup (rule 10.8) takes `student_code` + the last 4 digits of the parent's phone,
+   and returns the SAME generic error for "no such student" and "wrong digits" — anything else is
+   an enumeration oracle for a code that appears on every printed timetable.
+2. Rate limit BOTH ways: per IP (5 failed attempts / 15 min) and per `student_code` (per hour).
+   `lookup_attempts` exists for exactly this and stores a HASHED ip (CLAUDE.md).
+3. It returns no phone numbers and no other student. The result page is `noindex`, uncached, and
+   has no shareable URL carrying the code.
+4. Open question 6 from section 16 is still unanswered and blocks the exact shape of the result:
+   whether the lookup shows a student's full name or only a first name and family initial.
+   Ask before building that page.
+5. The teacher portal already has today, the week and earnings; Phase 9 adds what is missing from
+   rule 10.9 and the optional Playwright PDF generation.
 
 To bring a machine up from scratch:
 

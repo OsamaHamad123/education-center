@@ -1,9 +1,8 @@
 /**
- * CSV import and export for students (PROJECT_PLAN Phase 4).
+ * RFC 4180 CSV reading and writing. Pure: no database, no framework.
  *
- * Pure parsing and shaping: no database, no framework. The import is deliberately
- * two-step — parse to rows with per-row errors, show a preview, then write only the
- * valid rows — because a silent half-import of a class register is worse than none.
+ * Written for the student import in Phase 4 and moved here in Phase 8, when payroll
+ * needed the same writer — CSV is a file format, not a rule about students.
  */
 
 export const IMPORT_COLUMNS = [

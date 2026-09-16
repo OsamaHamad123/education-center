@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Pencil, Power, PowerOff } from "lucide-react";
+import Link from "next/link";
+import { Pencil, Power, PowerOff, Printer } from "lucide-react";
 import { ar } from "@/shared/i18n/ar";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -31,6 +32,11 @@ export function BranchesTable({ branches }: { branches: BranchWithCounts[] }) {
       cell: ({ row }) => <StatusBadge isActive={row.original.isActive} />,
     },
     {
+      accessorKey: "portalEnabled",
+      header: ar.branches.portalColumn,
+      cell: ({ row }) => <PortalBadge enabled={row.original.portalEnabled} />,
+    },
+    {
       id: "actions",
       header: "",
       cell: ({ row }) => <RowActions branch={row.original} onDone={() => router.refresh()} />,
@@ -57,7 +63,10 @@ export function BranchesTable({ branches }: { branches: BranchWithCounts[] }) {
               <p className="text-muted-foreground text-sm">
                 {ar.branches.students}: {branch.studentCount} · {ar.branches.admins}: {branch.adminCount}
               </p>
-              <StatusBadge isActive={branch.isActive} />
+              <div className="flex flex-wrap gap-2">
+                <StatusBadge isActive={branch.isActive} />
+                <PortalBadge enabled={branch.portalEnabled} />
+              </div>
             </div>
             <RowActions branch={branch} onDone={() => router.refresh()} />
           </CardContent>
@@ -75,9 +84,30 @@ function StatusBadge({ isActive }: { isActive: boolean }) {
   );
 }
 
+/** Which branches are in the portal rollout, at a glance — the point of P7 is that
+ * this column is mostly مغلقة for a while, on purpose. */
+function PortalBadge({ enabled }: { enabled: boolean }) {
+  return (
+    <Badge variant={enabled ? "secondary" : "outline"}>
+      {enabled ? ar.branches.portalOn : ar.branches.portalOff}
+    </Badge>
+  );
+}
+
 function RowActions({ branch, onDone }: { branch: BranchWithCounts; onDone: () => void }) {
   return (
     <div className="flex shrink-0 gap-1">
+      {/* Only for a branch already in the rollout: a card is a promise that the URL
+          works, and printing one before the switch is on is how a staged rollout turns
+          into a morning of phone calls (P7). */}
+      {branch.portalEnabled ? (
+        <Button asChild variant="ghost" size="icon" aria-label={`${ar.settings.portalCard} ${branch.name}`}>
+          <Link href={`/print/portal-card/${branch.id}`} target="_blank">
+            <Printer className="size-4" aria-hidden />
+          </Link>
+        </Button>
+      ) : null}
+
       <BranchFormDialog
         branch={branch}
         trigger={

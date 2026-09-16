@@ -41,6 +41,8 @@ export function BranchFormDialog({
   const [isPending, startTransition] = useAction();
   const [error, setError] = useState<AppError | null>(null);
 
+  const [portalEnabled, setPortalEnabled] = useState(branch?.portalEnabled ?? false);
+
   const isEdit = Boolean(branch);
   // Rule 10.1: once a student code has been issued from this branch, the code is frozen.
   const codeLocked = isEdit && (branch?.studentCount ?? 0) > 0;
@@ -53,6 +55,7 @@ export function BranchFormDialog({
       code: codeLocked ? (branch?.code ?? "") : readText(data, "code"),
       address: readText(data, "address"),
       phone: readText(data, "phone"),
+      portalEnabled,
     };
 
     setError(null);
@@ -128,6 +131,21 @@ export function BranchFormDialog({
             error={fieldError("phone")}
             disabled={isPending}
           />
+
+          <div className="flex items-start gap-3">
+            <input
+              id="portalEnabled"
+              type="checkbox"
+              checked={portalEnabled}
+              onChange={(event) => setPortalEnabled(event.target.checked)}
+              disabled={isPending}
+              className="mt-1 size-4 shrink-0"
+            />
+            <div className="space-y-0.5">
+              <Label htmlFor="portalEnabled">{ar.branches.portalEnabled}</Label>
+              <p className="text-muted-foreground text-xs">{ar.branches.portalEnabledHint}</p>
+            </div>
+          </div>
 
           {error && !error.fieldErrors ? (
             <p role="alert" className="text-destructive text-sm">

@@ -87,7 +87,13 @@ export async function countActiveBranches(_ctx: TenantContext, tx: Tx): Promise<
 export async function insertBranch(
   _ctx: TenantContext,
   tx: Tx,
-  values: { name: string; code: string; address?: string | undefined; phone?: string | undefined },
+  values: {
+    name: string;
+    code: string;
+    address?: string | undefined;
+    phone?: string | undefined;
+    portalEnabled?: boolean | undefined;
+  },
 ): Promise<Branch> {
   const [branch] = await tx
     .insert(branches)
@@ -96,6 +102,7 @@ export async function insertBranch(
       code: values.code,
       address: values.address ?? null,
       phone: values.phone ?? null,
+      portalEnabled: values.portalEnabled ?? false,
     })
     .returning();
   if (!branch) throw new Error("insertBranch returned no row");
@@ -112,6 +119,7 @@ export async function updateBranch(
     address: string | null;
     phone: string | null;
     isActive: boolean;
+    portalEnabled: boolean;
   }>,
 ): Promise<Branch | null> {
   const [branch] = await tx

@@ -107,6 +107,53 @@ docker compose -f docker-compose.prod.yml exec db psql -U postgres -d school -c 
 
 `school_app` must show `f`. If it shows `t`, stop and fix it before letting anyone in.
 
+## Rolling the parent portal out
+
+Two switches, and nothing happens until both are on for a family's branch
+(`drizzle/0011`). The order below is the whole of P7.
+
+**1. Staff first, for a fortnight.** Turn the master switch on
+(إعدادات المركز → تفعيل بوابة ولي الأمر) and open ONE branch (الفروع → تعديل →
+بوابة ولي الأمر لهذا الفرع). Tell nobody outside the building. Staff with children at
+the centre are the first users, because they will say what is wrong instead of
+shrugging and never coming back.
+
+**2. One branch, one month.** Print the cards — the printer icon on that branch's row,
+four cards to an A4 sheet — and hand them out at the desk. Do not email the URL to
+everybody; the desk is the throttle.
+
+**3. What to watch, weekly.** Sign-ins are audited:
+
+```bash
+docker compose -f docker-compose.prod.yml exec db psql -U postgres -d school -c   "select date_trunc('day', created_at) as day, count(*)
+   from audit_logs where entity = 'student.portal'
+   group by 1 order by 1 desc limit 14;"
+```
+
+A flat line is not success. It means the cards are in a drawer.
+
+**4. The next branch, only if the office says the phone got quieter.** A portal is
+supposed to _reduce_ طمنّنّي عليه calls, and the office is the only place that knows.
+
+### Pulling it back
+
+Smallest first, and none of these needs a deploy:
+
+- **One branch:** untick its portal box. Its parents stop getting in immediately;
+  everyone else is untouched.
+- **The whole portal:** untick the master switch in settings. The lookup stays open.
+- **Everything, portal and lookup:** untick تفعيل صفحة استعلام أولياء الأمور. The
+  portal requires it, so this closes both doors at once.
+
+Existing sessions do not need clearing: every portal request re-reads both switches, so
+a parent who was signed in a minute ago is signed out on their next page load.
+
+### The URL on the cards comes from `BETTER_AUTH_URL`
+
+The printed card carries whatever origin the server is configured with. Set it to the
+real public URL **before** printing anything — a wrong value is a wrong value on paper,
+in five hundred bags, and no deploy fixes the ones already handed out.
+
 ## Common incidents
 
 ### The app answers 503 on `/api/health`

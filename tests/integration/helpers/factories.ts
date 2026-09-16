@@ -31,6 +31,9 @@ export async function makeBranch(overrides: Partial<schema.NewBranch> = {}) {
       // in letters rather than digits.
       code: overrides.code ?? `Z${toLetters(n)}`.slice(0, 5),
       isActive: overrides.isActive ?? true,
+      // On by default HERE, off by default in production (drizzle/0011). A fixture
+      // exists to exercise a feature; the rollout default is asserted on its own.
+      portalEnabled: overrides.portalEnabled ?? true,
       ...overrides,
     })
     .returning();
@@ -162,12 +165,15 @@ export async function makeAttendance(args: {
   return record;
 }
 
-export async function makeCenterSettings(overrides: { teacherCanMarkAttendance?: boolean } = {}) {
+export async function makeCenterSettings(
+  overrides: { teacherCanMarkAttendance?: boolean; portalEnabled?: boolean } = {},
+) {
   const [settings] = await ownerDb
     .insert(schema.centerSettings)
     .values({
       centerName: "مركز اختبار",
       teacherCanMarkAttendance: overrides.teacherCanMarkAttendance ?? true,
+      portalEnabled: overrides.portalEnabled ?? true,
     })
     .returning();
   if (!settings) throw new Error("makeCenterSettings failed");

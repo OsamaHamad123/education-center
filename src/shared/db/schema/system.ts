@@ -61,6 +61,13 @@ export const centerSettings = pgTable(
     logoPath: text(),
     primaryColor: text(),
     lookupEnabled: boolean().notNull().default(true),
+    /**
+     * The parent portal's master switch (P7). Separate from `lookupEnabled` because the
+     * rollout needs to open the portal WITHOUT touching the lookup every family already
+     * uses — and off by default, because a feature that arrives switched on has not been
+     * rolled out, it has been released.
+     */
+    portalEnabled: boolean().notNull().default(false),
     teacherCanMarkAttendance: boolean().notNull().default(true),
     /** How many days back a branch admin may edit attendance. Super admin is unlimited. */
     attendanceEditWindowDays: integer().notNull().default(7),

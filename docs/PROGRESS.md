@@ -619,6 +619,40 @@ CSP with no `'unsafe-eval'`, and `Cache-Control: private, no-cache, no-store` �
 the one that mattered, because a portal page is about one child and must never sit in a
 shared proxy.
 
+## Parent portal — P7, rollout (2026-09-16)
+
+`drizzle/0011`, the settings and branches screens, `/print/portal-card/[id]`, and the
+procedure in `docs/RUNBOOK.md` under "Rolling the parent portal out".
+
+**The plan's rollout was not executable with the switches that existed.** There was one
+— `lookup_enabled` — and it is shared with the anonymous lookup, so the only way to keep
+the portal shut for most families was to shut the lookup every family already uses. Now
+there are two: `center_settings.portal_enabled` (the master switch) and
+`branches.portal_enabled` (which branches are in the rollout). **Both default to false.**
+A feature that arrives switched on has not been rolled out, it has been released.
+
+**The card.** Four to an A4 sheet, because a sheet that yields one card is a sheet nobody
+prints twice. The URL is large, monospaced and LTR since a parent copies it off paper;
+the branch's own number is on it in bold, under "لو لم تفتح معك". **The printer icon
+appears only for a branch already opened** — a card is a promise that the URL works.
+
+Three things fell out of building it that the plan had not asked for, all tested:
+
+- The portal still requires `lookup_enabled`. It shows the UNMASKED name, so it must
+  never be the door left open when the quieter one is shut.
+- A deactivated branch closes the portal even if its switch was left on.
+- A family with children at two branches, one open and one not, sees the open one — the
+  case that proves the switch belongs on the branch rather than the centre.
+
+**The seed is now a centre in the MIDDLE of a rollout**: master switch on, Nasr City
+open, El Obour and Giza not. That is the state the product spends its first month in, and
+it gives the e2e suite a real negative — a seeded El Obour parent with correct details
+gets the identical refusal a wrong code gets, compared string to string.
+
+**One operational trap, now in the runbook:** the card's URL comes from
+`BETTER_AUTH_URL`. A wrong value is a wrong value on paper, in five hundred bags, and no
+deploy fixes the ones already handed out.
+
 ## Next steps
 
 All ten phases are done. What is left is not a phase — it is the handover:

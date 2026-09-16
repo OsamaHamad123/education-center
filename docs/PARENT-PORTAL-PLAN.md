@@ -2,9 +2,10 @@
 
 Written September 2026, after the security, UX and product reviews.
 
-**P1, P2, P3 and P6 are built (2026-09-16).** What shipped differs from what this planned
-in two places, and section 3 says where. P4, P5 and P7 remain a plan, and section 1 is
-still the part that has to be settled before they are worth estimating.
+**P1, P2, P3, P6 and P7 are built (2026-09-16).** What shipped differs from what this
+planned in two places, and section 3 says where. **P4 and P5 remain a plan**, both
+blocked on decisions rather than on work: P4 needs a messaging provider (§16 q8) and P5
+needs student fees to exist in the admin product at all.
 
 ---
 
@@ -261,15 +262,43 @@ cookie from the browser (the delete used the wrong path, proved in a live browse
 it was fixed), and `portal_sessions` was readable by every staff query in the product
 until `drizzle/0010` made it invisible to anything carrying a tenant role.
 
-### Phase P7 — rollout
+### Phase P7 — rollout — **built**
 
 **Goal:** five hundred families arriving at once, deliberately.
 
-- The centre's own staff first, with their own children if they have any.
-- One branch, one month.
-- A printed card: the URL, what it does, and the office's number when it does not.
-- A switch in centre settings to turn the whole portal off without a deploy —
-  `lookup_enabled` already exists and is the precedent.
+The procedure is in `docs/RUNBOOK.md` under "Rolling the parent portal out". What had to
+be BUILT for it is `drizzle/0011`, because the plan below was not executable with the
+switches that existed — there was one, `lookup_enabled`, shared with the anonymous
+lookup, so the only way to keep the portal shut for most families was to shut the lookup
+every family already uses.
+
+- The centre's own staff first: **procedure, step 1.** Nothing to build.
+- One branch, one month: **`branches.portal_enabled`.** A rollout that cannot be done one
+  branch at a time is not a rollout, it is a release with a nicer name.
+- A printed card: **`/print/portal-card/[id]`**, four to an A4 sheet because the desk
+  hands them out by the handful. The URL is large, monospaced and LTR, since a parent
+  copies it off paper. The office's number is on it, in bold, under "لو لم تفتح معك".
+  **The printer icon only appears for a branch already opened** — a card is a promise
+  that the URL works, and printing one early is how a staged rollout becomes a morning of
+  phone calls.
+- A switch to turn the portal off without a deploy: **`center_settings.portal_enabled`**,
+  its own switch rather than borrowing the lookup's. Both default to FALSE, because a
+  feature that arrives switched on has not been rolled out, it has been released.
+
+Three things fell out of building it that the plan had not asked for, and all three are
+tested:
+
+- The portal still requires `lookup_enabled`. It shows the UNMASKED name, so it must
+  never be the door left open when the quieter one is shut.
+- A deactivated branch closes the portal even if its switch was left on. Deactivating a
+  branch is the strongest statement the centre makes about it, and a rollout switch that
+  outlived it would be a trap set for a year from now.
+- A family with children at two branches, one open and one not, sees the open one. That
+  is the case that proves the switch belongs on the branch.
+
+The seed is now a centre **in the middle** of a rollout — master switch on, Nasr City
+open, the other two not — because that is the state the product spends its first month
+in, and a demo that skips it hides the part most likely to be got wrong.
 
 ---
 

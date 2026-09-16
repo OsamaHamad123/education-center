@@ -9,7 +9,13 @@ import {
   ownerDb,
   resetDatabase,
 } from "../helpers/db";
-import { makeCenterSettings, makeStudent, makeTwoBranches } from "../helpers/factories";
+import {
+  makeBranch,
+  makeCenterSettings,
+  makeClass,
+  makeStudent,
+  makeTwoBranches,
+} from "../helpers/factories";
 import * as schema from "@/shared/db/schema";
 
 /**
@@ -196,6 +202,89 @@ describe("how a parent's access ends", () => {
     const children = await childrenOf(hash ?? "");
     expect(children).toHaveLength(1);
     expect(children[0]?.branchName).toBe(fx.branchB.name);
+  });
+});
+
+describe("the rollout switches", () => {
+  /**
+   * docs/PARENT-PORTAL-PLAN.md, P7. "One branch, one month" is not executable with one
+   * centre-wide switch, so there are two — and the value of a staged rollout is entirely
+   * in the pulling back, which is the half nobody tests.
+   *
+   * These run against `app_portal_verify`, the first thing any parent touches.
+   */
+  async function makeChild(branchPortal: boolean) {
+    const branch = await makeBranch({ name: "فرع الإطلاق", code: "ROL", portalEnabled: branchPortal });
+    const klass = await makeClass(branch.id, { name: "شعبة الإطلاق" });
+    await makeStudent(branch.id, klass.id, {
+      fullName: "ابن الإطلاق",
+      studentCode: "ROL-26-30001",
+      parentPhone: "+201000007777",
+    });
+    return branch;
+  }
+
+  it("answers when the centre switch and the branch switch are both on", async () => {
+    await makeChild(true);
+    expect(await verify("ROL-26-30001", "7777")).toBeTruthy();
+  });
+
+  it("refuses a branch that is not in the rollout yet", async () => {
+    await makeChild(false);
+    // The same nothing a wrong code gets. A parent at a branch that has not been rolled
+    // out cannot tell the difference between "not yet" and "wrong details", and should
+    // not be able to: the office's answer to both is the same conversation.
+    expect(await verify("ROL-26-30001", "7777")).toBeNull();
+  });
+
+  it("refuses everything when the centre's master switch is off", async () => {
+    await makeChild(true);
+    await ownerDb.update(schema.centerSettings).set({ portalEnabled: false });
+    // The cord. One row, no deploy, every branch at once.
+    expect(await verify("ROL-26-30001", "7777")).toBeNull();
+  });
+
+  it("refuses when the lookup is off, even with the portal switched on", async () => {
+    await makeChild(true);
+    await ownerDb.update(schema.centerSettings).set({ lookupEnabled: false });
+    // Deliberate: the portal shows the UNMASKED name, so it must never be the door left
+    // open when the quieter one is shut.
+    expect(await verify("ROL-26-30001", "7777")).toBeNull();
+  });
+
+  it("refuses a deactivated branch even if its portal switch was left on", async () => {
+    const branch = await makeChild(true);
+    await ownerDb
+      .update(schema.branches)
+      .set({ isActive: false })
+      .where(sql`id = ${branch.id}`);
+    // Deactivating a branch is the strongest statement the centre makes about it; a
+    // rollout switch that outlived it would be a trap set for a year from now.
+    expect(await verify("ROL-26-30001", "7777")).toBeNull();
+  });
+
+  it("shows a parent the child at the rolled-out branch and not the other", async () => {
+    const open = await makeBranch({ name: "فرع مفتوح", code: "OPN", portalEnabled: true });
+    const closed = await makeBranch({ name: "فرع مغلق", code: "CLS", portalEnabled: false });
+    const openClass = await makeClass(open.id, { name: "شعبة مفتوحة" });
+    const closedClass = await makeClass(closed.id, { name: "شعبة مغلقة" });
+
+    const here = await makeStudent(open.id, openClass.id, {
+      fullName: "الابن الأول",
+      studentCode: "OPN-26-30002",
+      parentPhone: "+201000008888",
+    });
+    await makeStudent(closed.id, closedClass.id, {
+      fullName: "الابن الثاني",
+      studentCode: "CLS-26-30003",
+      parentPhone: "+201000008888",
+    });
+
+    const hash = await verify("OPN-26-30002", "8888");
+    const children = await childrenOf(hash ?? "");
+    // One family, two branches, one of them in the rollout. The switch is per branch
+    // because the rollout is, and a half-open family is the case that proves it.
+    expect(children.map((child) => child.studentId)).toEqual([here.id]);
   });
 });
 

@@ -15,6 +15,7 @@ export async function saveSettings(
   values: {
     centerName: string;
     lookupEnabled: boolean;
+    portalEnabled: boolean;
     teacherCanMarkAttendance: boolean;
     attendanceEditWindowDays: number;
     absenceAlertThresholdPercent: number;
@@ -40,16 +41,18 @@ export async function loadPublicSettings(): Promise<{
   centerName: string;
   logoPath: string | null;
   lookupEnabled: boolean;
+  portalEnabled: boolean;
 }> {
   const [row] = await db
     .select({
       centerName: centerSettings.centerName,
       logoPath: centerSettings.logoPath,
       lookupEnabled: centerSettings.lookupEnabled,
+      portalEnabled: centerSettings.portalEnabled,
     })
     .from(centerSettings)
     .limit(1);
 
   // Closed by default: before the seed has run there is no centre and no lookup.
-  return row ?? { centerName: "", logoPath: null, lookupEnabled: false };
+  return row ?? { centerName: "", logoPath: null, lookupEnabled: false, portalEnabled: false };
 }

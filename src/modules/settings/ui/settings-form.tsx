@@ -21,6 +21,7 @@ export function SettingsForm({ settings }: { settings: CenterSettings }) {
   const [isPending, startTransition] = useAction();
   const [error, setError] = useState<AppError | null>(null);
   const [lookupEnabled, setLookupEnabled] = useState(settings.lookupEnabled);
+  const [portalEnabled, setPortalEnabled] = useState(settings.portalEnabled);
   const [teacherCanMark, setTeacherCanMark] = useState(settings.teacherCanMarkAttendance);
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -32,6 +33,7 @@ export function SettingsForm({ settings }: { settings: CenterSettings }) {
       const result = await updateCenterSettings({
         centerName: readText(data, "centerName"),
         lookupEnabled,
+        portalEnabled,
         teacherCanMarkAttendance: teacherCanMark,
         attendanceEditWindowDays: readText(data, "attendanceEditWindowDays"),
         absenceAlertThresholdPercent: readText(data, "absenceAlertThresholdPercent"),
@@ -84,6 +86,15 @@ export function SettingsForm({ settings }: { settings: CenterSettings }) {
               checked={lookupEnabled}
               onChange={setLookupEnabled}
               disabled={isPending}
+            />
+
+            <Toggle
+              id="portalEnabled"
+              label={ar.settings.portalEnabled}
+              description={lookupEnabled ? ar.settings.portalEnabledHint : ar.settings.portalNeedsLookup}
+              checked={portalEnabled}
+              onChange={setPortalEnabled}
+              disabled={isPending || !lookupEnabled}
             />
 
             <Toggle

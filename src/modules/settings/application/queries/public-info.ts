@@ -11,6 +11,8 @@ export type PublicCenterInfo = {
   centerName: string;
   logoPath: string | null;
   lookupEnabled: boolean;
+  /** Whether the portal's master switch is on at all (P7). Per-branch gating is in SQL. */
+  portalEnabled: boolean;
 };
 
 export async function getPublicCenterInfo(): Promise<PublicCenterInfo> {

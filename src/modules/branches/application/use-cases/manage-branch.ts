@@ -45,6 +45,7 @@ export const createBranch = createAction({
       code,
       address: input.address,
       phone: input.phone,
+      portalEnabled: input.portalEnabled,
     });
     return ok(branch);
   },
@@ -82,6 +83,9 @@ export const editBranch = createAction({
       code,
       address: input.address ?? null,
       phone: input.phone ?? null,
+      // The rollout switch (P7). It rides on the ordinary edit rather than getting its
+      // own action, so turning it on is audited as a branch change like any other.
+      portalEnabled: input.portalEnabled,
     });
     if (!updated) return err("NOT_FOUND", ar.errors.NOT_FOUND);
     return ok(updated);

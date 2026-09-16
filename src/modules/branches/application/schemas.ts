@@ -24,6 +24,8 @@ export const createBranchSchema = z.object({
   code: branchCodeSchema,
   address: optionalText,
   phone: optionalText,
+  /** Whether this branch is in the parent-portal rollout (P7). Off unless ticked. */
+  portalEnabled: z.boolean().default(false),
 });
 
 export const updateBranchSchema = createBranchSchema.extend({

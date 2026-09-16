@@ -12,6 +12,8 @@ export const branches = pgTable(
     address: text(),
     phone: text(),
     isActive: boolean().notNull().default(true),
+    /** Whether this branch is in the parent-portal rollout (P7). One branch at a time. */
+    portalEnabled: boolean().notNull().default(false),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },

@@ -36,7 +36,16 @@ const DEMO_PASSWORD = "Password123!";
 const TEACHER_ACCESS_CODE = "123456";
 
 const BRANCHES = [
-  { name: "فرع مدينة نصر", code: "NSR", address: "مدينة نصر، القاهرة", phone: "+201000000001" },
+  // Portal ON for Nasr City ONLY: a centre in the middle of the P7 rollout, which is
+  // the state the demo should show. The other two are the same product with the switch
+  // still off, and the seed is the easiest place to see what that looks like.
+  {
+    name: "فرع مدينة نصر",
+    code: "NSR",
+    address: "مدينة نصر، القاهرة",
+    phone: "+201000000001",
+    portalEnabled: true,
+  },
   { name: "فرع العبور", code: "OBR", address: "مدينة العبور، القليوبية", phone: "+201000000002" },
   { name: "فرع الجيزة", code: "GIZ", address: "الدقي، الجيزة", phone: "+201000000003" },
 ] as const;
@@ -239,6 +248,7 @@ async function main() {
   await db.insert(schema.centerSettings).values({
     centerName: "مركز النخبة التعليمي",
     lookupEnabled: true,
+    portalEnabled: true,
     teacherCanMarkAttendance: true,
     attendanceEditWindowDays: 7,
   });

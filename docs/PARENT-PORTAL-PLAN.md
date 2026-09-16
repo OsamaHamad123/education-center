@@ -214,11 +214,11 @@ trusting its own query string — signed out, that URL is a 404, and there is a 
   which is this phase's actual use for P1.
 - Templates, not free text (this is also the cheapest answer to §16 q8).
 
-**What changed since this was written:** the phase is not blocked as a whole. Splitting
-it showed that **P4a (templates) and P4b (one message per family per day) need no
-provider at all** — about two days, available now, and they carry most of the value. Only
-**P4c (automatic sending)** waits on §16 q8, and its hardest question is not technical:
-who reads the replies.
+**P4a and P4b are built (2026-09-16).** Splitting the phase showed that templates and
+one-message-per-family-per-day need **no provider at all**, and they carry most of the
+value: `/attendance/contact`, three templates in settings, and a `contact` audit action
+so the office can see who has already been rung. Only **P4c (automatic sending)** waits
+on §16 q8, and its hardest question is not technical: who reads the replies.
 
 **Done when:** a day with three absences produces one message, an opted-out parent
 produces none, and a failed send is visible to the office rather than silent.

@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ListChecks } from "lucide-react";
+import { ListChecks, MessageCircle } from "lucide-react";
 import {
   AttendanceBoardView,
   getAttendanceBoard,
@@ -32,12 +32,20 @@ export default async function AttendancePage({
       title={ar.attendance.title}
       description={ar.attendance.description}
       action={
-        <Button asChild variant="outline">
-          <Link href="/attendance/sessions">
-            <ListChecks className="size-4" aria-hidden />
-            {ar.attendance.sessions}
-          </Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline">
+            <Link href="/attendance/contact">
+              <MessageCircle className="size-4" aria-hidden />
+              {ar.contact.title}
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/attendance/sessions">
+              <ListChecks className="size-4" aria-hidden />
+              {ar.attendance.sessions}
+            </Link>
+          </Button>
+        </div>
       }
     />
   );

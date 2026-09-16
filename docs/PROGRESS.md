@@ -653,6 +653,42 @@ gets the identical refusal a wrong code gets, compared string to string.
 `BETTER_AUTH_URL`. A wrong value is a wrong value on paper, in five hundred bags, and no
 deploy fixes the ones already handed out.
 
+## Parent messaging — P4a and P4b (2026-09-16)
+
+`docs/MESSAGING-AND-FEES-PLAN.md`, the two phases that turned out not to be blocked.
+`drizzle/0012`, `src/shared/lib/message-template.ts`, `/attendance/contact`.
+
+**Templates (P4a).** Three, in centre settings, with a **live preview** beside each —
+which is the feature, not the decoration: `renderTemplate` leaves an unknown placeholder
+in the text rather than dropping it, so a misspelled `{النسبه}` is visible in the
+preview instead of arriving at five hundred families as a blank gap. Rendering is a
+SINGLE pass, so a value containing braces is never re-scanned.
+
+**The record.** `contact` is a new audit action — not an 'update', because the log is a
+thing you filter and spelling a contact as an edit would make it lie. One row per CHILD
+rather than per message, since that is how it is read back: a sibling who shared a message
+must still show as contacted. Both screens now say آخر تواصل or لم يتم التواصل من
+قبل on every row — the half of P4a worth more than the wording.
+
+**One message a day, per family (P4b).** `/attendance/contact`, grouped on the parent's
+phone, which is the same identity the portal signs in with: a family IS a phone number
+here. A child absent in three periods is one row naming three; two siblings are one row
+with one message naming both children, not two copies of the same paragraph. The grouping
+is pure and unit-tested.
+
+Two things were added that the plan had not asked for and the screen is worse without: a
+warning when registers are still unmarked, and a date control — half the time the office
+rings the next morning about the day before, and the seed's own data proved it (the suite
+had nothing to assert on "today").
+
+**Nothing is sent by a machine.** The link is pre-filled and a person presses send. P4c
+stays blocked on §16 q8, whose hardest question is who reads the replies.
+
+Two bugs the work caught: the typechecker refused the new audit action until the log's
+Arabic label existed (so it could never ship as a blank cell), and the first version of
+the e2e removed an anchor's href and then looked the anchor up by ROLE — an anchor without
+an href is not a link, so the locator silently moved to the next family's button.
+
 ## Next steps
 
 All ten phases are done. What is left is not a phase — it is the handover:

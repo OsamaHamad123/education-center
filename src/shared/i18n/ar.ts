@@ -277,6 +277,7 @@ export const ar = {
       transfer: "نقل",
       login: "دخول",
       lookup: "استعلام",
+      contact: "تواصل",
     },
   },
 
@@ -300,6 +301,14 @@ export const ar = {
     portalNeedsLookup: "البوابة تعمل على نفس بيانات الاستعلام، فإغلاق الاستعلام يغلقها معه.",
     portalCard: "طباعة بطاقات البوابة",
     portalCardHint: "أربع بطاقات في الصفحة، للمكتب ليسلّمها لأولياء الأمور.",
+    templates: "رسائل أولياء الأمور",
+    templatesHint:
+      "نصوص جاهزة تُفتح في واتساب مكتوبة. لا يُرسل النظام شيئاً من تلقاء نفسه — الموظف هو من يضغط إرسال.",
+    templateTokens: "المتغيرات المتاحة:",
+    templatePreview: "معاينة:",
+    templateDaily: "غياب اليوم",
+    templateRepeated: "غياب متكرر",
+    templateLowAttendance: "انخفاض نسبة الحضور",
     teacherCanMark: "السماح للمعلم برصد الحضور",
     teacherCanMarkHint: "في يوم الحصة نفسه فقط، ولحصصه هو دون غيرها.",
     editWindow: "مهلة تعديل الحضور (أيام)",
@@ -839,6 +848,19 @@ export const ar = {
     5: "الجمعة",
     6: "السبت",
     7: "الأحد",
+  },
+
+  contact: {
+    title: "التواصل مع أولياء الأمور",
+    description: "غياب اليوم، مجمّعاً لكل أسرة — رسالة واحدة لا رسالة لكل حصة.",
+    empty: "لا غياب اليوم.",
+    emptyHint: "لا يوجد من يحتاج التواصل في هذا اليوم.",
+    repeated: "غياب متكرر",
+    lastContacted: "آخر تواصل:",
+    neverContacted: "لم يتم التواصل من قبل.",
+    siblings: (count: number) => `${count} أبناء`,
+    openRegisters: (count: number) =>
+      `لم يُرصد الحضور بعد في ${count} حصة اليوم. القائمة غير مكتملة — الأفضل الانتظار حتى نهاية اليوم.`,
   },
 
   units: {

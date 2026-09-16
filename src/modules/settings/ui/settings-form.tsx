@@ -12,6 +12,8 @@ import type { AppError } from "@/shared/lib/result";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Input } from "@/shared/ui/input";
+import { Textarea } from "@/shared/ui/textarea";
+import { renderTemplate, TEMPLATE_PREVIEW, TEMPLATE_TOKENS } from "@/shared/lib/message-template";
 import { Label } from "@/shared/ui/label";
 import { updateCenterSettings, uploadCenterLogo } from "../application/use-cases/update-settings";
 import { useAction } from "@/shared/ui/use-action";
@@ -37,6 +39,9 @@ export function SettingsForm({ settings }: { settings: CenterSettings }) {
         teacherCanMarkAttendance: teacherCanMark,
         attendanceEditWindowDays: readText(data, "attendanceEditWindowDays"),
         absenceAlertThresholdPercent: readText(data, "absenceAlertThresholdPercent"),
+        templateDailyAbsence: readText(data, "templateDailyAbsence"),
+        templateRepeatedAbsence: readText(data, "templateRepeatedAbsence"),
+        templateLowAttendance: readText(data, "templateLowAttendance"),
       });
       if (!result.ok) {
         setError(result.error);
@@ -144,6 +149,39 @@ export function SettingsForm({ settings }: { settings: CenterSettings }) {
               </div>
             </div>
 
+            <div className="space-y-4 border-t pt-5">
+              <div>
+                <h3 className="font-medium">{ar.settings.templates}</h3>
+                <p className="text-muted-foreground text-xs">{ar.settings.templatesHint}</p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  {ar.settings.templateTokens}{" "}
+                  <span className="font-mono">{TEMPLATE_TOKENS.map((token) => `{${token}}`).join(" ")}</span>
+                </p>
+              </div>
+
+              <TemplateField
+                name="templateDailyAbsence"
+                label={ar.settings.templateDaily}
+                defaultValue={settings.templateDailyAbsence}
+                error={fieldError("templateDailyAbsence")}
+                disabled={isPending}
+              />
+              <TemplateField
+                name="templateRepeatedAbsence"
+                label={ar.settings.templateRepeated}
+                defaultValue={settings.templateRepeatedAbsence}
+                error={fieldError("templateRepeatedAbsence")}
+                disabled={isPending}
+              />
+              <TemplateField
+                name="templateLowAttendance"
+                label={ar.settings.templateLowAttendance}
+                defaultValue={settings.templateLowAttendance}
+                error={fieldError("templateLowAttendance")}
+                disabled={isPending}
+              />
+            </div>
+
             {error && !error.fieldErrors ? (
               <p role="alert" className="text-destructive text-sm">
                 {error.message}
@@ -157,6 +195,43 @@ export function SettingsForm({ settings }: { settings: CenterSettings }) {
           </CardContent>
         </Card>
       </form>
+    </div>
+  );
+}
+
+/**
+ * A template, with the rendered result underneath it as it is typed.
+ *
+ * The preview is the point. A misspelled `{النسبه}` survives rendering on purpose
+ * (`renderTemplate`), so the only place it can be caught cheaply is here — before the
+ * message goes to five hundred families.
+ */
+function TemplateField(props: {
+  name: string;
+  label: string;
+  defaultValue: string;
+  error?: string | undefined;
+  disabled: boolean;
+}) {
+  const [value, setValue] = useState(props.defaultValue);
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={props.name}>{props.label}</Label>
+      <Textarea
+        id={props.name}
+        name={props.name}
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        disabled={props.disabled}
+        rows={3}
+        aria-describedby={`${props.name}-preview`}
+      />
+      <p id={`${props.name}-preview`} className="bg-muted rounded-md p-2 text-xs">
+        <span className="text-muted-foreground">{ar.settings.templatePreview} </span>
+        {renderTemplate(value, TEMPLATE_PREVIEW)}
+      </p>
+      <FieldError message={props.error} />
     </div>
   );
 }

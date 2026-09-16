@@ -246,8 +246,10 @@ test.describe("the reports", () => {
     await expect(visible(page, "حد التنبيه: 1%").first()).toBeVisible();
     const chat = page.getByRole("link", { name: "مراسلة ولي الأمر" }).first();
     await expect(chat).toBeVisible();
-    // Click-to-chat only: it opens a conversation, it does not send anything.
-    await expect(chat).toHaveAttribute("href", /^https:\/\/wa\.me\/\d+$/);
+    // Still click-to-chat only — it OPENS a conversation and sends nothing. Since P4a the
+    // message box is pre-filled from the centre's template, so the assertion is that the
+    // link goes to wa.me with text, not that it is bare.
+    await expect(chat).toHaveAttribute("href", /^https:\/\/wa\.me\/\d+\?text=/);
   });
 
   test("masks the parent's number on screen", async ({ page }) => {

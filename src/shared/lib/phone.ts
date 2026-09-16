@@ -78,9 +78,17 @@ export function maskPhone(phone: NormalizedPhone): string {
   return `${phone.slice(0, 5)}****${phone.slice(-4)}`;
 }
 
-/** A wa.me click-to-chat link — we never send messages automatically (section 10.7). */
-export function whatsAppLink(phone: NormalizedPhone): string {
-  return `https://wa.me/${phone.replace("+", "")}`;
+/**
+ * A wa.me click-to-chat link — we never send messages automatically (section 10.7).
+ *
+ * `text` pre-fills the message box; the office still presses send. That is the whole of
+ * P4a: the wording becomes consistent without anything being sent by a machine.
+ */
+export function whatsAppLink(phone: NormalizedPhone, text?: string): string {
+  const base = `https://wa.me/${phone.replace("+", "")}`;
+  // encodeURIComponent, not URLSearchParams: the latter encodes spaces as "+", which
+  // WhatsApp shows literally in the message box.
+  return text ? `${base}?text=${encodeURIComponent(text)}` : base;
 }
 
 function toWesternDigits(input: string): string {

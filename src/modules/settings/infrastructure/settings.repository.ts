@@ -19,6 +19,9 @@ export async function saveSettings(
     teacherCanMarkAttendance: boolean;
     attendanceEditWindowDays: number;
     absenceAlertThresholdPercent: number;
+    templateDailyAbsence: string;
+    templateRepeatedAbsence: string;
+    templateLowAttendance: string;
   },
 ): Promise<CenterSettings | null> {
   // No WHERE: the table holds exactly one row, enforced by the singleton constraint.

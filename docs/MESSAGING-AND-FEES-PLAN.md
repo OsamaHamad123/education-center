@@ -6,8 +6,8 @@ Written 2026-09-16, after P1–P3, P6 and P7 shipped and left these two standing
 They are, but not equally, and not for the same kind of reason — which is the first thing
 worth saying:
 
-- **P4 is blocked on a decision and a bill.** Most of its value is not, and can be built
-  this week for about two days' work.
+- **P4 is blocked on a decision and a bill.** Most of its value was not — **P4a and P4b
+  are built (2026-09-16)**, and only automatic sending still waits.
 - **P5 is not really a portal phase at all.** It is the product's money phase. The portal
   is the last two days of it.
 
@@ -72,7 +72,7 @@ a limitation.** Automate it when the volume makes that impossible, and not befor
 
 So P4 splits into a part that is not blocked at all, and a part that is.
 
-## P4a — templates — **not blocked, ~1 day**
+## P4a — templates — **built**
 
 - `message_templates` in centre settings: first absence, repeated absence, low
   attendance. Arabic, with placeholders — `{الطالب}` `{اليوم}` `{الحصص}` `{النسبة}`
@@ -89,7 +89,14 @@ So P4 splits into a part that is not blocked at all, and a part that is.
 **Done when:** the alerts screen opens WhatsApp with a correct sentence about the right
 child, the log shows who was contacted today, and changing the wording needs no developer.
 
-## P4b — one message a day, per family — **not blocked, ~1 day**
+**Built**, in `drizzle/0012` and `src/shared/lib/message-template.ts`. Three templates
+live in centre settings with a **live preview** beside each, which is the feature: an
+unknown placeholder is left in the text rather than dropped, so `{النسبه}` shows up in
+the preview instead of arriving at five hundred families as a gap. `contact` is a new
+audit action — not an 'update', because the log is a thing you filter — and both screens
+now say آخر تواصل or لم يتم التواصل من قبل against every row.
+
+## P4b — one message a day, per family — **built**
 
 The rule the plan already states — _one message a day, after the last period, naming the
 periods missed_ — does not need a provider. It needs a screen.
@@ -102,6 +109,17 @@ periods missed_ — does not need a provider. It needs a screen.
 
 **Done when:** a child absent in three periods produces one row and one message, and two
 siblings absent the same day produce one.
+
+**Built** at `/attendance/contact` — under attendance rather than reports, because this
+is not something read at the end of the month, it is the last thing the office does
+before going home. Both rules are unit-tested in `domain/contact-list.ts`, and siblings
+get ONE message naming both children rather than two copies of the same paragraph.
+
+Two things were added that the plan had not asked for and the screen is worse without:
+a **warning when registers are still unmarked** (a day that is not finished is a day
+whose absences are not final — sending then is the six-messages mistake wearing a
+different hat), and a **date control**, because half the time the office rings the next
+morning about the day before.
 
 ## P4c — automatic sending — **blocked on §16 q8, 2–3 weeks**
 
@@ -220,11 +238,11 @@ and the teacher's مستحقاتي screen can say "شهر ٨: مدفوع" instea
 
 # What I would do
 
-**Now, without waiting for anybody:** P4a and P4b. Two days, no provider, no bill, no new
-decision beyond the wording — and they deliver most of what P4 was for. The office gets
-consistent messages, one per family per day, and a record of who was contacted.
+**Done (2026-09-16):** P4a and P4b. No provider, no bill, no new decision beyond the
+wording — and they deliver most of what P4 was for. The office gets consistent messages,
+one per family per day, and a record of who was contacted.
 
-**Then stop on P4.** P4c is two to three weeks of work whose hardest problem is not code.
+**Now stopped on P4.** P4c is two to three weeks of work whose hardest problem is not code.
 Build it when somebody has answered question 4 above.
 
 **P5 is its own project**, and it should be started by answering six questions rather than

@@ -51,6 +51,21 @@ export const lookupAttempts = pgTable(
 );
 
 /** PROJECT_PLAN 7.17 — one row, enforced by the singleton check. */
+/**
+ * What a centre sends before anybody edits the wording (P4a).
+ *
+ * The same three strings are the column defaults in `drizzle/0012`, which is what gives
+ * them to rows that already existed. They are restated here so a NEW row — the seed's,
+ * and every integration fixture's — does not have to supply them.
+ */
+export const DEFAULT_TEMPLATES = {
+  dailyAbsence: "السلام عليكم، {الطالب} غاب اليوم {اليوم} في: {الحصص}. برجاء المتابعة. {المركز} — {الفرع}",
+  repeatedAbsence:
+    "السلام عليكم، {الطالب} غاب اليوم {اليوم} في: {الحصص}، وهذا غيابه رقم {مرات} هذا الشهر. نرجو التواصل مع المكتب. {المركز} — {الفرع}",
+  lowAttendance:
+    "السلام عليكم، نسبة غياب {الطالب} بلغت {النسبة}% في الفترة الأخيرة. نرجو التواصل مع المكتب. {المركز} — {الفرع}",
+} as const;
+
 export const centerSettings = pgTable(
   "center_settings",
   {
@@ -73,6 +88,14 @@ export const centerSettings = pgTable(
     attendanceEditWindowDays: integer().notNull().default(7),
     /** Absence percentage above which a student appears in the alerts report. */
     absenceAlertThresholdPercent: integer().notNull().default(25),
+    /**
+     * What the office sends parents (P4a). In the database, not the code, so changing
+     * برجاء المتابعة to something firmer needs neither a developer nor a deploy.
+     * Defaults live in `drizzle/0012` — the feature works the day it is switched on.
+     */
+    templateDailyAbsence: text().notNull().default(DEFAULT_TEMPLATES.dailyAbsence),
+    templateRepeatedAbsence: text().notNull().default(DEFAULT_TEMPLATES.repeatedAbsence),
+    templateLowAttendance: text().notNull().default(DEFAULT_TEMPLATES.lowAttendance),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },

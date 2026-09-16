@@ -1,19 +1,22 @@
 import Link from "next/link";
-import { MessageCircle } from "lucide-react";
 import { ar } from "@/shared/i18n/ar";
+import { formatDisplayDate } from "@/shared/lib/time";
 import { Badge } from "@/shared/ui/badge";
-import { Button } from "@/shared/ui/button";
 import { Card, CardContent } from "@/shared/ui/card";
 import { EmptyState } from "@/shared/ui/empty-state";
 import type { AbsenceAlertsReport } from "../application/queries/get-reports";
+import { ContactButton } from "./contact-button";
 
 /**
  * Students above the centre's absence threshold (rule 10.7).
  *
- * The WhatsApp link is click-to-chat and nothing more: it opens a conversation the
- * admin then writes themselves. No message is composed, queued or sent — the plan is
- * explicit that there is no automation here, and a system that messages parents on
- * its own is a system that will one day message the wrong one.
+ * The WhatsApp link is click-to-chat, now PRE-FILLED from the centre's own template
+ * (P4a). Still nothing is queued or sent by a machine: a person reads the message and
+ * presses send. A system that messages parents on its own is a system that will one day
+ * message the wrong one — see docs/MESSAGING-AND-FEES-PLAN.md for when that changes.
+ *
+ * "آخر تواصل" comes from the audit log, and is the reason the log is written: it is
+ * what stops the same family being rung twice in a morning.
  *
  * The parent's number is masked on screen; only the link carries it (CLAUDE.md).
  */
@@ -44,20 +47,18 @@ export function AbsenceAlertsList({ report }: { report: AbsenceAlertsReport }) {
                   <p className="text-muted-foreground font-mono text-xs" dir="ltr">
                     {row.maskedPhone}
                   </p>
+                  <p className="text-muted-foreground text-xs">
+                    {row.lastContactedAt
+                      ? `${ar.contact.lastContacted} ${formatDisplayDate(row.lastContactedAt.slice(0, 10))}`
+                      : ar.contact.neverContacted}
+                  </p>
                 </div>
 
                 <Badge variant="destructive" dir="ltr">
                   {row.absencePercent}%
                 </Badge>
 
-                <Button asChild variant="outline" size="sm">
-                  {/* noreferrer as well as noopener: wa.me has no business knowing
-                      which admin screen the click came from. */}
-                  <a href={row.whatsappHref} target="_blank" rel="noopener noreferrer">
-                    <MessageCircle className="size-4" aria-hidden />
-                    {ar.reports.whatsapp}
-                  </a>
-                </Button>
+                <ContactButton href={row.whatsappHref} studentIds={[row.studentId]} />
               </CardContent>
             </Card>
           </li>

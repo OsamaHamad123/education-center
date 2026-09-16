@@ -3,6 +3,7 @@ import type { TenantContext } from "@/shared/auth/tenant-context";
 import type { Tx } from "@/shared/db/client";
 import {
   attendanceRecords,
+  auditLogs,
   branches,
   classes,
   classSessions,
@@ -13,6 +14,7 @@ import {
   type AttendanceStatus,
 } from "@/shared/db/schema";
 import { ZERO_COUNTS, type StatusCounts } from "../domain/attendance-rates";
+import type { AbsenceMark } from "../domain/contact-list";
 
 /**
  * Reports aggregate in SQL (PROJECT_PLAN Phase 8 prompt). A term's attendance for one
@@ -361,3 +363,117 @@ export async function openRegistersToday(
     )
     .orderBy(asc(timetableSlots.periodNumber), asc(classes.name));
 }
+
+// --- today's absences, for the office to ring ---------------------------------
+
+/**
+ * Every absence and late recorded TODAY, with the period it happened in and how many
+ * times that student has been absent this month (P4b).
+ *
+ * One row per mark, not per student: the grouping into families is pure and lives in
+ * `domain/contact-list.ts`, where it is tested without a database.
+ *
+ * `class_sessions.subject_name` rather than a join to `subjects`: an extra session may
+ * name a subject that no longer exists in the list, and the register the parent is being
+ * rung about should say what the register said.
+ */
+export async function absencesOn(
+  _ctx: TenantContext,
+  tx: Tx,
+  date: string,
+  monthStart: string,
+): Promise<AbsenceMark[]> {
+  const monthly = tx.$with("monthly").as(
+    tx
+      .select({
+        studentId: attendanceRecords.studentId,
+        total: sql<number>`count(*)::int`.as("total"),
+      })
+      .from(attendanceRecords)
+      .innerJoin(classSessions, eq(classSessions.id, attendanceRecords.sessionId))
+      .where(
+        and(
+          eq(attendanceRecords.status, "absent"),
+          eq(classSessions.status, "completed"),
+          gte(classSessions.sessionDate, monthStart),
+          lte(classSessions.sessionDate, date),
+        ),
+      )
+      .groupBy(attendanceRecords.studentId),
+  );
+
+  const rows = await tx
+    .with(monthly)
+    .select({
+      studentId: students.id,
+      studentCode: students.studentCode,
+      fullName: students.fullName,
+      className: classes.name,
+      parentPhone: students.parentPhone,
+      status: attendanceRecords.status,
+      subjectName: classSessions.subjectName,
+      periodNumber: classSessions.periodNumber,
+      monthAbsences: sql<number>`coalesce(${monthly.total}, 0)::int`,
+    })
+    .from(attendanceRecords)
+    .innerJoin(classSessions, eq(classSessions.id, attendanceRecords.sessionId))
+    .innerJoin(students, eq(students.id, attendanceRecords.studentId))
+    .innerJoin(classes, eq(classes.id, classSessions.classId))
+    .leftJoin(monthly, eq(monthly.studentId, students.id))
+    .where(
+      and(
+        eq(classSessions.sessionDate, date),
+        eq(classSessions.status, "completed"),
+        inArray(attendanceRecords.status, ["absent", "late"]),
+        // A student who has left is not somebody the office rings about today.
+        eq(students.status, "active"),
+      ),
+    );
+
+  return rows.map((row) => ({
+    studentId: row.studentId,
+    studentCode: row.studentCode,
+    fullName: row.fullName,
+    className: row.className,
+    parentPhone: row.parentPhone,
+    status: row.status === "late" ? "late" : "absent",
+    subjectName: row.subjectName,
+    periodNumber: row.periodNumber,
+    monthAbsences: row.monthAbsences,
+  }));
+}
+
+/**
+ * When each of these students' parents was last contacted, from the audit log (P4a).
+ *
+ * The log is the only record there is — nothing else in the product knows that a message
+ * was ever opened — and reading it back is what stops the office ringing the same family
+ * twice in a morning.
+ */
+export async function lastContactedAt(
+  _ctx: TenantContext,
+  tx: Tx,
+  studentIds: string[],
+): Promise<Map<string, Date>> {
+  if (studentIds.length === 0) return new Map();
+
+  const rows = await tx
+    .select({
+      studentId: auditLogs.entityId,
+      at: sql<Date>`max(${auditLogs.createdAt})`,
+    })
+    .from(auditLogs)
+    .where(
+      and(
+        eq(auditLogs.action, "contact"),
+        eq(auditLogs.entity, CONTACT_ENTITY),
+        inArray(auditLogs.entityId, studentIds),
+      ),
+    )
+    .groupBy(auditLogs.entityId);
+
+  return new Map(rows.flatMap((row) => (row.studentId ? [[row.studentId, new Date(row.at)]] : [])));
+}
+
+/** The audit entity a contact is written under. One constant, read and written here. */
+export const CONTACT_ENTITY = "student.contact";

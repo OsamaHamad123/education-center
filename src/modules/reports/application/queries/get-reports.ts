@@ -2,6 +2,7 @@ import { requirePermission } from "@/shared/actions/create-action";
 import { withTenant } from "@/shared/db/with-tenant";
 import { ar } from "@/shared/i18n/ar";
 import { err, ok, type Result } from "@/shared/lib/result";
+import { renderTemplate } from "@/shared/lib/message-template";
 import { maskPhone, whatsAppLink } from "@/shared/lib/phone";
 import { isoDayOfWeek, todayInCairo } from "@/shared/lib/time";
 import { readDateRange, uuidParam } from "@/shared/lib/url-filters";
@@ -17,6 +18,7 @@ import {
   classMatrix,
   compareBranches,
   countByStudent,
+  lastContactedAt,
   listReportClasses,
   openRegistersToday,
   todayPulse,
@@ -26,7 +28,7 @@ import {
   type OpenRegister,
   type StudentAttendanceRow,
 } from "../../infrastructure/reports.repository";
-import { loadAlertSettings } from "./alert-settings";
+import { loadAlertSettings, loadMessagingContext } from "./alert-settings";
 
 /**
  * The reports (PROJECT_PLAN 10.7). Counts are summed in SQL; every percentage comes
@@ -190,9 +192,12 @@ export type AbsenceAlertRow = {
   absencePercent: number;
   absent: number;
   recorded: number;
-  /** A click-to-chat link; no automation, and the number itself is never displayed. */
+  /** A click-to-chat link, PRE-FILLED from the centre's template (P4a). Still no
+   * automation: a person presses send. */
   whatsappHref: string;
   maskedPhone: string;
+  /** When this parent was last contacted through the product, from the audit log. */
+  lastContactedAt: string | null;
 };
 
 export type AbsenceAlertsReport = {
@@ -230,6 +235,13 @@ export async function getAbsenceAlerts(input: {
       MIN_SESSIONS_FOR_ALERT,
     );
 
+    const messaging = await loadMessagingContext(auth.data, tx);
+    const contacted = await lastContactedAt(
+      auth.data,
+      tx,
+      alerts.map((alert) => alert.subject.studentId),
+    );
+
     return ok({
       range,
       thresholdPercent: threshold,
@@ -242,9 +254,22 @@ export async function getAbsenceAlerts(input: {
         absencePercent: alert.absencePercent,
         absent: alert.counts.absent,
         recorded: alert.total,
-        whatsappHref: whatsAppLink(alert.subject.parentPhone),
+        // Pre-filled with the centre's own wording, rendered server-side so the full
+        // number and the message are assembled in one place.
+        whatsappHref: whatsAppLink(
+          alert.subject.parentPhone,
+          messaging
+            ? renderTemplate(messaging.templateLowAttendance, {
+                الطالب: alert.subject.fullName,
+                النسبة: String(alert.absencePercent),
+                الفرع: messaging.branchName,
+                المركز: messaging.centerName,
+              })
+            : undefined,
+        ),
         // The full number never reaches the page (CLAUDE.md); the link carries it.
         maskedPhone: maskPhone(alert.subject.parentPhone),
+        lastContactedAt: contacted.get(alert.subject.studentId)?.toISOString() ?? null,
       })),
     });
   });

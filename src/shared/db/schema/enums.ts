@@ -29,6 +29,9 @@ export const auditActionEnum = pgEnum("audit_action", [
   "transfer",
   "login",
   "lookup",
+  // Opening a WhatsApp conversation about a child (P4a). Not an 'update': the log is a
+  // thing you filter, and recording a contact as an edit would make it lie.
+  "contact",
 ]);
 
 export type UserRole = (typeof userRoleEnum.enumValues)[number];

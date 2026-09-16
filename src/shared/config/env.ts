@@ -17,6 +17,12 @@ export const env = createEnv({
 
     /** Salt for hashing visitor IPs in `lookup_attempts` — we never store a raw IP. */
     LOOKUP_IP_SALT: z.string().min(16),
+    /**
+     * Salts the parent's phone in `portal_sessions` and in the portal's SQL functions.
+     * Separate from LOOKUP_IP_SALT so that rotating one does not invalidate the other,
+     * and so a leak of either does not link a session to a lookup.
+     */
+    PORTAL_PHONE_SALT: z.string().min(16),
 
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   },

@@ -1,8 +1,10 @@
 # Parent & student portal — a plan
 
-Written September 2026, after the security, UX and product reviews. It is a plan, not a
-decision: section 1 is the part that has to be settled before any of the rest is worth
-estimating.
+Written September 2026, after the security, UX and product reviews.
+
+**P1, P2 and P3 are built (2026-09-16).** What shipped differs from what this planned in
+one place, and section 3 says where. P4–P7 remain a plan, and section 1 is still the part
+that has to be settled before they are worth estimating.
 
 ---
 
@@ -115,9 +117,24 @@ not "read forty policies".
 Each has acceptance criteria in the style of PROJECT_PLAN section 14, so they can be
 worked the way the ten phases before them were.
 
-### Phase P1 — identity without accounts
+### Phase P1 — identity without accounts — **built, on a different credential**
 
 **Goal:** a parent proves the phone is theirs once, and stays in for thirty days.
+
+**What shipped, and why it is not the OTP below.** An OTP needs a messaging provider that
+does not exist and is not funded, and a portal nobody can sign into is not a portal. So
+the credential is the one parents already have — the student code and the last four digits
+of the phone, exactly what the anonymous lookup takes — and what the portal adds on top is
+the **session**: typed once a month instead of once a visit.
+
+That is a deliberate trade, and the cost of it is stated plainly: the credential is no
+stronger than the lookup's, so the portal is no harder to reach than the lookup already
+is. It is guarded by the same rate limiter, on the same two keys, sharing the same budget
+— because two doors onto one secret with separate counters would hand an attacker twice
+the guesses by alternating between them.
+
+The OTP below remains the upgrade, and the table and the flow are unchanged by this: when
+messaging is funded, `app_portal_verify` gains a sibling and nothing else moves.
 
 - `portal_otp` table: phone hash, code hash, expiry, attempts, created_at. Never the
   plain code, never the plain phone.
@@ -137,6 +154,12 @@ worked the way the ten phases before them were.
 past five tries, and that a wrong phone and a right phone are indistinguishable from the
 outside.
 
+**Built:** `portal_sessions` (hashed token, hashed phone, nothing else), a 30-day
+`httpOnly` cookie scoped to `/portal`, sign-out that ends the session on the SERVER, and
+one reply for every failure — wrong code, wrong digits, a child who has left, and the
+feature being switched off all say the same thing, and `parent-portal.spec.ts` compares
+two of those strings to prove it.
+
 ### Phase P2 — the shell, and several children
 
 **Goal:** one parent, all their children, on a phone.
@@ -153,6 +176,10 @@ outside.
 **Done when:** a parent with two children sees both, a parent with one sees no switcher,
 and a student who has left the centre is not listed.
 
+**Built**, including the decision about names: they are **not** masked in the portal. An
+integration test creates two siblings and a stranger on the same branch and asserts the
+stranger is absent from `app_portal_children`.
+
 ### Phase P3 — attendance, properly
 
 **Goal:** everything the lookup shows, plus the things it cannot.
@@ -167,6 +194,11 @@ and a student who has left the centre is not listed.
 
 **Done when:** the portal answers every question the lookup answers, plus a custom range,
 and the print sheet is one page for a term.
+
+**Built:** any range up to two years (capped, because a public endpoint with an uncapped
+range is an invitation), the absence list with the teacher's note, the branch's phone as a
+`tel:` link, and an A4 sheet at `/portal/print` that re-runs the whole query rather than
+trusting its own query string — signed out, that URL is a 404, and there is a test.
 
 > **Stop here unless Q1 says otherwise.** P1–P3 is the whole portal for a centre that
 > tracks attendance. What follows needs decisions that have not been made.

@@ -93,8 +93,35 @@ export const loginAttempts = pgTable(
   (t) => [index("login_attempts_username_created_idx").on(t.username, t.createdAt.desc())],
 );
 
+/**
+ * A parent's portal session (docs/PARENT-PORTAL-PLAN.md, P1).
+ *
+ * No RLS: like `login_attempts` and `lookup_attempts` this is not tenant data, it is
+ * reached before anybody has a tenant context at all, and only the app role can touch
+ * it. Nothing here identifies a person — the phone and the token are both salted
+ * hashes, so a stolen copy of this table is a list of hashes and no way to use them.
+ */
+export const portalSessions = pgTable(
+  "portal_sessions",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    /** sha256 of the cookie's token. The token itself is never stored. */
+    tokenHash: text().notNull().unique(),
+    /** sha256 of the parent's normalized phone — the identity the session carries. */
+    parentPhoneHash: text().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp({ withTimezone: true }).notNull(),
+    lastSeenAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("portal_sessions_token_idx").on(t.tokenHash),
+    index("portal_sessions_expiry_idx").on(t.expiresAt),
+  ],
+);
+
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type NewAuditLog = typeof auditLogs.$inferInsert;
 export type LookupAttempt = typeof lookupAttempts.$inferSelect;
 export type CenterSettings = typeof centerSettings.$inferSelect;
 export type LoginAttempt = typeof loginAttempts.$inferSelect;
+export type PortalSession = typeof portalSessions.$inferSelect;

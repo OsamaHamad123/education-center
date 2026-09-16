@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { ar } from "@/shared/i18n/ar";
 
 /**
  * Phase 3 — branches, users, subjects, center settings, audit log.
@@ -159,6 +160,10 @@ test.describe("branch admin accounts", () => {
     await signIn(page, "admin");
     await page.goto("/users");
 
+    // Searched, not scrolled to: the password-change spec creates a throwaway admin on
+    // every run, so the seeded ones long ago stopped being on the first page. The same
+    // fix the branches and teachers specs already carry.
+    await findInList(page, ar.users.name, "مدير فرع مدينة نصر");
     await expect(visible(page, "admin_nsr").first()).toBeVisible();
     await expect(visible(page, "فرع مدينة نصر").first()).toBeVisible();
   });

@@ -119,13 +119,17 @@ export async function lookupStudent(raw: unknown): Promise<Result<LookupResult>>
 /**
  * The limiter, or nothing when `DISABLE_RATE_LIMIT=1`.
  *
+ * Exported because the parent portal signs in with the SAME credential and must count
+ * against the SAME budget — and must therefore share this escape hatch too. Two copies
+ * of a rate limiter is how one of them quietly stops being applied.
+ *
  * The same escape hatch sign-in already uses, and for the same reason: the whole e2e
  * suite runs from one address, so a per-IP budget meant for the internet would block
  * the suite against itself after five deliberately-wrong lookups. It is never set in
  * production — `.env.example` does not mention it and the server refuses nothing
  * without it.
  */
-async function limitBreach(input: { ipHash: string; code: string }) {
+export async function limitBreach(input: { ipHash: string; code: string }) {
   if (process.env.DISABLE_RATE_LIMIT === "1") return null;
   return checkLookupLimits(await countRecentFailures(input));
 }

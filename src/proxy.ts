@@ -11,7 +11,12 @@ import { NextResponse, type NextRequest } from "next/server";
  */
 const SESSION_COOKIE = "ec.session_token";
 
-const PUBLIC_PREFIXES = ["/login", "/lookup", "/api/auth", "/api/health"];
+/**
+ * `/portal` is public to THIS layer and not public at all underneath: it carries its own
+ * session cookie, and every query behind it re-verifies the parent in SQL. Leaving it out
+ * sent parents to the staff login, which is both wrong and a little insulting.
+ */
+const PUBLIC_PREFIXES = ["/login", "/lookup", "/portal", "/api/auth", "/api/health"];
 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;

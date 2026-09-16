@@ -261,3 +261,85 @@ describe("the floor underneath it", () => {
     expect(slots).toEqual([]);
   });
 });
+
+describe("the parent portal's SQL boundary", () => {
+  /**
+   * docs/PARENT-PORTAL-PLAN.md, P1–P3. The portal has no role and no tenant context, so
+   * the only thing standing between one parent and another family's child is the WHERE
+   * clause inside these functions. That makes them worth testing directly, as the app
+   * role, rather than only through the screens.
+   */
+  const SALT = "integration-test-salt";
+
+  it("gives a parent their own children and nobody else's", async () => {
+    const mine = await makeStudent(fx.branchA.id, fx.classA.id, {
+      fullName: "ابن الأول",
+      studentCode: "AAA-26-10001",
+      parentPhone: "+201000001111",
+    });
+    const sibling = await makeStudent(fx.branchA.id, fx.classA.id, {
+      fullName: "بنت الأول",
+      studentCode: "AAA-26-10002",
+      parentPhone: "+201000001111",
+    });
+    const stranger = await makeStudent(fx.branchA.id, fx.classA.id, {
+      fullName: "ابن غيره",
+      studentCode: "AAA-26-10003",
+      parentPhone: "+201000002222",
+    });
+
+    const [verified] = await appDb.execute<{ hash: string | null }>(
+      sql`select app_portal_verify('AAA-26-10001', '1111', ${SALT}) as hash`,
+    );
+    expect(verified?.hash).toBeTruthy();
+
+    const [children] = await appDb.execute<{ children: { studentId: string }[] }>(
+      sql`select app_portal_children(${verified?.hash ?? ""}, ${SALT}) as children`,
+    );
+    const ids = (children?.children ?? []).map((child) => child.studentId);
+
+    // Siblings come free — they share a phone, which is the whole identity.
+    expect(ids).toContain(mine.id);
+    expect(ids).toContain(sibling.id);
+    expect(ids).not.toContain(stranger.id);
+  });
+
+  it("refuses a student id that is not behind the parent's phone", async () => {
+    await makeStudent(fx.branchA.id, fx.classA.id, {
+      fullName: "ابن الأول",
+      studentCode: "AAA-26-10004",
+      parentPhone: "+201000003333",
+    });
+    const stranger = await makeStudent(fx.branchA.id, fx.classA.id, {
+      fullName: "ابن غيره",
+      studentCode: "AAA-26-10005",
+      parentPhone: "+201000004444",
+    });
+
+    const [verified] = await appDb.execute<{ hash: string | null }>(
+      sql`select app_portal_verify('AAA-26-10004', '3333', ${SALT}) as hash`,
+    );
+
+    // A student id from a URL is a request, not a permission.
+    const [report] = await appDb.execute<{ report: unknown }>(
+      sql`select app_portal_attendance(${stranger.id}::uuid, ${verified?.hash ?? ""}, ${SALT},
+            '2000-01-01'::date, '2100-01-01'::date) as report`,
+    );
+    expect(report?.report).toBeNull();
+  });
+
+  it("stops answering when the centre switches the lookup off", async () => {
+    await makeStudent(fx.branchA.id, fx.classA.id, {
+      fullName: "ابن الأول",
+      studentCode: "AAA-26-10006",
+      parentPhone: "+201000005555",
+    });
+    await ownerDb.update(schema.centerSettings).set({ lookupEnabled: false });
+
+    const [verified] = await appDb.execute<{ hash: string | null }>(
+      sql`select app_portal_verify('AAA-26-10006', '5555', ${SALT}) as hash`,
+    );
+    // The switch closes the DATA path, not merely the door to it.
+    expect(verified?.hash).toBeNull();
+  });
+});

@@ -734,6 +734,23 @@ export const ar = {
     payrollTotal: "إجمالي المستحقات",
   },
 
+  portal: {
+    title: "بوابة ولي الأمر",
+    signInTitle: "دخول ولي الأمر",
+    signInHint: "اكتب كود الطالب وآخر 4 أرقام من هاتفك مرة واحدة، ثم تبقى الصفحة مفتوحة شهراً.",
+    signIn: "دخول",
+    signOut: "خروج",
+    signedOut: "انتهت الجلسة. سجّل الدخول مرة أخرى.",
+    noChildren: "لا توجد بيانات مرتبطة بهذا الرقم.",
+    chooseChild: "اختر الابن",
+    attendanceTitle: "الحضور",
+    absencesTitle: "الغياب والتأخير",
+    noAbsences: "لا غياب في هذه الفترة.",
+    contactTitle: "للتواصل مع الفرع",
+    print: "طباعة السجل",
+    rangeHint: "اختر أي فترة تريد.",
+  },
+
   lookup: {
     title: "استعلام ولي الأمر",
     description: "اكتب كود الطالب وآخر 4 أرقام من هاتف ولي الأمر.",

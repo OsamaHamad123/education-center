@@ -538,6 +538,48 @@ owner decision about required fields), clickable matrix cells (needs the edit wi
 applied per cell), a teacher's week on the timetable screen, a per-teacher payroll sheet,
 and whole-row links on the students table.
 
+## Parent portal — P1, P2, P3 (2026-09-16)
+
+`docs/PARENT-PORTAL-PLAN.md` phases 1–3, built. `drizzle/0009_parent_portal.sql`,
+`src/modules/portal/`, `/portal` and `/portal/print`.
+
+**The identity is not the OTP the plan describes.** An OTP needs a messaging provider
+that does not exist, so the portal signs in with the credential parents already have —
+the student code and the last four digits — and adds the SESSION on top: typed once a
+month instead of once a visit. When messaging is funded, `app_portal_verify` gains a
+sibling and nothing else moves.
+
+**No fourth role.** Three SECURITY DEFINER functions extend the pattern
+`app_public_lookup` set in Phase 9. A parent gets no tenant context at all, so no RLS
+policy had to change and none had to be re-audited.
+
+**Every function re-verifies the parent.** A student id reaches the portal from a URL, so
+each function takes the parent's phone hash too and requires the two to match in the same
+WHERE clause. A tampered id returns nothing, the same way a wrong one does. Tested at the
+SQL level as the app role, not only through the screens.
+
+Two things the build caught that reading would not have:
+
+- A client component importing the module's index dragged `postgres` into the browser
+  bundle and broke `next build` outright. The sign-out button now imports the action file
+  directly, and the comment says why.
+- `/portal` was missing from `proxy.ts`'s public prefixes, so parents were being
+  redirected to the STAFF login.
+
+And one design mistake found by the suite: the portal shared the lookup's rate-limit
+counters but not its `DISABLE_RATE_LIMIT` escape hatch, so under parallel load the portal
+tests blocked each other. There is one guarded limiter now, exported from the lookup
+module — two copies of a rate limiter is how one of them quietly stops being applied.
+
+`admin-management.spec.ts` was also fixed to search before asserting: the password-change
+spec creates a throwaway admin every run, and the seeded ones had long since fallen off
+the first page.
+
+**Test runs on this machine are load-sensitive.** With 6 workers the suite failed 9, then
+2, then 9 tests — a different set each time, each passing in isolation, while a second
+Next server ran on port 3000. At `--workers=2` it is 309 passed, 0 failed. Recorded rather
+than glossed over.
+
 ## Next steps
 
 All ten phases are done. What is left is not a phase — it is the handover:

@@ -453,7 +453,17 @@ Also corrected in the audit: the four `<Suspense>` boundaries were called dead c
 they are not. They wrap components that call `useSearchParams`. They cannot double as
 loading states, but they were not removed.
 
-Phases C and D are open.
+### Phase C — done (2026-09-16)
+
+`useNavPending` now does `router.replace(href, { scroll: false })`, so three taps on the
+attendance date stepper cost one press of the back button to leave, not three, and a
+filter changed from the bottom of a register stays where it was.
+
+Pagination was deliberately left on `push`: those are real `<Link>`s and walking back
+through pages is what a link is for. The line drawn is that a control which changes what
+a list SHOWS replaces, and a link that moves you through it pushes.
+
+Phase D is open.
 
 ## Next steps
 

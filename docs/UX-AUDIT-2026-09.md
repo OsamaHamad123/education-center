@@ -182,6 +182,14 @@ Stepping back through a week on the attendance board leaves seven entries in the
 so the back button no longer means "leave this screen" — it means "undo one date". And
 changing a filter from the bottom of a 25-row register throws the page to the top.
 
+**Fixed** (phase C): `useNavPending` uses `router.replace(href, { scroll: false })`. A
+filter is a refinement of the screen you are on, not a place you went to.
+
+Pagination is deliberately untouched. Those are real `<Link>`s, and walking back through
+pages is what a link is for — mixing the two behaviours on one screen would be worse than
+either. The line is: a control that changes what the list SHOWS replaces; a link that
+moves you through it pushes.
+
 ### 8. Errors are reported three different ways — Low
 
 Inline `<p role="alert">` in ten components, `toast.error` in seven places, and — since
@@ -225,10 +233,11 @@ Not as planned: `loading.tsx` turned out to trade a security property for a skel
 was reverted in favour of `useLinkStatus`. The Suspense boundaries were left alone,
 because they are load-bearing for `useSearchParams`. See both findings above.
 
-### Phase C — the URL as state (finding 7)
+### Phase C — the URL as state (finding 7) — done 2026-09-16
 
-`replace` instead of `push` for filter changes, and `scroll: false`. Small, and it gives
-the back button its meaning back.
+`tests/e2e/filter-history.spec.ts`: three date steps then ONE press of the browser's back
+button leaves the board, and a filter change from the bottom of a list stays where it
+was.
 
 ### Phase D — forms (findings 5, 6, 8)
 

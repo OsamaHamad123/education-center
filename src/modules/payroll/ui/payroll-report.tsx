@@ -1,11 +1,12 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { ChevronDown, Download, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { ar } from "@/shared/i18n/ar";
+import { useNavPending } from "@/shared/ui/use-nav-pending";
 import { ensureBom } from "@/shared/lib/csv";
 import { formatEGP } from "@/shared/lib/money";
 import { Badge } from "@/shared/ui/badge";
@@ -30,7 +31,7 @@ const ANY = "__any__";
  * and only place a decimal point appears.
  */
 export function PayrollReportView({ report }: { report: PayrollReport }) {
-  const router = useRouter();
+  const [isNavigating, navigate] = useNavPending();
   const params = useSearchParams();
   const [isExporting, startExport] = useTransition();
 
@@ -38,7 +39,7 @@ export function PayrollReportView({ report }: { report: PayrollReport }) {
     const next = new URLSearchParams(params.toString());
     if (!value || value === ANY) next.delete(key);
     else next.set(key, value);
-    router.push(`?${next.toString()}`);
+    navigate(`?${next.toString()}`);
   }
 
   function download() {
@@ -75,7 +76,16 @@ export function PayrollReportView({ report }: { report: PayrollReport }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {/*
+        Disabled as a group while the next report is being fetched
+        (docs/UX-AUDIT-2026-09.md, finding 3). A fieldset rather than a styling trick:
+        `disabled` reaches every control inside it, keyboard included.
+      */}
+      <fieldset
+        disabled={isNavigating}
+        aria-busy={isNavigating}
+        className="grid gap-3 transition-opacity disabled:opacity-60 sm:grid-cols-2 lg:grid-cols-4"
+      >
         <div className="space-y-1.5">
           <Label htmlFor="payroll-from">{ar.payroll.from}</Label>
           <Input
@@ -134,7 +144,7 @@ export function PayrollReportView({ report }: { report: PayrollReport }) {
             </Select>
           </div>
         ) : null}
-      </div>
+      </fieldset>
 
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="secondary">

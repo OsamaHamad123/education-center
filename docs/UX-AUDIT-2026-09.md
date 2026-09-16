@@ -91,8 +91,8 @@ a navigation does nothing at all — no spinner, no skeleton, not even a URL cha
 the server has finished rendering.
 
 There are four `<Suspense>` boundaries with skeleton fallbacks, on `/students`,
-`/students/archive`, `/audit` and `/login`. **None of them can ever render**, because the
-data is awaited above them:
+`/students/archive`, `/audit` and `/login`. None of them can render a fallback for DATA,
+because the data is awaited above them:
 
 ```ts
 const [page, classes] = await Promise.all([listStudentsPage(params), listClassOptions()]);
@@ -100,8 +100,28 @@ const [page, classes] = await Promise.all([listStudentsPage(params), listClassOp
 <Suspense fallback={<Skeleton className="h-24 w-full" />}>   // nothing inside suspends
 ```
 
-So the product looks like it has loading states and has none. On a fast local machine
-this is invisible; on a branch's connection it is the whole experience of using it.
+**Correction, made while fixing this.** Those boundaries are not dead code, as first
+written here. Every component inside them calls `useSearchParams`, which Next wants
+wrapped, so they are load-bearing for a reason that has nothing to do with loading —
+they simply cannot also serve as loading states. They were left alone.
+
+On a fast local machine the silence is invisible; on a branch's connection it is the
+whole experience of using the product.
+
+**Fixed** (phase B), and not the way this said to. A route-group `loading.tsx` was
+written first and **reverted**: it makes Next flush the shell before the page has decided
+anything, so `notFound()` then arrives inside a response already sent as **200**. Eight of
+this project's own tests caught it, and returning 200 for a student in another branch
+would undo the thing `docs/SECURITY-REVIEW.md` leans on hardest.
+
+What shipped instead is `useLinkStatus` — a spinner on the nav item that was tapped. The
+feedback lands on the control the user touched, and the route still answers 404 when it
+should. `tests/e2e/loading-feedback.spec.ts` asserts both, so the skeleton cannot come
+back by accident.
+
+One more thing came out of it: on a phone the menu used to close the instant a link was
+tapped, so there was nowhere for the feedback to appear. The sheet now closes when the
+route changes — keyed by the pathname, not synchronised from an effect.
 
 ### 3. Changing a filter gives no sign that anything is happening — High
 
@@ -113,6 +133,13 @@ looking current.
 
 The attendance board's date stepper is the most used control in the product. Tapping
 "يوم سابق" appears to do nothing, so it gets tapped again.
+
+**Fixed** (phase B): `useNavPending` wraps the push in a transition, which does two
+things at once. It gives `isPending`, so each filter group disables itself — a `fieldset`,
+so the keyboard is covered too — and it keeps the CURRENT screen on display while the
+next one is built, rather than replacing it with a skeleton. That division is the whole
+design: a spinner on the link for arriving somewhere, a disabled control for changing
+what you are already looking at.
 
 ### 4. The error page asks for a number it does not have — Medium
 
@@ -192,11 +219,11 @@ almost every assertion.
 dialog still open with its values, the register still marked, and a toast instead of a
 new page.
 
-### Phase B — knowing the app is working (findings 2, 3)
+### Phase B — knowing the app is working (findings 2, 3) — done 2026-09-16
 
-`loading.tsx` where navigation happens, real Suspense boundaries instead of decorative
-ones, and `useTransition` on the five filter components that lack it. The two findings
-that decide how the product feels on a branch's connection.
+Not as planned: `loading.tsx` turned out to trade a security property for a skeleton and
+was reverted in favour of `useLinkStatus`. The Suspense boundaries were left alone,
+because they are load-bearing for `useSearchParams`. See both findings above.
 
 ### Phase C — the URL as state (finding 7)
 

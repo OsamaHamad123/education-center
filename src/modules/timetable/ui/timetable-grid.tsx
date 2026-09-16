@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Plus, Printer } from "lucide-react";
 import { ar, weekdayName } from "@/shared/i18n/ar";
 import { Badge } from "@/shared/ui/badge";
@@ -14,6 +13,7 @@ import { cellKey } from "../domain/copy-timetable";
 import type { ClassPickerOption, ClassTimetable, GridCell } from "../application/queries/get-class-timetable";
 import { CopyTimetableDialog } from "./copy-timetable-dialog";
 import { SlotDialog, type CellTarget } from "./slot-dialog";
+import { useNavPending } from "@/shared/ui/use-nav-pending";
 
 /**
  * The weekly grid (PROJECT_PLAN 10.4). Rows are days Saturday → Thursday, columns are
@@ -36,7 +36,7 @@ export function TimetableGrid({
   copySources: ClassPickerOption[];
   canWrite: boolean;
 }) {
-  const router = useRouter();
+  const [isNavigating, navigate] = useNavPending();
   const [target, setTarget] = useState<CellTarget | null>(null);
 
   const openCell = (dayOfWeek: number, periodNumber: number) => {
@@ -56,7 +56,11 @@ export function TimetableGrid({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <Select value={selectedClassId} onValueChange={(value) => router.push(`/timetable?classId=${value}`)}>
+        <Select
+          value={selectedClassId}
+          onValueChange={(value) => navigate(`/timetable?classId=${value}`)}
+          disabled={isNavigating}
+        >
           <SelectTrigger className="w-full sm:w-64" aria-label={ar.timetable.classLabel}>
             <SelectValue placeholder={ar.timetable.chooseClass} />
           </SelectTrigger>

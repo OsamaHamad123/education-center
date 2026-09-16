@@ -1,9 +1,10 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { X } from "lucide-react";
 import type { BranchOption } from "@/modules/branches";
 import { ar } from "@/shared/i18n/ar";
+import { useNavPending } from "@/shared/ui/use-nav-pending";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
@@ -26,7 +27,7 @@ export function AuditFilters({
   entities: string[];
   canFilterBranch: boolean;
 }) {
-  const router = useRouter();
+  const [isNavigating, navigate] = useNavPending();
   const params = useSearchParams();
 
   function setParam(key: string, value: string | undefined) {
@@ -35,13 +36,23 @@ export function AuditFilters({
     else next.set(key, value);
     // Any filter change returns to the first page; page 7 of the old filter is meaningless.
     next.delete("page");
-    router.push(`/audit?${next.toString()}`);
+    navigate(`/audit?${next.toString()}`);
   }
 
   const hasFilters = [...params.keys()].some((key) => key !== "page");
 
+  /*
+   * Disabled as a group while the next screen is being fetched
+   * (docs/UX-AUDIT-2026-09.md, finding 3). A fieldset rather than a styling trick:
+   * `disabled` here reaches every control inside it, for the keyboard as well as the
+   * mouse.
+   */
   return (
-    <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+    <fieldset
+      disabled={isNavigating}
+      aria-busy={isNavigating}
+      className="mb-4 grid gap-3 transition-opacity disabled:opacity-60 sm:grid-cols-2 lg:grid-cols-5"
+    >
       {canFilterBranch ? (
         <FilterSelect
           id="filter-branch"
@@ -90,13 +101,13 @@ export function AuditFilters({
 
       {hasFilters ? (
         <div className="flex items-end">
-          <Button variant="ghost" size="sm" onClick={() => router.push("/audit")}>
+          <Button variant="ghost" size="sm" onClick={() => navigate("/audit")}>
             <X className="size-4" aria-hidden />
             {ar.audit.clearFilters}
           </Button>
         </div>
       ) : null}
-    </div>
+    </fieldset>
   );
 }
 

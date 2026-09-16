@@ -433,8 +433,27 @@ Ten findings in `docs/UX-AUDIT-2026-09.md`, four phases.
   server error carries a digest; every client-side one landed on a screen telling the
   user to report "الرقم أدناه" with no number on it.
 
-Phases B, C and D are open. B (loading feedback) is the one that decides how the product
-feels on a branch's connection.
+### Phase B — done (2026-09-16)
+
+- **A spinner on the nav item that was tapped**, via `useLinkStatus`.
+- **`useNavPending` on all seven filter components.** The push runs in a transition, so
+  the controls disable as a group and the current screen stays up while the next is
+  built. The attendance date stepper can no longer be tapped twice.
+- **The mobile menu stays open until the route changes**, keyed by the pathname rather
+  than closed from an effect — otherwise there was nowhere for the feedback to appear on
+  the device most of the teachers use.
+
+**A route-group `loading.tsx` was written first and reverted.** It makes Next flush the
+shell before the page decides, so `notFound()` arrives inside a response already sent as
+**200** — eight existing tests caught it. Returning 200 for another branch's student
+would undo what the security review leans on hardest. `loading-feedback.spec.ts` now
+asserts the 404 as well as the spinner, so it cannot come back by accident.
+
+Also corrected in the audit: the four `<Suspense>` boundaries were called dead code, and
+they are not. They wrap components that call `useSearchParams`. They cannot double as
+loading states, but they were not removed.
+
+Phases C and D are open.
 
 ## Next steps
 

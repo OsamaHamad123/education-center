@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { ar, weekdayNameOf } from "@/shared/i18n/ar";
 import { formatDisplayDate } from "@/shared/lib/time";
@@ -13,6 +12,7 @@ import { Input } from "@/shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import type { AttendanceBoard, BoardPeriod } from "../application/queries/get-attendance-board";
 import { ExtraSessionDialog } from "./extra-session-dialog";
+import { useNavPending } from "@/shared/ui/use-nav-pending";
 
 /**
  * Step two of the flow (rule 10.5): the day's periods, each saying whether it has
@@ -32,18 +32,22 @@ export function AttendanceBoardView({
   subjects: { id: string; name: string }[];
   canManage: boolean;
 }) {
-  const router = useRouter();
+  const [isNavigating, navigate] = useNavPending();
 
   const go = (params: { classId?: string; date?: string }) => {
     const classId = params.classId ?? board.classRef.id;
     const date = params.date ?? board.sessionDate;
-    router.push(`/attendance?classId=${classId}&date=${date}`);
+    navigate(`/attendance?classId=${classId}&date=${date}`);
   };
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <Select value={board.classRef.id} onValueChange={(classId) => go({ classId })}>
+        <Select
+          value={board.classRef.id}
+          onValueChange={(classId) => go({ classId })}
+          disabled={isNavigating}
+        >
           <SelectTrigger className="w-full sm:w-56" aria-label={ar.attendance.classLabel}>
             <SelectValue placeholder={ar.attendance.chooseClass} />
           </SelectTrigger>
@@ -61,6 +65,9 @@ export function AttendanceBoardView({
             variant="outline"
             size="icon"
             aria-label={ar.attendance.previousDay}
+            // Disabled while the next day is being fetched: this is the control that
+            // looked like it had done nothing, so it got tapped twice.
+            disabled={isNavigating}
             onClick={() => go({ date: shiftDays(board.sessionDate, -1) })}
           >
             <ChevronRight className="size-4" aria-hidden />
@@ -73,6 +80,7 @@ export function AttendanceBoardView({
             aria-label={ar.attendance.date}
             dir="ltr"
             className="w-40 text-center"
+            disabled={isNavigating}
             onChange={(event) => event.target.value && go({ date: event.target.value })}
           />
 
@@ -80,7 +88,7 @@ export function AttendanceBoardView({
             variant="outline"
             size="icon"
             aria-label={ar.attendance.nextDay}
-            disabled={board.sessionDate >= board.today}
+            disabled={isNavigating || board.sessionDate >= board.today}
             onClick={() => go({ date: shiftDays(board.sessionDate, 1) })}
           >
             <ChevronLeft className="size-4" aria-hidden />
@@ -88,7 +96,7 @@ export function AttendanceBoardView({
         </div>
 
         {board.sessionDate !== board.today ? (
-          <Button variant="ghost" onClick={() => go({ date: board.today })}>
+          <Button variant="ghost" disabled={isNavigating} onClick={() => go({ date: board.today })}>
             <CalendarDays className="size-4" aria-hidden />
             {ar.attendance.today}
           </Button>

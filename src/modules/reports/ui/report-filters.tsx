@@ -1,7 +1,8 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { ar } from "@/shared/i18n/ar";
+import { useNavPending } from "@/shared/ui/use-nav-pending";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
@@ -24,18 +25,28 @@ export function ReportFilters({
   /** Omitted when a class must be chosen, as in the matrix. */
   allClassesLabel?: string;
 }) {
-  const router = useRouter();
+  const [isNavigating, navigate] = useNavPending();
   const params = useSearchParams();
 
   function setParam(key: string, value: string | undefined) {
     const next = new URLSearchParams(params.toString());
     if (!value || value === ANY) next.delete(key);
     else next.set(key, value);
-    router.push(`?${next.toString()}`);
+    navigate(`?${next.toString()}`);
   }
 
+  /*
+   * Disabled as a group while the next screen is being fetched
+   * (docs/UX-AUDIT-2026-09.md, finding 3). A fieldset rather than a styling trick:
+   * `disabled` here reaches every control inside it, for the keyboard as well as the
+   * mouse.
+   */
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <fieldset
+      disabled={isNavigating}
+      aria-busy={isNavigating}
+      className="grid gap-3 transition-opacity disabled:opacity-60 sm:grid-cols-2 lg:grid-cols-4"
+    >
       <div className="space-y-1.5">
         <Label htmlFor="report-from">{ar.payroll.from}</Label>
         <Input
@@ -76,6 +87,6 @@ export function ReportFilters({
           </Select>
         </div>
       ) : null}
-    </div>
+    </fieldset>
   );
 }

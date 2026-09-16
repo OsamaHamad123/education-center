@@ -1,11 +1,12 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Download, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import type { ClassOption } from "@/modules/classes";
 import { ar } from "@/shared/i18n/ar";
+import { useNavPending } from "@/shared/ui/use-nav-pending";
 import { ensureBom } from "@/shared/lib/csv";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
@@ -24,14 +25,14 @@ export function StudentsFilters({
   status: "active" | "archived";
   canSeeTransferredOut: boolean;
 }) {
-  const router = useRouter();
+  const [isNavigating, navigate] = useNavPending();
   const params = useSearchParams();
   const [search, setSearch] = useState(params.get("search") ?? "");
   const [isExporting, startExport] = useTransition();
 
   function apply(next: URLSearchParams) {
     next.delete("page");
-    router.push(`?${next.toString()}`);
+    navigate(`?${next.toString()}`);
   }
 
   function setParam(key: string, value: string | undefined) {
@@ -70,8 +71,18 @@ export function StudentsFilters({
 
   const hasFilters = [...params.keys()].some((key) => key !== "page" && key !== "status");
 
+  /*
+   * Disabled as a group while the next screen is being fetched
+   * (docs/UX-AUDIT-2026-09.md, finding 3). A fieldset rather than a styling trick:
+   * `disabled` here reaches every control inside it, for the keyboard as well as the
+   * mouse.
+   */
   return (
-    <div className="mb-4 flex flex-wrap items-end gap-3">
+    <fieldset
+      disabled={isNavigating}
+      aria-busy={isNavigating}
+      className="mb-4 flex flex-wrap items-end gap-3 transition-opacity disabled:opacity-60"
+    >
       <form onSubmit={submitSearch} className="relative min-w-0 flex-1 sm:max-w-sm">
         <Label htmlFor="student-search" className="sr-only">
           {ar.students.search}
@@ -136,6 +147,6 @@ export function StudentsFilters({
         <Download className="size-4" aria-hidden />
         {ar.students.exportCsv}
       </Button>
-    </div>
+    </fieldset>
   );
 }

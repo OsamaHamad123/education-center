@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/shared/ui/card";
 import { EmptyState } from "@/shared/ui/empty-state";
 import type { AbsenceAlertsReport } from "../application/queries/get-reports";
 import { ContactButton } from "./contact-button";
+import { StopMessagesButton } from "./stop-messages-button";
 
 /**
  * Students above the centre's absence threshold (rule 10.7).
@@ -58,7 +59,12 @@ export function AbsenceAlertsList({ report }: { report: AbsenceAlertsReport }) {
                   {row.absencePercent}%
                 </Badge>
 
-                <ContactButton href={row.whatsappHref} studentIds={[row.studentId]} />
+                {row.stopped ? (
+                  <Badge variant="outline">{ar.contact.stopped}</Badge>
+                ) : (
+                  <ContactButton href={row.whatsappHref} studentIds={[row.studentId]} />
+                )}
+                <StopMessagesButton studentId={row.studentId} stopped={row.stopped} />
               </CardContent>
             </Card>
           </li>

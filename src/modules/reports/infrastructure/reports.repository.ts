@@ -567,3 +567,70 @@ export async function moneyByBranch(_ctx: TenantContext, tx: Tx, period: string)
     payrollPaidPiasters: Number(row.payroll_paid),
   }));
 }
+
+// --- families who have asked not to be messaged -------------------------------
+
+/**
+ * The phone hashes, among these students', that have stopped messages
+ * (`drizzle/0018`; docs/MESSAGING-AND-FEES-PLAN.md, P4c step 2).
+ *
+ * The hash is computed in SQL from the same salt the portal uses, so the phone itself
+ * never travels and one family is one answer however many children they have.
+ */
+export async function stoppedPhones(
+  _ctx: TenantContext,
+  tx: Tx,
+  studentIds: string[],
+  phoneSalt: string,
+): Promise<Set<string>> {
+  if (studentIds.length === 0) return new Set();
+
+  const rows = await tx.execute<{ student_id: string }>(sql`
+    select s.id as student_id
+    from students s
+    join parent_message_optouts o
+      on o.parent_phone_hash = encode(digest(${phoneSalt} || ':' || s.parent_phone, 'sha256'), 'hex')
+    where s.id in ${studentIds}`);
+
+  return new Set(rows.map((row) => row.student_id));
+}
+
+/** Sets or clears one family's opt-out, from the office side. */
+export async function setStoppedForStudent(
+  _ctx: TenantContext,
+  tx: Tx,
+  studentId: string,
+  phoneSalt: string,
+  stop: boolean,
+): Promise<boolean> {
+  if (stop) {
+    const inserted = await tx.execute<{ ok: boolean }>(sql`
+      insert into parent_message_optouts (parent_phone_hash, source)
+      select encode(digest(${phoneSalt} || ':' || s.parent_phone, 'sha256'), 'hex'), 'office'
+      from students s where s.id = ${studentId}
+      on conflict (parent_phone_hash) do nothing
+      returning true as ok`);
+    // Already stopped is success: the office asked for a state, not for a change.
+    return inserted.length > 0 || (await isStopped(tx, studentId, phoneSalt));
+  }
+
+  const deleted = await tx.execute<{ ok: boolean }>(sql`
+    delete from parent_message_optouts o
+    using students s
+    where s.id = ${studentId}
+      and o.parent_phone_hash =
+        encode(digest(${phoneSalt} || ':' || s.parent_phone, 'sha256'), 'hex')
+    returning true as ok`);
+  return deleted.length > 0 || !(await isStopped(tx, studentId, phoneSalt));
+}
+
+async function isStopped(tx: Tx, studentId: string, phoneSalt: string): Promise<boolean> {
+  const rows = await tx.execute<{ stopped: boolean }>(sql`
+    select exists (
+      select 1 from students s
+      join parent_message_optouts o
+        on o.parent_phone_hash = encode(digest(${phoneSalt} || ':' || s.parent_phone, 'sha256'), 'hex')
+      where s.id = ${studentId}
+    ) as stopped`);
+  return rows[0]?.stopped ?? false;
+}

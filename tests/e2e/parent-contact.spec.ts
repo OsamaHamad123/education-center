@@ -117,3 +117,37 @@ test.describe("the absence alerts screen", () => {
     await expect(page.getByText(ar.contact.neverContacted).first()).toBeVisible();
   });
 });
+
+test.describe("a family that has asked us to stop", () => {
+  test("loses the message button, and gets it back", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "one browser: it changes a real family");
+    test.setTimeout(150_000);
+    await signIn(page, "admin_nsr");
+    await page.goto(`/attendance/contact?date=${YESTERDAY}`);
+
+    const first = page.locator('a[href^="https://wa.me/"]').first();
+    await expect(first).toBeVisible({ timeout: 20_000 });
+    const before = await page.locator('a[href^="https://wa.me/"]').count();
+
+    await page.getByRole("button", { name: ar.contact.stopMessages }).first().click();
+    await page.getByRole("button", { name: ar.contact.stopMessages }).last().click();
+    await expect(page.getByText(ar.contact.stopped).first()).toBeVisible({ timeout: 20_000 });
+
+    // No button at all rather than a greyed-out one: a disabled button is still pressed
+    // by somebody in a hurry.
+    expect(await page.locator('a[href^="https://wa.me/"]').count()).toBe(before - 1);
+
+    // And it can be undone — an opt-out nobody can reverse is a support call.
+    await page.getByRole("button", { name: ar.contact.resumeMessages }).first().click();
+    await page.getByRole("button", { name: ar.contact.resumeMessages }).last().click();
+    await expect
+      .poll(
+        async () => {
+          await page.goto(`/attendance/contact?date=${YESTERDAY}`);
+          return page.locator('a[href^="https://wa.me/"]').count();
+        },
+        { timeout: 20_000 },
+      )
+      .toBe(before);
+  });
+});

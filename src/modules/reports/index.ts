@@ -29,6 +29,7 @@ export {
 } from "./application/queries/get-reports";
 export { getContactList, type ContactList, type ContactRow } from "./application/queries/get-contact-list";
 export { recordParentContact } from "./application/use-cases/record-contact";
+export { setFamilyMessaging } from "./application/use-cases/set-messaging";
 export { getMoneyReport, type MoneyReport } from "./application/queries/get-money";
 export { AbsenceAlertsList } from "./ui/absence-alerts";
 export { ContactListView } from "./ui/contact-list";

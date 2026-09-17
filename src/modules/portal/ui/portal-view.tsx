@@ -1,6 +1,8 @@
 "use client";
 
-import { Phone, Printer } from "lucide-react";
+import { useState } from "react";
+import { Loader2, Phone, Printer } from "lucide-react";
+import { toast } from "sonner";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ar } from "@/shared/i18n/ar";
@@ -12,7 +14,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/sha
 import { DateField } from "@/shared/ui/date-field";
 import { Label } from "@/shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
+import { useAction } from "@/shared/ui/use-action";
 import { useNavPending } from "@/shared/ui/use-nav-pending";
+import { setPortalMessaging } from "../application/use-cases/portal-messaging";
 import type { PortalView } from "../application/queries/get-portal";
 
 /**
@@ -200,6 +204,8 @@ export function PortalView({ view }: { view: PortalView }) {
         </CardContent>
       </Card>
 
+      <MessagingSwitch stopped={view.messagingStopped} />
+
       <Button asChild variant="outline" className="w-full">
         <Link
           href={`/portal/print?studentId=${view.selected.studentId}&from=${view.range.from}&to=${view.range.to}`}
@@ -210,5 +216,52 @@ export function PortalView({ view }: { view: PortalView }) {
         </Link>
       </Button>
     </div>
+  );
+}
+
+/**
+ * "Stop messaging me", where the parent already is (`drizzle/0018`).
+ *
+ * The centre messages through WhatsApp by hand today, and will one day do it
+ * automatically. Either way the place a parent can say no should not be a reply to a
+ * number nobody is watching.
+ *
+ * Nothing about WHICH family travels in the request — the identity is the session — so
+ * there is no id here to forge.
+ */
+function MessagingSwitch({ stopped }: { stopped: boolean }) {
+  const [isPending, startTransition] = useAction();
+  const [isStopped, setIsStopped] = useState(stopped);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{ar.portal.messagingTitle}</CardTitle>
+        <CardDescription>
+          {isStopped ? ar.portal.messagingStoppedHint : ar.portal.messagingOnHint}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Button
+          variant="outline"
+          className="w-full"
+          disabled={isPending}
+          onClick={() =>
+            startTransition(async () => {
+              const result = await setPortalMessaging(!isStopped);
+              if (!result.ok) {
+                toast.error(result.error.message);
+                return;
+              }
+              setIsStopped(result.data.stopped);
+              toast.success(ar.portal.messagingSaved);
+            })
+          }
+        >
+          {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+          {isStopped ? ar.portal.messagingResume : ar.portal.messagingStop}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

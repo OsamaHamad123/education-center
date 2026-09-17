@@ -121,10 +121,18 @@ whose absences are not final — sending then is the six-messages mistake wearin
 different hat), and a **date control**, because half the time the office rings the next
 morning about the day before.
 
-## P4c — automatic sending — **blocked on §16 q8, 2–3 weeks**
+## P4c — automatic sending — **still blocked on §16 q8; step 2 built early**
 
-Only after the provider decision. Built in this order, because each step is what makes
-the next one safe:
+Only after the provider decision — **with one exception, now built: the opt-out
+(step 2), which needs no provider and was already overdue.** The rest is in this order
+because each step is what makes the next one safe:
+
+**Why the rest was not built.** Steps 1, 3, 5 and 6 are a queue, a job, a screen and a
+cap for a sender that does not exist, and building them now would be worse than idle: a
+WhatsApp outbox carries approved template ids and typed parameters, an SMS one carries a
+string. Designing the queue before the provider is chosen is designing it for the wrong
+one. The answer to §16 q8 is the first line of that code, not a detail to fill in
+afterwards.
 
 1. **`message_outbox`** — recipient hash, template, rendered body, state
    (queued / sent / failed / skipped), provider id, attempts, error. A queue, because a
@@ -142,7 +150,7 @@ the next one safe:
 
 **Done when:** a day with three absences for one child produces one message; an opted-out
 parent produces none; and a failed send is visible to the office within the hour rather
-than never.
+than never. **The middle one already holds**, for the messages a person sends by hand.
 
 ## What the owner must decide before P4c
 

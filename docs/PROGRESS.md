@@ -847,6 +847,45 @@ stored against a term id — attendance, invoices and payslips are all stored ag
 — so removing a label mistyped in September changes no figure anywhere. An integration
 test asserts exactly that: the attendance count is the same before and after.
 
+## "Stop messaging me" — P4c step 2 (2026-09-17)
+
+Roadmap item 5 is P4c, and P4c is blocked. **One step of it was not**, and it was the
+one already overdue: `drizzle/0018`, `parent_message_optouts`.
+
+**Why it could not wait.** Since P4a the office has been messaging parents by hand, and
+a parent who said "stop" had nowhere to be recorded but somebody's memory. The opt-out
+needs no provider, no budget and no answer to "who reads the replies".
+
+**Why the rest WAS left.** Steps 1, 3, 5 and 6 of P4c are a queue, a job, a screen and a
+cap for a sender that does not exist — and building the queue now would likely build the
+wrong one: a WhatsApp outbox carries approved template ids and typed parameters, an SMS
+outbox carries a string. The answer to §16 q8 is the first line of that code rather than
+a detail to fill in afterwards.
+
+**Three decisions, in the migration.** The table is keyed on a SALTED HASH of the phone,
+not the phone: a branch admin already sees their own students' numbers, and a table of
+every phone in the centre would hand them the other branches' too — hashed, a dump names
+nobody. A ROW MEANS STOPPED, so the common case stores nothing and nothing had to be
+back-filled. And the PARENT can set it themselves from the portal, through a
+SECURITY DEFINER function that re-verifies them exactly as every other portal query does
+— so a hash lifted from somewhere cannot be used to silence a family.
+
+**It is the family's, not the student's.** One phone, one row, every sibling, every
+branch. A per-student opt-out would mean a parent who said stop still being messaged
+about their other child, and an integration test asserts the single row.
+
+**No button rather than a disabled one** on both screens that message anybody: a greyed
+out button is still pressed by somebody in a hurry.
+
+Two test notes. The suite's own reset lists had to learn the new table — rows were
+leaking between tests until they did. And the second register-draft e2e was racing its
+own feature: it reloaded in the same tick as the tap, and the draft is written by an
+effect. That is a race in the TEST, and the wait is now explicit rather than implied.
+
+**Port 3100 stopped being bindable mid-session** — Windows had taken 3001–3100 and
+3114–3213 into its excluded port ranges. The suite runs on 3300 now; nothing about the
+product changed.
+
 ## Next steps
 
 **See `docs/ROADMAP.md`** — written 2026-09-17, after payroll runs closed the last item

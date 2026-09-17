@@ -7,6 +7,7 @@ import {
   attendanceFor,
   balanceFor,
   childrenOf,
+  messagingStopped,
   type PortalAttendance,
   type PortalBalance,
   type PortalChild,
@@ -29,6 +30,8 @@ export type PortalView = {
   attendance: PortalAttendance;
   /** Null when the centre has not billed this family at all — not zero (P5d). */
   balance: PortalBalance | null;
+  /** This family has asked the centre not to message them (`drizzle/0018`). */
+  messagingStopped: boolean;
 };
 
 export async function getPortalChildren(): Promise<Result<PortalChild[]>> {
@@ -63,9 +66,10 @@ export async function getPortalView(input: {
   // real question a parent has.
   const range = rangeIsSane(from, to) ? { from, to } : fallback;
 
-  const [attendance, balance] = await Promise.all([
+  const [attendance, balance, stopped] = await Promise.all([
     attendanceFor(selected.studentId, parent, range.from, range.to),
     balanceFor(selected.studentId, parent),
+    messagingStopped(parent),
   ]);
   // Null means the database refused the pairing. It is the same reply a tampered id
   // gets, and the same one a child who has just left gets.
@@ -74,5 +78,12 @@ export async function getPortalView(input: {
   // An empty ledger is not a zero balance: a centre that has not started billing must
   // not show a family a confident مستحق: 0.00 they might rely on.
   const hasLedger = balance !== null && balance.months.length > 0;
-  return ok({ children, selected, range, attendance, balance: hasLedger ? balance : null });
+  return ok({
+    children,
+    selected,
+    range,
+    attendance,
+    balance: hasLedger ? balance : null,
+    messagingStopped: stopped,
+  });
 }

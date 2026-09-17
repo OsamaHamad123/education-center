@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/shared/ui/card";
 import { EmptyState } from "@/shared/ui/empty-state";
 import type { ContactList } from "../application/queries/get-contact-list";
 import { ContactButton } from "./contact-button";
+import { StopMessagesButton } from "./stop-messages-button";
 
 /**
  * Today's absences, one row per family (P4b).
@@ -72,9 +73,19 @@ export function ContactListView({ list }: { list: ContactList }) {
                       {row.children.length > 1 ? (
                         <Badge variant="outline">{ar.contact.siblings(row.children.length)}</Badge>
                       ) : null}
-                      <ContactButton
-                        href={row.whatsappHref}
-                        studentIds={row.children.map((child) => child.studentId)}
+                      {/* No button at all for a family that has asked us to stop. A
+                          greyed-out one would still be pressed by somebody in a hurry. */}
+                      {row.stopped ? (
+                        <Badge variant="outline">{ar.contact.stopped}</Badge>
+                      ) : (
+                        <ContactButton
+                          href={row.whatsappHref}
+                          studentIds={row.children.map((child) => child.studentId)}
+                        />
+                      )}
+                      <StopMessagesButton
+                        studentId={row.children[0]?.studentId ?? ""}
+                        stopped={row.stopped}
                       />
                     </div>
                   </div>

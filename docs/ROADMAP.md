@@ -96,7 +96,7 @@ audit log for whether anybody signs in; a flat line means the cards are in a dra
 
 # What I know is missing, in the order I would do it
 
-**Items 1, 2, 3 and 4 were built on 2026-09-17**, ahead of the deployment phases, at the
+**Items 1, 2, 3 and 4 were built on 2026-09-17, and item 5's one unblocked step with them**, ahead of the deployment phases, at the
 owner's instruction. The recommendation above stands unchanged: they are three more
 pieces of code that have never met a real user, on a deployment that has not happened.
 
@@ -169,12 +169,24 @@ calendar comes from the ministry and three copies of it would be three things to
 step; and **fees stay monthly** — P5 answered that and built it, and a term fee is a
 different feature rather than a consequence of naming the calendar.
 
-### 5. Automatic messages — **P4c, 2 to 3 weeks, and still blocked**
+### 5. Automatic messages — **still blocked; the opt-out built early**
 
 `MESSAGING-AND-FEES-PLAN.md` has the whole plan. It waits on a provider, a budget, and
 the question that sinks projects like this: **who reads the replies?** P4a and P4b
 already deliver most of the value with a human in the loop, which at this size is a
 feature.
+
+**One step of it was built (2026-09-17): the opt-out**, `drizzle/0018`. It needs no
+provider and it was already overdue — the office has been messaging parents by hand
+since P4a, and a parent who said "stop" had nowhere to be recorded but somebody's
+memory. Both screens that message anybody now honour it, and the parent can set it
+themselves in the portal.
+
+**The rest was deliberately not built**, and not only because of the decision: steps 1,
+3, 5 and 6 are a queue, a job, a screen and a cap for a sender that does not exist. A
+WhatsApp outbox carries approved template ids and typed parameters; an SMS one carries a
+string. Designing the queue before the provider is chosen is designing it for the wrong
+one.
 
 ### Also open, and smaller
 

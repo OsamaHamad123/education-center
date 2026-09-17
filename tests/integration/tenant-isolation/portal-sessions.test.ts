@@ -309,3 +309,103 @@ describe("a portal sign-in leaves a trace", () => {
     expect(rows[0]?.userId).toBeNull();
   });
 });
+
+describe("stop messaging me (drizzle/0018)", () => {
+  /**
+   * P4c's step 2, and the only step of it that does not wait on a provider. The rule it
+   * has to keep is that the opt-out is the FAMILY's: one phone, one answer, however many
+   * children and in however many branches.
+   */
+  async function stopped(hash: string): Promise<boolean> {
+    const [row] = await appDb.execute<{ stopped: boolean }>(
+      sql`select app_portal_messaging_stopped(${hash}) as stopped`,
+    );
+    return row?.stopped ?? false;
+  }
+
+  async function setStop(hash: string, stop: boolean): Promise<boolean> {
+    const [row] = await appDb.execute<{ ok: boolean }>(
+      sql`select app_portal_set_messaging(${hash}, ${SALT}, ${stop}) as ok`,
+    );
+    return row?.ok ?? false;
+  }
+
+  it("lets a parent stop and resume their own messages", async () => {
+    await makeStudent(fx.branchA.id, fx.classA.id, {
+      fullName: "ابن الأول",
+      studentCode: "AAA-26-40001",
+      parentPhone: "+201000011111",
+    });
+    const hash = (await verify("AAA-26-40001", "1111")) ?? "";
+
+    expect(await stopped(hash)).toBe(false);
+    expect(await setStop(hash, true)).toBe(true);
+    expect(await stopped(hash)).toBe(true);
+
+    expect(await setStop(hash, false)).toBe(true);
+    expect(await stopped(hash)).toBe(false);
+  });
+
+  it("covers every sibling, because the opt-out is the family's", async () => {
+    await makeStudent(fx.branchA.id, fx.classA.id, {
+      fullName: "الأكبر",
+      studentCode: "AAA-26-40002",
+      parentPhone: "+201000012222",
+    });
+    await makeStudent(fx.branchB.id, fx.classB.id, {
+      fullName: "الأصغر",
+      studentCode: "BBB-26-40003",
+      parentPhone: "+201000012222",
+    });
+    const hash = (await verify("AAA-26-40002", "2222")) ?? "";
+    await setStop(hash, true);
+
+    // One row, both children, both branches. A per-student opt-out would mean a parent
+    // who said stop still being messaged about their other child.
+    //
+    // Counted as OWNER: the table's select policy is `app_role() IS NOT NULL`, and this
+    // connection has no tenant context at all — which is the portal's own state, and
+    // exactly why the parent's switch goes through a SECURITY DEFINER function.
+    const rows = await ownerDb.execute<{ count: number }>(
+      sql`select count(*)::int as count from parent_message_optouts`,
+    );
+    expect(Number(rows[0]?.count)).toBe(1);
+    expect(await stopped(hash)).toBe(true);
+  });
+
+  it("refuses a hash that belongs to nobody", async () => {
+    // The same re-verification every other portal function does: a hash lifted from
+    // somewhere must not be usable to silence a family.
+    expect(await setStop("not-a-real-hash", true)).toBe(false);
+  });
+
+  it("refuses when the branch is not in the rollout", async () => {
+    await makeStudent(fx.branchA.id, fx.classA.id, {
+      fullName: "ابن مغلق",
+      studentCode: "AAA-26-40004",
+      parentPhone: "+201000013333",
+    });
+    const hash = (await verify("AAA-26-40004", "3333")) ?? "";
+    await ownerDb.update(schema.branches).set({ portalEnabled: false });
+
+    expect(await setStop(hash, true)).toBe(false);
+  });
+
+  it("is readable by staff and writable only by an admin", async () => {
+    await ownerDb.insert(schema.parentMessageOptouts).values({ parentPhoneHash: "hash-for-the-test" });
+
+    // Staff read it to know whether to offer the button. A teacher may read it too and
+    // it costs nothing: by decision 1 of drizzle/0018 the rows are salted hashes, so the
+    // list names nobody. Writing is another matter.
+    const staff = await asTenant(ctxFor.branchAdmin(fx.branchA.id), (tx) =>
+      tx.select().from(schema.parentMessageOptouts),
+    );
+    expect(staff).toHaveLength(1);
+
+    await expect(
+      asTenant(ctxFor.teacher(fx.teacherA.id), (tx) =>
+        tx.insert(schema.parentMessageOptouts).values({ parentPhoneHash: "forged" }),
+      ),
+    ).rejects.toThrow();
+  });
+});

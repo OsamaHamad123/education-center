@@ -1,4 +1,5 @@
 import { requirePermission } from "@/shared/actions/create-action";
+import { env } from "@/shared/config/env";
 import { withTenant } from "@/shared/db/with-tenant";
 import { ar } from "@/shared/i18n/ar";
 import { err, ok, type Result } from "@/shared/lib/result";
@@ -20,6 +21,7 @@ import {
   countByStudent,
   lastContactedAt,
   listReportClasses,
+  stoppedPhones,
   openRegistersToday,
   todayPulse,
   type BranchComparisonRow,
@@ -198,6 +200,8 @@ export type AbsenceAlertRow = {
   maskedPhone: string;
   /** When this parent was last contacted through the product, from the audit log. */
   lastContactedAt: string | null;
+  /** This family has asked not to be messaged (`drizzle/0018`). */
+  stopped: boolean;
 };
 
 export type AbsenceAlertsReport = {
@@ -241,6 +245,12 @@ export async function getAbsenceAlerts(input: {
       tx,
       alerts.map((alert) => alert.subject.studentId),
     );
+    const stopped = await stoppedPhones(
+      auth.data,
+      tx,
+      alerts.map((alert) => alert.subject.studentId),
+      env.PORTAL_PHONE_SALT,
+    );
 
     return ok({
       range,
@@ -270,6 +280,7 @@ export async function getAbsenceAlerts(input: {
         // The full number never reaches the page (CLAUDE.md); the link carries it.
         maskedPhone: maskPhone(alert.subject.parentPhone),
         lastContactedAt: contacted.get(alert.subject.studentId)?.toISOString() ?? null,
+        stopped: stopped.has(alert.subject.studentId),
       })),
     });
   });

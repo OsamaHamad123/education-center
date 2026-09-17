@@ -158,3 +158,23 @@ export async function balanceFor(studentId: string, parentPhoneHash: string): Pr
   );
   return rows[0]?.balance ?? null;
 }
+
+/** Whether this family has stopped messages (`drizzle/0018`). */
+export async function messagingStopped(parentPhoneHash: string): Promise<boolean> {
+  const rows = await db.execute<{ stopped: boolean }>(
+    sql`select app_portal_messaging_stopped(${parentPhoneHash}) as stopped`,
+  );
+  return rows[0]?.stopped ?? false;
+}
+
+/**
+ * The parent's own switch. Returns false when the database refused the pairing — the
+ * same answer a tampered hash gets, and the same one a family whose branch is not in
+ * the rollout gets.
+ */
+export async function setMessagingStopped(parentPhoneHash: string, stop: boolean): Promise<boolean> {
+  const rows = await db.execute<{ ok: boolean }>(
+    sql`select app_portal_set_messaging(${parentPhoneHash}, ${salt()}, ${stop}) as ok`,
+  );
+  return rows[0]?.ok ?? false;
+}

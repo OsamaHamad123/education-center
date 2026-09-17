@@ -1,4 +1,5 @@
 import { requirePermission } from "@/shared/actions/create-action";
+import { env } from "@/shared/config/env";
 import { withTenant } from "@/shared/db/with-tenant";
 import { ar } from "@/shared/i18n/ar";
 import { err, ok, type Result } from "@/shared/lib/result";
@@ -6,7 +7,12 @@ import { renderTemplate } from "@/shared/lib/message-template";
 import { maskPhone, whatsAppLink } from "@/shared/lib/phone";
 import { isoDayOfWeek, isIsoDate, todayInCairo } from "@/shared/lib/time";
 import { familyTemplateValues, groupByFamily, type ContactChild } from "../../domain/contact-list";
-import { absencesOn, lastContactedAt, openRegistersToday } from "../../infrastructure/reports.repository";
+import {
+  absencesOn,
+  lastContactedAt,
+  openRegistersToday,
+  stoppedPhones,
+} from "../../infrastructure/reports.repository";
 import { loadMessagingContext } from "./alert-settings";
 
 /**
@@ -31,6 +37,8 @@ export type ContactRow = {
   whatsappHref: string;
   /** When this family was last contacted through this screen, from the audit log. */
   lastContactedAt: string | null;
+  /** This family has asked not to be messaged (`drizzle/0018`). No button is offered. */
+  stopped: boolean;
 };
 
 export type ContactList = {
@@ -62,6 +70,12 @@ export async function getContactList(input: { date?: string | undefined }): Prom
     );
 
     const open = await openRegistersToday(auth.data, tx, date, isoDayOfWeek(date));
+    const stopped = await stoppedPhones(
+      auth.data,
+      tx,
+      families.flatMap((family) => family.children.map((child) => child.studentId)),
+      env.PORTAL_PHONE_SALT,
+    );
 
     return ok({
       date,
@@ -93,6 +107,8 @@ export async function getContactList(input: { date?: string | undefined }): Prom
           message,
           whatsappHref: whatsAppLink(family.parentPhone, message),
           lastContactedAt: last ? last.toISOString() : null,
+          // One child is enough: the opt-out is the family's, not the student's.
+          stopped: family.children.some((child) => stopped.has(child.studentId)),
         } satisfies ContactRow;
       }),
     });

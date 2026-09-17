@@ -196,3 +196,23 @@ export const academicTerms = pgTable(
 );
 
 export type AcademicTerm = typeof academicTerms.$inferSelect;
+
+/**
+ * Families who have asked not to be messaged (`drizzle/0018`).
+ *
+ * Keyed on a SALTED HASH of the phone, not the phone: a branch admin can already see
+ * their own students' numbers, and a table of every phone in the centre would hand them
+ * the other branches' too. Hashed, a dump of this table names nobody.
+ *
+ * A row means "stopped". No row means messages are fine, so the common case stores
+ * nothing and nothing had to be back-filled for the families who never asked.
+ */
+export const parentMessageOptouts = pgTable("parent_message_optouts", {
+  parentPhoneHash: text().primaryKey(),
+  optedOutAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  /** `parent` when they switched it off themselves, `office` when somebody rang. */
+  source: text().notNull().default("office"),
+  note: text(),
+});
+
+export type ParentMessageOptout = typeof parentMessageOptouts.$inferSelect;

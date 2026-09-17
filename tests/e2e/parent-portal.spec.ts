@@ -152,3 +152,30 @@ test.describe("the portal is not indexable", () => {
     expect(robots.includes("noindex") || html.includes("noindex")).toBe(true);
   });
 });
+
+test.describe("the parent's own switch", () => {
+  test("stops the centre's messages, and says so on the next visit", async ({ page }) => {
+    test.setTimeout(120_000);
+    await signIn(page, CHILD);
+    await expect(page.getByText(CHILD.code)).toBeVisible({ timeout: 20_000 });
+
+    // P4c step 2: the opt-out belongs where the parent already is, not in a reply to a
+    // number nobody is watching.
+    await page.getByRole("button", { name: "أوقف الرسائل" }).click();
+    await expect(page.getByRole("button", { name: "أعد الرسائل" })).toBeVisible({
+      timeout: 20_000,
+    });
+
+    await page.reload();
+    // It survives, because it is a row rather than a toggle in the browser.
+    await expect(page.getByRole("button", { name: "أعد الرسائل" })).toBeVisible({
+      timeout: 20_000,
+    });
+
+    // Put it back: the suite shares one database and the next test's family is this one.
+    await page.getByRole("button", { name: "أعد الرسائل" }).click();
+    await expect(page.getByRole("button", { name: "أوقف الرسائل" })).toBeVisible({
+      timeout: 20_000,
+    });
+  });
+});

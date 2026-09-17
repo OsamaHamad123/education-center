@@ -81,10 +81,14 @@ test.describe("unsaved marks on a bad connection", () => {
     await signIn(page, "admin_giz");
     if (!(await openFirstRegister(page))) test.skip(true, "no register to mark in Giza today");
 
-    await page
-      .getByRole("button", { name: /: حاضر$/ })
-      .first()
-      .click();
+    const present = page.getByRole("button", { name: /: حاضر$/ }).first();
+    const name = (await present.getAttribute("aria-label"))?.replace(/: حاضر$/, "") ?? "";
+    await present.click();
+    // Wait for the tap to land before reloading. The draft is written by an effect, and
+    // a reload fired in the same tick can beat it — a race in the TEST rather than in
+    // the feature, which is why this assertion is here instead of implied.
+    await expect(page.getByRole("button", { name: `${name}: غائب` })).toBeVisible();
+
     await page.reload();
     await expect(page.getByText(ar.attendance.draftFound)).toBeVisible({ timeout: 20_000 });
 

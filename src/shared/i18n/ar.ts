@@ -818,6 +818,12 @@ export const ar = {
     feesHint: "المتبقّي عليك الآن. للاستفسار أو السداد، مراجعة مكتب الفرع.",
     feePaid: "مدفوع",
     feeDue: "متبقّي",
+    messagingTitle: "رسائل المركز",
+    messagingOnHint: "يتواصل معك المركز عند غياب ابنك أو انخفاض نسبة حضوره.",
+    messagingStoppedHint: "أوقفت رسائل المركز. يمكنك إعادتها متى شئت — وتبقى هذه الصفحة متاحة لك كما هي.",
+    messagingStop: "أوقف الرسائل",
+    messagingResume: "أعد الرسائل",
+    messagingSaved: "تم الحفظ.",
     rangeHint: "اختر أي فترة تريد.",
   },
 
@@ -1007,6 +1013,15 @@ export const ar = {
     repeated: "غياب متكرر",
     lastContacted: "آخر تواصل:",
     neverContacted: "لم يتم التواصل من قبل.",
+    stopped: "أوقف الرسائل",
+    stopMessages: "إيقاف الرسائل",
+    resumeMessages: "إعادة الرسائل",
+    stopTitle: "إيقاف الرسائل لهذه الأسرة؟",
+    stopDescription:
+      "لن يظهر زر المراسلة لهذه الأسرة في أي شاشة. يشمل كل أبنائها في كل الفروع، ويمكن التراجع عنه في أي وقت.",
+    resumeTitle: "إعادة الرسائل؟",
+    resumeDescription: "سيعود زر المراسلة للظهور لهذه الأسرة.",
+    stopSaved: "تم حفظ تفضيل الأسرة.",
     siblings: (count: number) => `${count} أبناء`,
     openRegisters: (count: number) =>
       `لم يُرصد الحضور بعد في ${count} حصة اليوم. القائمة غير مكتملة — الأفضل الانتظار حتى نهاية اليوم.`,

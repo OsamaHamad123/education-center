@@ -188,12 +188,47 @@ WhatsApp outbox carries approved template ids and typed parameters; an SMS one c
 string. Designing the queue before the provider is chosen is designing it for the wrong
 one.
 
-### Also open, and smaller
+### Also open, and smaller — **both closed 2026-09-17**
 
-- **§16 question 4** (travel time between branches for a shared teacher) — the default,
-  no gap, has not hurt anybody yet.
-- **`/lookup` performance** — 150 KiB of framework JavaScript for one form. Only matters
-  if somebody is counting the Lighthouse score.
+#### §16 question 4 — travel time between branches — **built**
+
+A teacher double-booked at the same MOMENT has been refused since Phase 6, by a gist
+exclusion constraint across every branch. What nothing ever refused was the lesson
+ending in Nasr City at 10:30 and the one starting in El Obour at 10:35: no overlap, no
+conflict, and a timetable nobody can teach.
+
+`center_settings.teacher_travel_minutes`, **0 by default** so every existing centre keeps
+today's behaviour, and between BRANCHES only — two lessons in one building are back to
+back by design, which is what a bell schedule is. The refusal names the minutes to
+everybody and the branch only to a super admin: a number names nobody, a branch name
+would.
+
+#### `/lookup` performance — **measured, and my own estimate was wrong**
+
+The figure above said 150 KiB. Measured on a production build, the page pulls
+**1,353 KiB of JavaScript raw** across 19 chunks (roughly 350–400 KiB over the wire).
+Nearly ten times what this document claimed, which is what estimating instead of
+measuring buys.
+
+Two causes, both found by reading the chunks rather than guessing:
+
+1. **The whole Arabic i18n object.** `ar.ts` is 55 KB of source and every string in the
+   product — payroll, fees, audit, the timetable editor — and it ships to a page whose
+   only text is a form and a result. It cannot be tree-shaken: `ar` is one object
+   literal, so reaching `ar.lookup.x` keeps all of it.
+2. **date-fns**, pulled in through `time.ts` — and `ar.ts` imported `time.ts` for one
+   function, so the timezone machinery was in the browser bundle of EVERY page.
+
+**Fixed:** the library-free half of `time.ts` now lives in `date-display.ts` — showing a
+date, checking one, and naming its weekday are string and calendar arithmetic and need no
+library. `ar.ts` and the public pages import that instead.
+
+**Not fixed, and deliberately:** the total did not move. Splitting `ar.ts` so a page pulls
+only the strings it uses means changing every `ar.x.y` call site in the product, and the
+rest is the Next and React runtime. That is a refactor of a hundred files for the byte
+count of a page nobody has complained about, on a product that still has not been
+deployed. The number is now written down; the decision can be made on it rather than on
+a guess.
 
 ---
 

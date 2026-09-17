@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ar } from "@/shared/i18n/ar";
 import { formatEGP } from "@/shared/lib/money";
-import { formatDisplayDate } from "@/shared/lib/time";
+import { formatDisplayDate } from "@/shared/lib/date-display";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";

@@ -39,6 +39,7 @@ export function SettingsForm({ settings }: { settings: CenterSettings }) {
         teacherCanMarkAttendance: teacherCanMark,
         attendanceEditWindowDays: readText(data, "attendanceEditWindowDays"),
         absenceAlertThresholdPercent: readText(data, "absenceAlertThresholdPercent"),
+        teacherTravelMinutes: readText(data, "teacherTravelMinutes"),
         templateDailyAbsence: readText(data, "templateDailyAbsence"),
         templateRepeatedAbsence: readText(data, "templateRepeatedAbsence"),
         templateLowAttendance: readText(data, "templateLowAttendance"),
@@ -147,6 +148,25 @@ export function SettingsForm({ settings }: { settings: CenterSettings }) {
                 <p className="text-muted-foreground text-xs">{ar.settings.absenceThresholdHint}</p>
                 <FieldError message={fieldError("absenceAlertThresholdPercent")} />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="teacherTravelMinutes">{ar.settings.travelMinutes}</Label>
+              <Input
+                id="teacherTravelMinutes"
+                name="teacherTravelMinutes"
+                type="number"
+                min={0}
+                max={240}
+                defaultValue={settings.teacherTravelMinutes}
+                required
+                dir="ltr"
+                className="text-start"
+                inputMode="numeric"
+                disabled={isPending}
+              />
+              <p className="text-muted-foreground text-xs">{ar.settings.travelMinutesHint}</p>
+              <FieldError message={fieldError("teacherTravelMinutes")} />
             </div>
 
             <div className="space-y-4 border-t pt-5">

@@ -11,6 +11,14 @@ import type { RedactedConflict } from "../domain/conflicts";
 export function conflictMessage(conflict: RedactedConflict): string {
   if (conflict.kind === "class_busy") return ar.timetable.conflictClassBusy;
 
+  // Travel time (§16 q4). The minutes are said to everybody — a number names nobody —
+  // and only a super admin is told which branch the teacher has to reach.
+  if (conflict.kind === "teacher_travel") {
+    return conflict.detail === "other_branch"
+      ? `${ar.timetable.conflictTravel(conflict.gapMinutes)} — ${conflict.branchName}.`
+      : ar.timetable.conflictTravel(conflict.gapMinutes);
+  }
+
   switch (conflict.detail) {
     case "same_branch":
       return `${ar.timetable.conflictTeacherSameBranch} ${conflict.className} (${ar.timetable.period} ${conflict.periodNumber}).`;

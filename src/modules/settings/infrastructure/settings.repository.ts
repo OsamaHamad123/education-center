@@ -19,6 +19,7 @@ export async function saveSettings(
     teacherCanMarkAttendance: boolean;
     attendanceEditWindowDays: number;
     absenceAlertThresholdPercent: number;
+    teacherTravelMinutes: number;
     templateDailyAbsence: string;
     templateRepeatedAbsence: string;
     templateLowAttendance: string;

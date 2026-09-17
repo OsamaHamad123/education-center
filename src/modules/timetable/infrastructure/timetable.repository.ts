@@ -277,8 +277,10 @@ export async function findTeacherConflicts(
   _ctx: TenantContext,
   tx: Tx,
   candidates: readonly ConflictCandidate[],
-): Promise<Map<number, ExistingSlot[]>> {
-  const byCandidate = new Map<number, ExistingSlot[]>();
+  /** §16 q4. 0 restores exactly the old overlap-only behaviour. */
+  travelMinutes = 0,
+): Promise<Map<number, (ExistingSlot & { gapMinutes: number })[]>> {
+  const byCandidate = new Map<number, (ExistingSlot & { gapMinutes: number })[]>();
   if (candidates.length === 0) return byCandidate;
 
   const payload = candidates.map((candidate) => ({
@@ -290,7 +292,7 @@ export async function findTeacherConflicts(
   }));
 
   const rows = await tx.execute(
-    sql`select * from app_timetable_conflicts(${JSON.stringify(payload)}::jsonb)`,
+    sql`select * from app_timetable_conflicts(${JSON.stringify(payload)}::jsonb, ${travelMinutes})`,
   );
 
   for (const raw of rows as unknown as ConflictFunctionRow[]) {
@@ -311,6 +313,9 @@ export async function findTeacherConflicts(
       periodNumber: raw.period_number ?? 0,
       startTime: candidate.startTime,
       endTime: candidate.endTime,
+      // 0 for a real overlap, positive for a travel clash. A number names nobody, so
+      // it is told to every role (drizzle/0019).
+      gapMinutes: raw.gap_minutes ?? 0,
     });
     byCandidate.set(raw.candidate_index, list);
   }
@@ -327,6 +332,7 @@ const REDACTED_BRANCH = "redacted-branch";
 const REDACTED_CLASS = "redacted-class";
 
 type ConflictFunctionRow = {
+  gap_minutes: number | null;
   candidate_index: number;
   slot_id: string | null;
   branch_id: string | null;

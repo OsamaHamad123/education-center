@@ -4,7 +4,9 @@ import { useState } from "react";
 import { Loader2, Search } from "lucide-react";
 import { ar, weekdayName } from "@/shared/i18n/ar";
 import { readText } from "@/shared/lib/form-data";
-import { formatDisplayDate, WEEK_DISPLAY_ORDER } from "@/shared/lib/time";
+// The pure module, not `time.ts`: this page is opened by a parent on a phone, and
+// `time.ts` imports date-fns for the functions that decide what "now" is.
+import { formatDisplayDate, WEEK_DISPLAY_ORDER } from "@/shared/lib/date-display";
 import type { AppError } from "@/shared/lib/result";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";

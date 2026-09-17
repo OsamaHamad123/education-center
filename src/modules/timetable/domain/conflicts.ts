@@ -1,4 +1,4 @@
-import { timeRangesOverlap, type IsoTime } from "@/shared/lib/time";
+import { timeRangesOverlap, timeToMinutes, type IsoTime } from "@/shared/lib/time";
 
 /**
  * Timetable conflicts (PROJECT_PLAN 7.12, 10.4).
@@ -38,7 +38,12 @@ export type SlotConflict =
   /** The class already has something in that period. */
   | { kind: "class_busy"; with: ExistingSlot }
   /** The teacher is in another classroom at that moment — possibly another branch. */
-  | { kind: "teacher_busy"; with: ExistingSlot };
+  | { kind: "teacher_busy"; with: ExistingSlot }
+  /**
+   * The teacher is free at that moment but cannot get there (§16 question 4). Between
+   * BRANCHES only: two lessons in one building are back to back by design.
+   */
+  | { kind: "teacher_travel"; with: ExistingSlot; gapMinutes: number };
 
 /**
  * Every reason `candidate` cannot be written, given the slots that already exist.
@@ -47,9 +52,10 @@ export type SlotConflict =
 export function findConflicts(
   candidate: PlannedSlot,
   existing: readonly ExistingSlot[],
-  options: { ignoreSlotId?: string } = {},
+  options: { ignoreSlotId?: string; travelMinutes?: number; candidateBranchId?: string } = {},
 ): SlotConflict[] {
   const conflicts: SlotConflict[] = [];
+  const travelMinutes = options.travelMinutes ?? 0;
 
   for (const slot of existing) {
     if (slot.id === options.ignoreSlotId) continue;
@@ -60,15 +66,40 @@ export function findConflicts(
       continue;
     }
 
-    if (
-      slot.teacherId === candidate.teacherId &&
-      timeRangesOverlap(candidate.startTime, candidate.endTime, slot.startTime, slot.endTime)
-    ) {
+    if (slot.teacherId !== candidate.teacherId) continue;
+
+    if (timeRangesOverlap(candidate.startTime, candidate.endTime, slot.startTime, slot.endTime)) {
       conflicts.push({ kind: "teacher_busy", with: slot });
+      continue;
+    }
+
+    // A gap rule inside one building would refuse the ordinary day, which is what a
+    // bell schedule is. Only a hop between branches needs travelling to.
+    if (travelMinutes <= 0) continue;
+    if (options.candidateBranchId === undefined || slot.branchId === options.candidateBranchId) continue;
+
+    const gap = gapMinutesBetween(candidate, slot);
+    if (gap < travelMinutes) {
+      conflicts.push({ kind: "teacher_travel", with: slot, gapMinutes: gap });
     }
   }
 
   return conflicts;
+}
+
+/** Whole minutes between two non-overlapping ranges on the same day. */
+export function gapMinutesBetween(
+  a: { startTime: IsoTime; endTime: IsoTime },
+  b: { startTime: IsoTime; endTime: IsoTime },
+): number {
+  const aStart = timeToMinutes(a.startTime);
+  const aEnd = timeToMinutes(a.endTime);
+  const bStart = timeToMinutes(b.startTime);
+  const bEnd = timeToMinutes(b.endTime);
+
+  if (bStart >= aEnd) return bStart - aEnd;
+  if (aStart >= bEnd) return aStart - bEnd;
+  return 0;
 }
 
 export type ViewerRole = "super_admin" | "branch_admin" | "teacher";
@@ -86,7 +117,13 @@ export type RedactedConflict =
   | { kind: "class_busy"; className: string; periodNumber: number }
   | { kind: "teacher_busy"; detail: "same_branch"; className: string; periodNumber: number }
   | { kind: "teacher_busy"; detail: "other_branch"; branchName: string; className: string }
-  | { kind: "teacher_busy"; detail: "none" };
+  | { kind: "teacher_busy"; detail: "none" }
+  /**
+   * Travel time (§16 q4). The minutes are told to everybody — a number names nobody —
+   * and only a super admin is told WHICH branch the teacher has to get to.
+   */
+  | { kind: "teacher_travel"; detail: "other_branch"; branchName: string; gapMinutes: number }
+  | { kind: "teacher_travel"; detail: "none"; gapMinutes: number };
 
 export function redactConflict(
   conflict: SlotConflict,
@@ -97,6 +134,17 @@ export function redactConflict(
   if (conflict.kind === "class_busy") {
     // The clash is inside the class being edited, so its name is already on screen.
     return { kind: "class_busy", className: slot.className, periodNumber: slot.periodNumber };
+  }
+
+  if (conflict.kind === "teacher_travel") {
+    return viewer.role === "super_admin"
+      ? {
+          kind: "teacher_travel",
+          detail: "other_branch",
+          branchName: slot.branchName,
+          gapMinutes: conflict.gapMinutes,
+        }
+      : { kind: "teacher_travel", detail: "none", gapMinutes: conflict.gapMinutes };
   }
 
   if (viewer.branchId !== null && slot.branchId === viewer.branchId) {

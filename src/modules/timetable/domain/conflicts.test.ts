@@ -160,3 +160,94 @@ describe("firstRedactedConflict", () => {
     expect(firstRedactedConflict([], { role: "branch_admin", branchId: BRANCH_A })).toBeNull();
   });
 });
+
+describe("travel time between branches (§16 question 4)", () => {
+  /**
+   * A teacher double-booked at the same MOMENT has been refused since Phase 6. What was
+   * never refused is the lesson that ends in one branch at 09:30 and the one that starts
+   * in another at 09:35 — no overlap, no conflict, and a timetable nobody can teach.
+   */
+  const nextDoor = { travelMinutes: 30, candidateBranchId: BRANCH_A };
+
+  it("refuses a tight hop to another branch", () => {
+    const conflicts = findConflicts(
+      candidate,
+      [slot({ teacherId: "teacher-1", branchId: BRANCH_B, startTime: "09:35", endTime: "10:20" })],
+      nextDoor,
+    );
+    expect(conflicts[0]?.kind).toBe("teacher_travel");
+    expect(conflicts[0]).toMatchObject({ gapMinutes: 5 });
+  });
+
+  it("allows the same hop when there is enough time", () => {
+    const conflicts = findConflicts(
+      candidate,
+      [slot({ teacherId: "teacher-1", branchId: BRANCH_B, startTime: "10:30", endTime: "11:15" })],
+      nextDoor,
+    );
+    expect(conflicts).toEqual([]);
+  });
+
+  it("measures backwards too — the other lesson may come FIRST", () => {
+    const conflicts = findConflicts(
+      candidate,
+      [slot({ teacherId: "teacher-1", branchId: BRANCH_B, startTime: "08:00", endTime: "08:40" })],
+      nextDoor,
+    );
+    expect(conflicts[0]).toMatchObject({ kind: "teacher_travel", gapMinutes: 5 });
+  });
+
+  it("does NOT apply inside one branch", () => {
+    // Two lessons in one building are back to back by design — that is what a bell
+    // schedule is, and a gap rule there would refuse the ordinary day.
+    const conflicts = findConflicts(
+      candidate,
+      [slot({ teacherId: "teacher-1", branchId: BRANCH_A, startTime: "09:30", endTime: "10:15" })],
+      nextDoor,
+    );
+    expect(conflicts).toEqual([]);
+  });
+
+  it("is off when the centre has not set it", () => {
+    // The default, and therefore every centre until somebody answers §16 q4.
+    const conflicts = findConflicts(
+      candidate,
+      [slot({ teacherId: "teacher-1", branchId: BRANCH_B, startTime: "09:35", endTime: "10:20" })],
+      { travelMinutes: 0, candidateBranchId: BRANCH_A },
+    );
+    expect(conflicts).toEqual([]);
+  });
+
+  it("still calls a real overlap busy, not a travel problem", () => {
+    // An impossible booking outranks a tight one, and says so in different words.
+    const conflicts = findConflicts(
+      candidate,
+      [slot({ teacherId: "teacher-1", branchId: BRANCH_B, startTime: "09:00", endTime: "09:45" })],
+      nextDoor,
+    );
+    expect(conflicts[0]?.kind).toBe("teacher_busy");
+  });
+
+  it("tells a super admin which branch, and a branch admin only the minutes", () => {
+    const [conflict] = findConflicts(
+      candidate,
+      [slot({ teacherId: "teacher-1", branchId: BRANCH_B, startTime: "09:35", endTime: "10:20" })],
+      nextDoor,
+    );
+    if (!conflict) throw new Error("expected a conflict");
+
+    expect(redactConflict(conflict, { role: "super_admin", branchId: null })).toEqual({
+      kind: "teacher_travel",
+      detail: "other_branch",
+      branchName: "مدينة نصر",
+      gapMinutes: 5,
+    });
+
+    // A number of minutes names nobody; the branch's NAME would.
+    expect(redactConflict(conflict, { role: "branch_admin", branchId: BRANCH_A })).toEqual({
+      kind: "teacher_travel",
+      detail: "none",
+      gapMinutes: 5,
+    });
+  });
+});

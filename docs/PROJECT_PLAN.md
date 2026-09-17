@@ -948,7 +948,7 @@ Implement Phase 10 from docs/PROJECT_PLAN.md (section 13). Produce a security re
 1. Can a branch admin request a student transfer to another branch, or only super admin performs it? (default: SA only)
 2. Can teachers mark attendance themselves? Same day only? (default: yes, same day, toggle in settings)
 3. Lookup result: show student full name or partial (e.g. first name + father)? (default: first two names)
-4. Is there a minimum gap between a teacher's sessions in different branches (travel time)? (default: none in v1)
+4. ~~Is there a minimum gap between a teacher's sessions in different branches (travel time)?~~ **Answered 2026-09-17 by building it** (`drizzle/0019`): `center_settings.teacher_travel_minutes`, 0 by default so the v1 behaviour is unchanged, applied between branches only.
 5. Should an `excused` or `late` student count as present in attendance percentage? (default: late = present, excused excluded from denominator)
 6. Are teacher payments ever per-hour or fixed monthly instead of per session? (default: per session only)
 7. ~~Academic terms/years: do reports need a "term" concept?~~ **Answered 2026-09-17 by building it** (`drizzle/0017`): a term is a named date range, centre-wide, offered as a preset on reports and used for the public lookup's "الفصل" figure. Reports still compute on date ranges; fees stay monthly.

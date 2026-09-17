@@ -1,4 +1,7 @@
-import { isoDayOfWeek, type IsoDate } from "@/shared/lib/time";
+// `date-display`, not `time.ts`: every client component in the product imports this
+// file, and `time.ts` pulls date-fns for the functions that decide what "now" is. One
+// import here was putting the whole library in every page's browser bundle.
+import { isoDayOfWeek, type IsoDate } from "@/shared/lib/date-display";
 
 /**
  * All user-facing Arabic text. Components never hard-code strings (CLAUDE.md,
@@ -316,6 +319,9 @@ export const ar = {
     editWindowHint: "لمديري الفروع. الإدارة العامة تعدّل دون قيد زمني.",
     absenceThreshold: "حد تنبيه الغياب (%)",
     absenceThresholdHint: "يظهر الطالب في تقرير التنبيهات إذا تجاوزت نسبة غيابه هذا الحد.",
+    travelMinutes: "وقت الانتقال بين الفروع (دقائق)",
+    travelMinutesHint:
+      "أقل فاصل بين حصتي معلم في فرعين مختلفين. صفر يعني إيقاف القاعدة — ولا تنطبق داخل الفرع الواحد.",
     saved: "تم حفظ الإعدادات.",
     missing: "لا توجد إعدادات بعد.",
     missingHint: "شغّل pnpm db:seed لإنشاء صف الإعدادات.",
@@ -532,6 +538,8 @@ export const ar = {
     conflictTeacherSameBranch: "المعلم مشغول في هذا الوقت مع",
     conflictTeacherOtherBranch: "المعلم مشغول في هذا الوقت في فرع",
     conflictTeacherHidden: "المعلم مشغول في هذا الوقت.",
+    conflictTravel: (gapMinutes: number) =>
+      `لا يكفي الوقت لانتقال المعلم بين الفروع: ${gapMinutes} دقيقة فقط بين الحصتين.`,
 
     settings: "جرس المدرسة",
     settingsTitle: "إعدادات الجدول",

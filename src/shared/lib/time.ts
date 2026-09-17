@@ -1,5 +1,6 @@
 import { TZDate } from "@date-fns/tz";
 import { addMinutes, format, isValid, parse } from "date-fns";
+import { type IsoDate } from "./date-display";
 
 /**
  * Every calendar decision in this system happens in Cairo, regardless of where the
@@ -8,19 +9,27 @@ import { addMinutes, format, isValid, parse } from "date-fns";
  */
 export const CAIRO_TZ = "Africa/Cairo";
 
-/** ISO weekday numbers. The Egyptian school week runs Saturday → Thursday. */
-export const ISO_MONDAY = 1;
-export const ISO_SATURDAY = 6;
-export const ISO_SUNDAY = 7;
-
-/** Display order of the week in timetables: Saturday first, Friday is the weekend. */
-export const WEEK_DISPLAY_ORDER = [6, 7, 1, 2, 3, 4, 5] as const;
-
-/** Default working days of a branch: Saturday → Thursday. */
-export const DEFAULT_WORKING_DAYS = [6, 7, 1, 2, 3, 4] as const;
-
-/** A calendar day as stored in a Postgres `date` column: `yyyy-MM-dd`. */
-export type IsoDate = string;
+/**
+ * The library-free half of this file lives in `date-display.ts`, and is re-exported
+ * here so every existing caller carries on unchanged.
+ *
+ * The split is a measured one: this module imports `date-fns` for the functions that
+ * decide what "now" is in Cairo, and any client component importing it — even only to
+ * reorder three fields of a date it already has — put the whole library in the browser's
+ * bundle, including on the PUBLIC lookup (docs/ROADMAP.md).
+ */
+export {
+  DEFAULT_WORKING_DAYS,
+  formatDisplayDate,
+  ISO_MONDAY,
+  ISO_SATURDAY,
+  ISO_SUNDAY,
+  isIsoDate,
+  isoDayOfWeek,
+  isRealIsoDate,
+  WEEK_DISPLAY_ORDER,
+  type IsoDate,
+} from "./date-display";
 
 /** A time of day as stored in a Postgres `time` column: `HH:mm`. */
 export type IsoTime = string;
@@ -33,13 +42,6 @@ export function todayInCairo(now: Date = new Date()): IsoDate {
 /** The current wall-clock time in Cairo, as `HH:mm`. */
 export function nowTimeInCairo(now: Date = new Date()): IsoTime {
   return format(new TZDate(now, CAIRO_TZ), "HH:mm");
-}
-
-/** ISO weekday (1 = Monday … 7 = Sunday) of a calendar day. */
-export function isoDayOfWeek(date: IsoDate): number {
-  const day = parseIsoDate(date).getDay();
-  // JS getDay() is 0 = Sunday; ISO wants 7 for Sunday.
-  return day === 0 ? ISO_SUNDAY : day;
 }
 
 /** Parses `yyyy-MM-dd` into a Date anchored at midnight in Cairo. */
@@ -59,21 +61,6 @@ export function parseIsoDate(date: IsoDate): Date {
  * and both make Postgres raise on the cast, which is how a query string became a 500.
  * `parseIsoDate` rejects them because date-fns checks that the parts round-trip.
  */
-export function isIsoDate(value: unknown): value is IsoDate {
-  if (typeof value !== "string") return false;
-  try {
-    parseIsoDate(value);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/** Formats a calendar day for display: `dd/MM/yyyy` (PROJECT_PLAN section 12). */
-export function formatDisplayDate(date: IsoDate): string {
-  return format(parseIsoDate(date), "dd/MM/yyyy");
-}
-
 /** Minutes since midnight for `HH:mm` — the unit period arithmetic works in. */
 export function timeToMinutes(time: IsoTime): number {
   const match = /^(\d{2}):(\d{2})(?::\d{2})?$/.exec(time);

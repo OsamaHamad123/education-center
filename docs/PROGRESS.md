@@ -886,6 +886,40 @@ effect. That is a race in the TEST, and the wait is now explicit rather than imp
 3114–3213 into its excluded port ranges. The suite runs on 3300 now; nothing about the
 product changed.
 
+## The last two roadmap items (2026-09-17)
+
+**§16 question 4 — travel time between branches — built.** `drizzle/0019`. A teacher in
+two places at the same MOMENT has been refused since Phase 6; a teacher who finishes in
+Nasr City at 10:30 and starts in El Obour at 10:35 never was. The allowance is a number
+of minutes in centre settings because the answer differs by city, it is **0 by default**
+so no existing centre changes, and it applies between BRANCHES only — two lessons in one
+building are back to back by design.
+
+The redaction was the interesting part: the refusal tells everybody the MINUTES and only
+a super admin the branch. A number names nobody; a branch name would. The SQL function
+from `drizzle/0005` gained a travel argument and now returns the gap, and its old
+one-argument form was dropped in the same migration so there is never a moment when two
+answers to that question exist.
+
+**`/lookup` performance — measured, and the roadmap's own figure was wrong.** It said
+150 KiB. On a production build the page pulls **1,353 KiB of JavaScript raw** across 19
+chunks. That is what estimating instead of measuring buys, and it is now written down.
+
+Two causes, found by reading the chunks: the entire `ar.ts` (55 KB of source, every
+string in the product, shipped to a page whose only text is a form), and date-fns —
+which `ar.ts` was pulling in through `time.ts` for ONE function, putting the timezone
+machinery in the browser bundle of every page in the product.
+
+**What was fixed:** `date-display.ts` now holds the library-free half — showing a date,
+checking one, and naming its weekday are string and calendar arithmetic. `ar.ts` and the
+public pages import that.
+
+**What was not, deliberately:** the total did not move. Splitting `ar.ts` per screen
+means touching every `ar.x.y` call site in the product, and the remainder is the Next and
+React runtime. That is a hundred-file refactor for the byte count of a page nobody has
+complained about, on a product that has still never been deployed. The measurement is
+recorded so the decision can be made on a number rather than on my guess.
+
 ## Next steps
 
 **See `docs/ROADMAP.md`** — written 2026-09-17, after payroll runs closed the last item

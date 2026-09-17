@@ -288,14 +288,21 @@ describe("app_timetable_conflicts — explaining a clash without leaking", () =>
     same_branch: boolean;
     class_name: string | null;
     branch_name: string | null;
+    gap_minutes: number;
   };
 
-  async function ask(ctx: Parameters<typeof asTenant>[0], teacherId: string) {
+  /** `travelMinutes` is the §16 q4 allowance; 0 is the overlap-only behaviour. */
+  async function ask(
+    ctx: Parameters<typeof asTenant>[0],
+    teacherId: string,
+    window: { startTime: string; endTime: string } = { startTime: "08:30", endTime: "09:15" },
+    travelMinutes = 0,
+  ) {
     const rows = await asTenant(ctx, (tx) =>
       tx.execute(
         sql`select * from app_timetable_conflicts(${JSON.stringify([
-          { teacherId, dayOfWeek: 6, startTime: "08:30", endTime: "09:15", ignoreSlotId: "" },
-        ])}::jsonb)`,
+          { teacherId, dayOfWeek: 6, ...window, ignoreSlotId: "" },
+        ])}::jsonb, ${travelMinutes})`,
       ),
     );
     return rows as unknown as ConflictRow[];
@@ -358,7 +365,7 @@ describe("app_timetable_conflicts — explaining a clash without leaking", () =>
       tx.execute(
         sql`select * from app_timetable_conflicts(${JSON.stringify([
           { teacherId: shared.id, dayOfWeek: 6, startTime: "12:15", endTime: "13:00", ignoreSlotId: "" },
-        ])}::jsonb)`,
+        ])}::jsonb, 0)`,
       ),
     );
 
@@ -377,7 +384,7 @@ describe("app_timetable_conflicts — explaining a clash without leaking", () =>
       tx.execute(
         sql`select * from app_timetable_conflicts(${JSON.stringify([
           { teacherId: shared.id, dayOfWeek: 6, startTime: "08:45", endTime: "09:30", ignoreSlotId: "" },
-        ])}::jsonb)`,
+        ])}::jsonb, 0)`,
       ),
     );
 
@@ -401,7 +408,7 @@ describe("app_timetable_conflicts — explaining a clash without leaking", () =>
             endTime: "09:15",
             ignoreSlotId: own?.id ?? "",
           },
-        ])}::jsonb)`,
+        ])}::jsonb, 0)`,
       ),
     );
 
@@ -414,7 +421,7 @@ describe("app_timetable_conflicts — explaining a clash without leaking", () =>
         sql`select * from app_timetable_conflicts(${JSON.stringify([
           { teacherId: shared.id, dayOfWeek: 6, startTime: "08:45", endTime: "09:30", ignoreSlotId: "" },
           { teacherId: shared.id, dayOfWeek: 6, startTime: "08:15", endTime: "09:00", ignoreSlotId: "" },
-        ])}::jsonb)`,
+        ])}::jsonb, 0)`,
       ),
     );
 
@@ -422,5 +429,85 @@ describe("app_timetable_conflicts — explaining a clash without leaking", () =>
     expect(conflicts).toHaveLength(1);
     // The SECOND candidate is the one that clashes, and it says so.
     expect(conflicts[0]?.candidate_index).toBe(1);
+  });
+});
+
+describe("travel time between branches (§16 question 4)", () => {
+  /**
+   * The SQL half of the rule. The domain decides what to SAY about a gap; this decides
+   * which slots are even offered to it — and it has to widen the window without
+   * widening what a branch admin is told.
+   */
+  type Row = { same_branch: boolean; gap_minutes: number; branch_name: string | null };
+
+  async function ask(
+    ctx: Parameters<typeof asTenant>[0],
+    teacherId: string,
+    travelMinutes: number,
+  ): Promise<Row[]> {
+    const rows = await asTenant(ctx, (tx) =>
+      tx.execute(
+        sql`select * from app_timetable_conflicts(${JSON.stringify([
+          { teacherId, dayOfWeek: 6, startTime: "09:00", endTime: "09:45", ignoreSlotId: "" },
+        ])}::jsonb, ${travelMinutes})`,
+      ),
+    );
+    return rows as unknown as Row[];
+  }
+
+  beforeEach(async () => {
+    const shared = await makeTeacher([fx.branchA.id, fx.branchB.id], { fullName: "معلم متنقّل" });
+    travellingTeacher = shared;
+    // Ends five minutes before the candidate starts, in the OTHER branch.
+    await makeSlot({
+      branchId: fx.branchB.id,
+      classId: fx.classB.id,
+      teacherId: shared.id,
+      subjectId: subject.id,
+      dayOfWeek: 6,
+      startTime: "08:00",
+      endTime: "08:55",
+    });
+  });
+
+  let travellingTeacher: Awaited<ReturnType<typeof makeTeacher>>;
+
+  it("finds nothing at all with the rule switched off", async () => {
+    // The default, and therefore today's behaviour for every existing centre.
+    expect(await ask(ctxFor.branchAdmin(fx.branchA.id), travellingTeacher.id, 0)).toEqual([]);
+  });
+
+  it("finds the near miss once the centre allows travel time", async () => {
+    const rows = await ask(ctxFor.branchAdmin(fx.branchA.id), travellingTeacher.id, 30);
+    expect(rows).toHaveLength(1);
+    expect(Number(rows[0]?.gap_minutes)).toBe(5);
+  });
+
+  it("still tells a branch admin no branch name, only the minutes", async () => {
+    const rows = await ask(ctxFor.branchAdmin(fx.branchA.id), travellingTeacher.id, 30);
+    // A number names nobody. A branch name would.
+    expect(rows[0]?.branch_name).toBeNull();
+    expect(JSON.stringify(rows)).not.toContain("فرع ب");
+  });
+
+  it("tells a super admin which branch it is", async () => {
+    const rows = await ask(ctxFor.superAdmin(fx.branchA.id), travellingTeacher.id, 30);
+    expect(rows[0]?.branch_name).toBe("فرع ب");
+  });
+
+  it("does not turn a same-branch neighbour into a conflict", async () => {
+    const local = await makeTeacher([fx.branchA.id], { fullName: "معلم محلي" });
+    await makeSlot({
+      branchId: fx.branchA.id,
+      classId: fx.classA.id,
+      teacherId: local.id,
+      subjectId: subject.id,
+      dayOfWeek: 6,
+      startTime: "08:00",
+      endTime: "08:55",
+    });
+
+    // Back to back in one building is what a bell schedule IS.
+    expect(await ask(ctxFor.branchAdmin(fx.branchA.id), local.id, 30)).toEqual([]);
   });
 });

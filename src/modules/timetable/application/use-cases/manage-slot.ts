@@ -3,6 +3,7 @@
 import { createAction } from "@/shared/actions/create-action";
 import type { TenantContext } from "@/shared/auth/tenant-context";
 import type { Tx } from "@/shared/db/client";
+import { centerSettings } from "@/shared/db/schema";
 import { ar } from "@/shared/i18n/ar";
 import { err, ok } from "@/shared/lib/result";
 import { computePeriods, type ComputedPeriod } from "../../domain/compute-periods";
@@ -158,13 +159,17 @@ export const copyTimetable = createAction({
     // A copy is a bulk action, so one clash must not abort the other thirty slots.
     // Each candidate is checked against everything already accepted in this pass.
     const branchSlots = await listSlotsForBranch(ctx, tx, classRef.branchId);
+    const copyTravelMinutes = await loadTravelMinutes(ctx, tx);
     const accepted: (PlannedSlot & { subjectId: string })[] = [];
     const skipped = [...plan.skipped];
 
     for (const candidate of plan.create) {
       const existing = [...toExistingSlots(branchSlots), ...asExisting(accepted, classRef)];
       const local = findConflicts(candidate, existing);
-      const foreign = await foreignTeacherConflicts(ctx, tx, [candidate], branchSlots);
+      const foreign = await foreignTeacherConflicts(ctx, tx, [candidate], branchSlots, undefined, {
+        travelMinutes: copyTravelMinutes,
+        branchId: classRef.branchId,
+      });
 
       if (local.length > 0 || foreign.length > 0) {
         skipped.push({
@@ -229,9 +234,24 @@ async function firstConflict(
   const first = local[0];
   if (first) return conflictMessage(redactConflict(first, ctx));
 
-  const foreign = await foreignTeacherConflicts(ctx, tx, [candidate], branchSlots, ignoreSlotId);
+  // §16 q4. The setting is read here rather than passed in, because the cross-branch
+  // half of the question is answered in SQL and has to be asked with the same number.
+  const travelMinutes = await loadTravelMinutes(ctx, tx);
+  const foreign = await foreignTeacherConflicts(ctx, tx, [candidate], branchSlots, ignoreSlotId, {
+    travelMinutes,
+    branchId,
+  });
   const firstForeign = foreign[0];
   return firstForeign ? conflictMessage(redactConflict(firstForeign, ctx)) : null;
+}
+
+/** `center_settings.teacher_travel_minutes`, or 0 — which is the rule switched off. */
+async function loadTravelMinutes(_ctx: TenantContext, tx: Tx): Promise<number> {
+  const [row] = await tx
+    .select({ minutes: centerSettings.teacherTravelMinutes })
+    .from(centerSettings)
+    .limit(1);
+  return row?.minutes ?? 0;
 }
 
 /**
@@ -245,6 +265,7 @@ async function foreignTeacherConflicts(
   candidates: readonly PlannedSlot[],
   visible: readonly SlotRow[],
   ignoreSlotId?: string,
+  travel?: { travelMinutes: number; branchId: string },
 ) {
   const visibleIds = new Set(visible.map((slot) => slot.id));
 
@@ -252,12 +273,19 @@ async function foreignTeacherConflicts(
     ctx,
     tx,
     candidates.map((candidate) => (ignoreSlotId ? { ...candidate, ignoreSlotId } : candidate)),
+    travel?.travelMinutes ?? 0,
   );
 
   return [...byCandidate.values()]
     .flat()
     .filter((slot) => !visibleIds.has(slot.id))
-    .map((slot) => ({ kind: "teacher_busy", with: slot }) as const);
+    .map((slot) =>
+      // A positive gap means the teacher is FREE at that moment and cannot get there;
+      // zero means they are genuinely in two places at once.
+      slot.gapMinutes > 0
+        ? ({ kind: "teacher_travel", with: slot, gapMinutes: slot.gapMinutes } as const)
+        : ({ kind: "teacher_busy", with: slot } as const),
+    );
 }
 
 function toExistingSlots(slots: readonly SlotRow[]): ExistingSlot[] {

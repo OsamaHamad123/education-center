@@ -100,6 +100,12 @@ export const centerSettings = pgTable(
     /** Absence percentage above which a student appears in the alerts report. */
     absenceAlertThresholdPercent: integer().notNull().default(25),
     /**
+     * Minutes a teacher needs to get from one BRANCH to another (§16 q4). 0 means the
+     * rule is off, which is every centre until somebody sets it — and the answer
+     * differs by city, so it is a number rather than a switch.
+     */
+    teacherTravelMinutes: integer().notNull().default(0),
+    /**
      * What the office sends parents (P4a). In the database, not the code, so changing
      * برجاء المتابعة to something firmer needs neither a developer nor a deploy.
      * Defaults live in `drizzle/0012` — the feature works the day it is switched on.

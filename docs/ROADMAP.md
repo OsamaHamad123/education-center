@@ -255,6 +255,23 @@ branch.
 
 ---
 
+# Added 2026-09-24, second request of the day — الدرجات
+
+The centre asked for a parent portal showing grades. The portal was already built; grades
+were not in the product at all. So `drizzle/0021` added assessments and marks where they
+belong — in the centre's own screens, entered by the people who mark the papers — and
+`drizzle/0022` opened a capped, redacted window onto them for parents, publishing gated
+behind a deliberate act of the office.
+
+730 unit and integration tests, 7 new e2e, and one browser check by hand.
+
+**And this is the twelfth feature on top of a phase 1 that has still never happened.**
+The product now holds children's marks as well as the centre's money. The argument for
+deploying — on a real server, with a restore drill done before it holds real data — is
+not weaker for any of this. It is stronger.
+
+---
+
 # What I would NOT do
 
 **Build anything else before phase 1.** Every feature added now is more code that has

@@ -1099,6 +1099,86 @@ instead of skipping when it is missing — a seeded month always owes something,
 absence is news. It writes two rows and two reversals, net zero, which is the proof that
 "one row per teacher" is real.
 
+---
+
+## 2026-09-24 — الدرجات, and the portal that had been waiting for them
+
+The centre asked for "a portal where a parent follows their child's grades, attendance
+and anything about their student". **The portal has existed since P2** and already shows
+attendance, the timetable, the fee ledger, contact details and a printable card. What it
+could not show was grades — because **grades did not exist anywhere in this product**: no
+table, no screen, no column.
+
+`docs/PARENT-PORTAL-PLAN.md` section 5 said so a year ago, and said what to do about it:
+
+> **Grades and exams.** Not in the product, and a portal is not where to add them.
+
+That sentence held, and it set the shape: **`drizzle/0021` builds grades in the centre's
+own product** and **`drizzle/0022` opens one capped, redacted window onto them** — the
+identical road the fee ledger took, where `0013` built it and `0014` showed it.
+
+### Four decisions, taken with the centre
+
+1. **A LIST OF MARKS, NOT A COMPUTED AVERAGE.** Weighting is a policy that differs
+   between centres, and a wrong average is worse than no average. The schema leaves room
+   for weights; nothing computes one.
+2. **The teacher enters their own, the branch corrects any.** Same shape as attendance,
+   same enforcement — RLS, not the application.
+3. **A parent sees their own child's mark and nothing else.** No class average, no rank.
+   `app_portal_grades` does not return either, so the card could not show them if it
+   tried.
+4. **Publishing is a separate act.** A mark is invisible to parents until the office
+   publishes it. Half an exam entered at four o'clock is not a result.
+
+### The unit, and the snapshot
+
+Marks are **integer hundredths**, the rule money follows: 17.5 out of 20 is an ordinary
+mark here, quarter-marks happen, and a total that comes back as 17.499999 is a phone
+call. `shared/lib/score.ts` is the only thing that converts, and it reads Arabic-Indic
+digits and the Arabic decimal separator — refusing ٥١ is refusing the keyboard half this
+country types on.
+
+Every mark **snapshots what it was marked out of**, exactly as `class_sessions` snapshots
+the rate it was paid at. Two things fall out of that, and both are the point: raising an
+exam's total tomorrow cannot re-score what a parent was shown yesterday, and the database
+itself can refuse 25 out of 20 — which a cross-table CHECK could never do.
+
+### An existing test caught a naming mistake
+
+`assessment.write` broke `permissions.test.ts`, which asserts that **a teacher never
+holds a permission ending in `.manage`, `.write`, `.archive`…** — a real invariant of
+this product, not a formality. The right answer was not to edit the test: it is
+`assessment.mark`, the verb `attendance.mark` already uses, and it covers creating the
+paper as well as marking it because for a teacher those are one act. `attendance.mark`
+creates a `class_sessions` row lazily for the same reason.
+
+### What a teacher may open a paper FOR
+
+`assessments_insert` admits a teacher only for a class **on their own timetable**.
+Without that clause a teacher could open an assessment for any class in a branch they
+work in, and then hold the marks of children they have never met. Asserted directly:
+`tests/integration/tenant-isolation/assessments.test.ts`, 21 tests.
+
+### Verified
+
+Typecheck, lint and format clean. **730 unit and integration tests** (up from 656): 53 on
+the new pure layer, 21 on the isolation, the rest unchanged. **7 e2e** on the marks
+screens and the portal, and the one that matters asserts a marked-but-unpublished paper
+is absent from a parent's screen — the seed gives every class one published paper and one
+draft so both halves of that exist before a browser opens.
+
+Also checked by hand in a browser at 1280px: the portal shows attendance, the absences
+with their dates and subjects, **the published mark with its percentage**, the fee
+ledger, the branch's phone and the print button — on one screen, and without the draft.
+
+### Two small things the demo data taught
+
+Seeded marks were landing on values like `8.32 / 10`. A marker writes 8.5, never 8.32, so
+the seed rounds to the nearest half mark — demo data that looks generated is demo data
+nobody trusts. And the first e2e teacher had **no papers at all**, so the test asserting
+"a teacher sees no publish button" was passing against an empty screen; it now signs in
+as a teacher the seed actually gives papers to.
+
 ## Next steps
 
 **See `docs/ROADMAP.md`** — written 2026-09-17, after payroll runs closed the last item

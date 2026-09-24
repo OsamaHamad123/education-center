@@ -65,9 +65,14 @@ describe("role boundaries", () => {
     expect(permissionsFor("super_admin")).toEqual(all);
   });
 
-  it("gives a teacher only read access plus marking attendance", () => {
+  it("gives a teacher only read access plus marking attendance and papers", () => {
     expect(permissionsFor("teacher").sort()).toEqual(
       [
+        // Marking papers, and creating the assessment that holds them — the same
+        // shape as `attendance.mark`, which creates a session lazily. NOT publishing
+        // them to parents, which is the office's act (`drizzle/0021`).
+        "assessment.mark",
+        "assessment.read",
         "attendance.mark",
         "attendance.read",
         "payroll.read",

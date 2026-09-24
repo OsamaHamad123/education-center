@@ -20,6 +20,13 @@ export const attendanceStatusEnum = pgEnum("attendance_status", ["present", "abs
 
 export const recordStatusEnum = pgEnum("record_status", ["active", "inactive"]);
 
+/**
+ * What kind of paper a mark came from (`drizzle/0021`). Deliberately short: the
+ * centre asked for a LIST of marks, not a weighted average, so this labels a row
+ * rather than driving a calculation.
+ */
+export const assessmentKindEnum = pgEnum("assessment_kind", ["quiz", "monthly", "final", "other"]);
+
 /** How the office took the money (P5). Cash first, because most of it is cash. */
 export const paymentMethodEnum = pgEnum("payment_method", ["cash", "instapay", "wallet", "bank"]);
 
@@ -45,5 +52,6 @@ export type EnrollmentEnd = (typeof enrollmentEndEnum.enumValues)[number];
 export type SessionStatus = (typeof sessionStatusEnum.enumValues)[number];
 export type AttendanceStatus = (typeof attendanceStatusEnum.enumValues)[number];
 export type RecordStatus = (typeof recordStatusEnum.enumValues)[number];
+export type AssessmentKind = (typeof assessmentKindEnum.enumValues)[number];
 export type AuditAction = (typeof auditActionEnum.enumValues)[number];
 export type PaymentMethod = (typeof paymentMethodEnum.enumValues)[number];

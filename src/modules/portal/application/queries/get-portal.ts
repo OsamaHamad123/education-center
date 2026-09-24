@@ -7,10 +7,12 @@ import {
   attendanceFor,
   balanceFor,
   childrenOf,
+  gradesFor,
   messagingStopped,
   type PortalAttendance,
   type PortalBalance,
   type PortalChild,
+  type PortalGrades,
 } from "../../infrastructure/portal.repository";
 import { currentParent } from "../use-cases/portal-session";
 
@@ -30,6 +32,12 @@ export type PortalView = {
   attendance: PortalAttendance;
   /** Null when the centre has not billed this family at all — not zero (P5d). */
   balance: PortalBalance | null;
+  /**
+   * Published marks (`drizzle/0022`). Null when the centre has published none — not
+   * an empty list, for the same reason the balance is null rather than zero: a centre
+   * that has not started marking must not show a family a confident "no results".
+   */
+  grades: PortalGrades | null;
   /** This family has asked the centre not to message them (`drizzle/0018`). */
   messagingStopped: boolean;
 };
@@ -66,9 +74,10 @@ export async function getPortalView(input: {
   // real question a parent has.
   const range = rangeIsSane(from, to) ? { from, to } : fallback;
 
-  const [attendance, balance, stopped] = await Promise.all([
+  const [attendance, balance, grades, stopped] = await Promise.all([
     attendanceFor(selected.studentId, parent, range.from, range.to),
     balanceFor(selected.studentId, parent),
+    gradesFor(selected.studentId, parent),
     messagingStopped(parent),
   ]);
   // Null means the database refused the pairing. It is the same reply a tampered id
@@ -78,12 +87,16 @@ export async function getPortalView(input: {
   // An empty ledger is not a zero balance: a centre that has not started billing must
   // not show a family a confident مستحق: 0.00 they might rely on.
   const hasLedger = balance !== null && balance.months.length > 0;
+  // Same rule for marks. An empty list is "nothing has been published", and a card
+  // saying so is better than an empty card a parent reads as "he sat nothing".
+  const hasMarks = grades !== null && grades.marks.length > 0;
   return ok({
     children,
     selected,
     range,
     attendance,
     balance: hasLedger ? balance : null,
+    grades: hasMarks ? grades : null,
     messagingStopped: stopped,
   });
 }

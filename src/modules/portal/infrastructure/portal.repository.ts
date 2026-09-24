@@ -159,6 +159,37 @@ export async function balanceFor(studentId: string, parentPhoneHash: string): Pr
   return rows[0]?.balance ?? null;
 }
 
+export type PortalMark = {
+  name: string;
+  kind: "quiz" | "monthly" | "final" | "other";
+  assessedOn: string;
+  subjectName: string;
+  /** Null when the child did not sit it. */
+  scoreHundredths: number | null;
+  maxScoreHundredths: number;
+  didNotSit: boolean;
+};
+
+export type PortalGrades = { marks: PortalMark[] };
+
+/**
+ * This child's PUBLISHED marks (`drizzle/0022`), or null when the pairing is refused.
+ *
+ * A third function rather than a wider `app_portal_attendance`, for the reason the
+ * balance is a third one: the three answer different questions, and a centre that has
+ * not entered a single mark should show attendance without a grades card claiming
+ * anything at all.
+ *
+ * `published_at IS NOT NULL` is inside the SQL, not here. A half-marked paper cannot
+ * reach a parent by any route this file could get wrong.
+ */
+export async function gradesFor(studentId: string, parentPhoneHash: string): Promise<PortalGrades | null> {
+  const rows = await db.execute<{ grades: PortalGrades | null }>(
+    sql`select app_portal_grades(${studentId}::uuid, ${parentPhoneHash}, ${salt()}) as grades`,
+  );
+  return rows[0]?.grades ?? null;
+}
+
 /** Whether this family has stopped messages (`drizzle/0018`). */
 export async function messagingStopped(parentPhoneHash: string): Promise<boolean> {
   const rows = await db.execute<{ stopped: boolean }>(

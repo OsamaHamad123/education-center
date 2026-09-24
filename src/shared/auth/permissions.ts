@@ -52,6 +52,30 @@ export const PERMISSIONS = {
   "attendance.edit_past": ["super_admin", "branch_admin"],
   "session.manage": ["super_admin", "branch_admin"],
 
+  // Assessments and marks (`drizzle/0021`)
+  "assessment.read": ["super_admin", "branch_admin", "teacher"],
+  /**
+   * Marking papers — and creating the assessment that holds them, because for a
+   * teacher those are one act: "I gave a quiz on Sunday, here are the marks".
+   *
+   * `.mark` rather than `.write` deliberately: in this product `.write` is a
+   * MANAGERIAL permission and no teacher holds one (`permissions.test.ts` asserts
+   * exactly that). It is the same verb `attendance.mark` uses, for the same shape —
+   * that one creates a `class_sessions` row lazily too.
+   *
+   * Which rows a teacher may touch is RLS's answer, not this map's: their own
+   * assessments, for classes they actually teach.
+   */
+  "assessment.mark": ["super_admin", "branch_admin", "teacher"],
+  /** Editing or archiving anybody's assessment — the office's, not the teacher's. */
+  "assessment.manage": ["super_admin", "branch_admin"],
+  /**
+   * Showing marks to parents, and archiving an assessment. Deliberately NOT the
+   * teacher's: publishing is the moment a result leaves the building, and the office
+   * is who answers the phone afterwards.
+   */
+  "assessment.publish": ["super_admin", "branch_admin"],
+
   // Money and reporting
   "payroll.read": ["super_admin", "branch_admin", "teacher"],
   /**

@@ -220,6 +220,29 @@ docker compose -f docker-compose.prod.yml exec db psql -U postgres -d school -c 
 Sessions last thirty days and are capped at five per phone, so a code typed on a sixth
 device evicts the oldest by itself.
 
+### A mark went out to parents before it was ready
+
+Marks reach a parent only when an assessment is **published**, and publishing is
+reversible from the screen that did it: **الدرجات → the eye icon on that row → سحب
+النشر**. The marks stay; they stop being visible in the portal immediately, because
+`app_portal_grades` filters on `published_at` at read time rather than copying anything.
+
+If the screen is unavailable, the same thing at the data layer:
+
+```bash
+docker compose -f docker-compose.prod.yml exec db psql -U postgres -d school -c   "update assessments set published_at = null where id = '<assessment-uuid>';"
+```
+
+To see what is currently visible to parents at all:
+
+```bash
+docker compose -f docker-compose.prod.yml exec db psql -U postgres -d school -c   "select name, assessed_on, published_at from assessments where published_at is not null and is_active order by published_at desc limit 20;"
+```
+
+A **wrong** mark is corrected on the sheet and the audit log keeps both values; there is
+no delete, and the app role has no grant for one. A paper that should never have existed
+is **archived** (أرشفة التقييم), which unpublishes it in the same act.
+
 ### Never set `log_statement = 'all'` on the production database
 
 The portal passes `PORTAL_PHONE_SALT` to Postgres as a bind parameter. Bind parameters

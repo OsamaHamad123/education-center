@@ -8,6 +8,7 @@ import { useSearchParams } from "next/navigation";
 import { ar } from "@/shared/i18n/ar";
 import { formatEGP } from "@/shared/lib/money";
 import { formatDisplayDate } from "@/shared/lib/date-display";
+import { formatOutOf, scorePercent } from "@/shared/lib/score";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
@@ -152,6 +153,53 @@ export function PortalView({ view }: { view: PortalView }) {
           )}
         </CardContent>
       </Card>
+
+      {/*
+        الدرجات (`drizzle/0022`). Published papers only, newest first.
+
+        It shows the child's own mark and nothing else — no class average and no rank.
+        The centre chose that on 2026-09-24, and the SQL function does not return
+        either, so this card could not show them if it tried.
+      */}
+      {view.grades ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{ar.portal.gradesTitle}</CardTitle>
+            <CardDescription>{ar.portal.gradesHint}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="divide-y text-sm">
+              {view.grades.marks.map((mark, index) => (
+                <li
+                  key={`${mark.assessedOn}:${mark.subjectName}:${index}`}
+                  className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium">{mark.name}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {mark.subjectName} · {ar.assessments.kinds[mark.kind]} ·{" "}
+                      {formatDisplayDate(mark.assessedOn)}
+                    </p>
+                  </div>
+
+                  {mark.didNotSit || mark.scoreHundredths === null ? (
+                    <Badge variant="outline">{ar.portal.didNotSit}</Badge>
+                  ) : (
+                    <>
+                      <span className="font-bold" dir="ltr">
+                        {formatOutOf(mark.scoreHundredths, mark.maxScoreHundredths)}
+                      </span>
+                      <Badge variant="secondary" dir="ltr">
+                        {scorePercent(mark.scoreHundredths, mark.maxScoreHundredths)}%
+                      </Badge>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {view.balance ? (
         <Card>

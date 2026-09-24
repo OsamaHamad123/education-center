@@ -240,6 +240,7 @@ async function main() {
     branch_schedule_settings, student_enrollments, student_code_counters, students,
     teacher_branches, teacher_rate_history, teachers, classes, subjects,
     payroll_runs, payments, invoices, fee_plans, receipt_counters,
+    assessment_scores, assessments,
     academic_terms, parent_message_optouts,
     audit_logs, lookup_attempts, login_attempts, portal_sessions,
     account, session, verification, "user",
@@ -638,6 +639,72 @@ async function main() {
       .values({ branchId, year: Number(thisPeriod.slice(0, 4)), lastValue });
   }
 
+  // --- assessments: two papers per class, one published (`drizzle/0021`) ------
+  //
+  // One PUBLISHED and one DRAFT on purpose. The draft is what proves the portal is
+  // reading `published_at` rather than everything — the most valuable row in this
+  // seed is the one a parent must NOT be able to see.
+  let assessmentCount = 0;
+  let scoreCount = 0;
+
+  for (const [classId, roster] of studentsByClass) {
+    const klass = classById.get(classId);
+    if (!klass || roster.length === 0) continue;
+
+    // The subject and teacher come from the class's own timetable, so every
+    // assessment belongs to somebody who actually teaches that class — which is
+    // what `assessments_insert` requires of a teacher creating one.
+    const slot = slots.find((row) => row.classId === classId && row.isActive);
+    if (!slot) continue;
+
+    const papers = [
+      { name: "اختبار قصير — الوحدة الأولى", kind: "quiz" as const, max: 1000, publish: true },
+      { name: "امتحان الشهر", kind: "monthly" as const, max: 4000, publish: false },
+    ];
+
+    for (const paper of papers) {
+      const [assessment] = await db
+        .insert(schema.assessments)
+        .values({
+          branchId: klass.branchId,
+          classId,
+          subjectId: slot.subjectId,
+          teacherId: slot.teacherId,
+          name: paper.name,
+          kind: paper.kind,
+          assessedOn: daysAgo(paper.publish ? 10 : 2),
+          maxScoreHundredths: paper.max,
+          publishedAt: paper.publish ? new Date() : null,
+          createdBy: "usr_super",
+        })
+        .returning({ id: schema.assessments.id });
+      if (!assessment) continue;
+      assessmentCount += 1;
+
+      await db.insert(schema.assessmentScores).values(
+        roster.map((student) => {
+          // A spread worth looking at, and one absentee per class so the screens
+          // that handle "did not sit" are exercised by the demo data.
+          const roll = nextRandom();
+          const didNotSit = roll < 0.04;
+          const fraction = 0.45 + nextRandom() * 0.55;
+          return {
+            assessmentId: assessment.id,
+            branchId: klass.branchId,
+            studentId: student.id,
+            // Rounded to the nearest HALF mark. A marker writes 8.5, never 8.32,
+            // and demo data that looks generated is demo data nobody trusts.
+            scoreHundredths: didNotSit ? null : Math.round((paper.max * fraction) / 50) * 50,
+            didNotSit,
+            maxScoreHundredths: paper.max,
+            markedBy: "usr_super",
+          };
+        }),
+      );
+      scoreCount += roster.length;
+    }
+  }
+
   const counts = {
     branches: branchRows.length,
     subjects: subjectRows.length,
@@ -649,6 +716,8 @@ async function main() {
     attendanceRecords: attendanceCount,
     invoices: invoiceCount,
     payments: paymentCount,
+    assessments: assessmentCount,
+    scores: scoreCount,
   };
 
   console.log("\nSeed complete:");

@@ -782,6 +782,104 @@ export const ar = {
     myPayouts: "ما صُرف لي",
   },
 
+  /** الدرجات (`drizzle/0021`). Read by admins, teachers and — published only — parents. */
+  assessments: {
+    title: "الدرجات",
+    description: "امتحانات الشُعب ودرجات الطلاب فيها. لا تظهر لأولياء الأمور حتى تُنشَر.",
+    teacherDescription: "امتحاناتك أنت ودرجات طلابك فيها.",
+    nav: "الدرجات",
+
+    create: "تقييم جديد",
+    createTitle: "تسجيل تقييم جديد",
+    createDescription: "الامتحان أو الاختبار الذي صحّحته. الدرجة العظمى تُثبَّت ولا تتغيّر بعد الحفظ.",
+    created: "تم تسجيل التقييم.",
+    edit: "تعديل التقييم",
+    editTitle: "تعديل بيانات التقييم",
+    editDescription: "الاسم والنوع والتاريخ. الدرجة العظمى لا تُعدَّل — لأن كل درجة مسجَّلة تحمل عظماها.",
+    edited: "تم حفظ التعديل.",
+
+    name: "اسم التقييم",
+    namePlaceholder: "امتحان شهر سبتمبر",
+    kindLabel: "النوع",
+    assessedOn: "تاريخ التقييم",
+    maxScore: "الدرجة العظمى",
+    classLabel: "الشعبة",
+    subject: "المادة",
+    teacher: "المعلم",
+    score: "الدرجة",
+    student: "الطالب",
+    notes: "ملاحظة",
+    outOf: "من",
+
+    kinds: {
+      quiz: "اختبار قصير",
+      monthly: "امتحان شهري",
+      final: "امتحان نهائي",
+      other: "أخرى",
+    },
+
+    marked: "مُصحَّح",
+    unmarked: "لم تُرصَد",
+    didNotSit: "لم يقدّم",
+    didNotSitShort: "لم يقدّم",
+    markedOf: (marked: number, total: number) => `${marked} من ${total}`,
+    average: "المتوسط",
+    highest: "الأعلى",
+    lowest: "الأدنى",
+    sat: "قدّموا",
+
+    save: "حفظ الدرجات",
+    saved: (saved: number, unmarked: number) =>
+      unmarked > 0 ? `حُفظت ${saved} درجة، وبقي ${unmarked} بلا رصد.` : `حُفظت ${saved} درجة.`,
+    nothingToSave: "لا توجد درجات لحفظها.",
+
+    publish: "نشر لأولياء الأمور",
+    publishTitle: "نشر درجات هذا التقييم؟",
+    publishDescription:
+      "تظهر درجة كل طالب لوليّ أمره في البوابة فوراً. لا يرى أي ولي أمر درجة طالب آخر ولا متوسط الشعبة ولا الترتيب.",
+    published: "تم النشر.",
+    publishedBadge: "منشور",
+    draftBadge: "غير منشور",
+    unpublish: "سحب النشر",
+    unpublishTitle: "سحب الدرجات من أولياء الأمور؟",
+    unpublishDescription: "تختفي الدرجات من البوابة فوراً. السجل يبقى كما هو ولا يُحذف.",
+    unpublished: "تم سحب النشر.",
+
+    archive: "أرشفة التقييم",
+    archiveTitle: "أرشفة هذا التقييم؟",
+    archiveDescription: "يخرج من القوائم ومن البوابة. الدرجات المسجّلة تبقى ولا تُحذف.",
+    archived: "تمت الأرشفة.",
+    archivedBadge: "مؤرشف",
+    alreadyArchived: "التقييم مؤرشف بالفعل.",
+
+    empty: "لا تقييمات في هذه الفترة.",
+    emptyHint: "غيّر التواريخ أو سجّل تقييماً جديداً.",
+    noStudents: "لا طلاب في هذه الشعبة بتاريخ التقييم.",
+    noSuchSubject: "المادة غير موجودة.",
+    notYourAssessment: "هذا التقييم ليس لك.",
+    notYourClass: "أنت لا تدرّس هذه الشعبة.",
+    readOnlyHint: "للعرض فقط.",
+
+    violations: {
+      NAME_REQUIRED: "اكتب اسم التقييم.",
+      MAX_SCORE_INVALID: "الدرجة العظمى غير صالحة.",
+      FUTURE_DATE: "لا يمكن تسجيل تقييم بتاريخ لم يأت بعد.",
+      TOO_FAR_BACK: "التاريخ أقدم من سنة.",
+    },
+
+    publishViolations: {
+      ALREADY_PUBLISHED: "التقييم منشور بالفعل.",
+      NOT_PUBLISHED: "التقييم غير منشور.",
+      NOTHING_TO_PUBLISH: "لا درجات مرصودة — النشر الآن يخبر الأهالي بنتيجة لا يرونها.",
+    },
+
+    scoreViolations: {
+      OUT_OF_RANGE: "الدرجة خارج حدود الدرجة العظمى.",
+      ABSENT_WITH_SCORE: "لا يمكن رصد درجة لطالب لم يقدّم.",
+      NEITHER: "اكتب الدرجة أو علّم «لم يقدّم».",
+    },
+  },
+
   /**
    * Absence without permission (asked for 2026-09-24). Deliberately NOT under
    * `reports`: a teacher reads this screen and holds no reporting permission.
@@ -873,6 +971,11 @@ export const ar = {
     noAbsences: "لا غياب في هذه الفترة.",
     contactTitle: "للتواصل مع الفرع",
     print: "طباعة السجل",
+    /** الدرجات in the portal (`drizzle/0022`). Published papers only. */
+    gradesTitle: "الدرجات",
+    gradesHint: "درجات ابنك في التقييمات التي أعلنها المركز. لا تظهر درجات أي طالب آخر.",
+    didNotSit: "لم يقدّم",
+
     feesTitle: "الرسوم",
     feesHint: "المتبقّي عليك الآن. للاستفسار أو السداد، مراجعة مكتب الفرع.",
     feePaid: "مدفوع",

@@ -331,7 +331,13 @@ still useful is not a portal.**
 
 ## 5. What this plan deliberately leaves out
 
-- **Grades and exams.** Not in the product, and a portal is not where to add them.
+- ~~**Grades and exams.** Not in the product, and a portal is not where to add them.~~
+  **Built 2026-09-24, and this line is why it was built the way it was.** The centre
+  asked for grades in the portal; grades were added to the PRODUCT first
+  (`drizzle/0021` — assessments, marks, a teacher's own sheet, publishing), and the
+  portal then got one capped, redacted window onto them (`drizzle/0022`). A parent sees
+  their own child's published marks and nothing else: no class average, no rank, no
+  unpublished paper. See `docs/PROGRESS.md`, 2026-09-24.
 - **Chat between parent and teacher.** A moderation problem wearing a feature's clothes.
 - **A mobile app.** The portal is three screens; a phone browser is the right client.
 - **Parent-initiated anything** — corrections, absence excuses, enrolment. Every one of

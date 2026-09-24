@@ -18,6 +18,7 @@ export type NavIconKey =
   | "subjects"
   | "timetable"
   | "attendance"
+  | "grades"
   | "payroll"
   | "fees"
   | "reports"
@@ -53,6 +54,12 @@ export const DASHBOARD_NAV: NavItem[] = [
     icon: "attendance",
     permission: "attendance.read",
   },
+  {
+    href: "/assessments",
+    label: ar.assessments.nav,
+    icon: "grades",
+    permission: "assessment.read",
+  },
   { href: "/fees", label: ar.nav.fees, icon: "fees", permission: "fee.read" },
   { href: "/payroll", label: ar.nav.payroll, icon: "payroll", permission: "payroll.read" },
   { href: "/reports", label: ar.nav.reports, icon: "reports", permission: "report.read" },
@@ -67,6 +74,9 @@ export const TEACHER_NAV: NavItem[] = [
   // Their own students' unexcused absences. No permission entry: every role in this
   // area holds `attendance.read`, and RLS decides which lessons are theirs.
   { href: "/teacher/absences", label: ar.absences.title, icon: "attendance" },
+  // Their own papers. No permission entry: every role in this area holds
+  // `assessment.read`, and RLS decides which assessments are theirs.
+  { href: "/teacher/assessments", label: ar.assessments.nav, icon: "grades" },
   { href: "/teacher/earnings", label: ar.nav.teacherEarnings, icon: "payroll" },
   // A teacher's access code IS their password, so this is the same screen every
   // other role uses — one flow to keep correct rather than two.

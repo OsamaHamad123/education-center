@@ -17,6 +17,14 @@ const config = {
         "teachers",
         "timetable",
         "attendance",
+        // Four modules the enum had drifted away from: `fees` and `portal` landed in
+        // P5 and P2, `settings` has been there since Phase 2, and `assessments`
+        // arrived 2026-09-24. The comment above says the scopes mirror src/modules;
+        // this is what makes that true again.
+        "assessments",
+        "fees",
+        "portal",
+        "settings",
         "payroll",
         "reports",
         "lookup",

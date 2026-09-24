@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { ar } from "@/shared/i18n/ar";
 
 /**
  * Phase 8 — payroll and reports, against the seeded database.
@@ -199,7 +200,7 @@ test.describe("the reports", () => {
     await page.goto("/reports");
 
     await expect(visible(page, "حضور الطلاب").first()).toBeVisible();
-    await expect(visible(page, "كشف الشعبة").first()).toBeVisible();
+    await expect(visible(page, ar.reports.classMatrix).first()).toBeVisible();
     await expect(visible(page, "تنبيهات الغياب").first()).toBeVisible();
     // Not disabled — absent. Nothing hints that other branches exist to compare.
     await expect(page.getByText("مقارنة الفروع")).toHaveCount(0);
@@ -229,12 +230,18 @@ test.describe("the reports", () => {
     await expect(visible(page, /^\d{1,3}%$/).first()).toBeVisible();
   });
 
-  test("draws the class matrix with a legend", async ({ page }) => {
+  test("draws the register with a column per LESSON, not per day", async ({ page }) => {
     await signIn(page, "admin_nsr");
     await page.goto("/reports/matrix?from=2000-01-01&to=2100-01-01");
 
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("كشف الشعبة");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("كشف الحضور والغياب");
     await expect(visible(page, /ح = حاضر/).first()).toBeVisible();
+
+    // The two-row header is the whole change (2026-09-24): a date on top spanning its
+    // periods, and a period number under each column. A date cell that spans more than
+    // one column is the proof the day was not folded into one cell.
+    const spanning = page.locator("thead th[colspan]").first();
+    await expect(spanning).toBeVisible();
   });
 
   test("lists absence alerts above the configured threshold", async ({ page }) => {

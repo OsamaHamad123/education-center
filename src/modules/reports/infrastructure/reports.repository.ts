@@ -12,6 +12,7 @@ import {
   teachers,
   timetableSlots,
   type AttendanceStatus,
+  type SessionStatus,
 } from "@/shared/db/schema";
 import { ZERO_COUNTS, type StatusCounts } from "../domain/attendance-rates";
 import type { AbsenceMark } from "../domain/contact-list";
@@ -109,17 +110,28 @@ export async function countByStudent(
 
 export type MatrixCell = {
   studentId: string;
-  sessionDate: string;
+  /** The SESSION, not the day: a day with two periods has two cells (2026-09-24). */
+  sessionId: string;
   status: AttendanceStatus;
 };
 
 export type MatrixSessionColumn = {
+  sessionId: string;
   sessionDate: string;
   periodNumber: number;
   subjectName: string;
+  /** A cancelled lesson gets a column and no marks — it is why the day looks empty. */
+  status: SessionStatus;
 };
 
-/** Students × dates for one class (rule 10.7), as flat cells the view pivots. */
+/**
+ * Students × LESSONS for one class (rule 10.7), as flat cells the view pivots.
+ *
+ * It used to be students × days, with one cell holding the worst status of the day.
+ * The centre's own paper register has a sub-column per period under each date, and a
+ * boy who attends first period and skips second is the exact case the fold hid
+ * (photographs, 2026-09-24).
+ */
 export async function classMatrix(
   _ctx: TenantContext,
   tx: Tx,
@@ -128,10 +140,11 @@ export async function classMatrix(
 ): Promise<{ cells: MatrixCell[]; columns: MatrixSessionColumn[] }> {
   const sessions = await tx
     .select({
-      id: classSessions.id,
+      sessionId: classSessions.id,
       sessionDate: classSessions.sessionDate,
       periodNumber: classSessions.periodNumber,
       subjectName: classSessions.subjectName,
+      status: classSessions.status,
     })
     .from(classSessions)
     .where(and(eq(classSessions.classId, classId), inRange(range)))
@@ -142,15 +155,14 @@ export async function classMatrix(
   const cells = await tx
     .select({
       studentId: attendanceRecords.studentId,
-      sessionDate: classSessions.sessionDate,
+      sessionId: attendanceRecords.sessionId,
       status: attendanceRecords.status,
     })
     .from(attendanceRecords)
-    .innerJoin(classSessions, eq(classSessions.id, attendanceRecords.sessionId))
     .where(
       inArray(
         attendanceRecords.sessionId,
-        sessions.map((session) => session.id),
+        sessions.map((session) => session.sessionId),
       ),
     );
 

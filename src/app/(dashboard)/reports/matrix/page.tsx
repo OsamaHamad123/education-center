@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Printer } from "lucide-react";
 import { ClassMatrix, getClassMatrixReport, ReportFilters } from "@/modules/reports";
 import { getTerms } from "@/modules/settings";
 import { ar } from "@/shared/i18n/ar";
@@ -30,12 +30,30 @@ export default async function ClassMatrixPage({
         title={ar.reports.classMatrix}
         description={ar.reports.classMatrixDescription}
         action={
-          <Button asChild variant="outline">
-            <Link href="/reports">
-              <ArrowRight className="size-4" aria-hidden />
-              {ar.reports.title}
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {/*
+              The filters the viewer is actually looking at, carried into the print
+              route — a print button that printed the DEFAULT range would be a sheet
+              nobody asked for.
+            */}
+            <Button asChild variant="outline">
+              <Link
+                href={`/print/reports/register?from=${report.data.range.from}&to=${report.data.range.to}${
+                  report.data.classId ? `&classId=${report.data.classId}` : ""
+                }`}
+                target="_blank"
+              >
+                <Printer className="size-4" aria-hidden />
+                {ar.print.print}
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/reports">
+                <ArrowRight className="size-4" aria-hidden />
+                {ar.reports.title}
+              </Link>
+            </Button>
+          </div>
         }
       />
       <div className="space-y-4">

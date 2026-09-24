@@ -1,7 +1,7 @@
 // `date-display`, not `time.ts`: every client component in the product imports this
 // file, and `time.ts` pulls date-fns for the functions that decide what "now" is. One
 // import here was putting the whole library in every page's browser bundle.
-import { isoDayOfWeek, type IsoDate } from "@/shared/lib/date-display";
+import { formatDisplayDate, isoDayOfWeek, type IsoDate } from "@/shared/lib/date-display";
 
 /**
  * All user-facing Arabic text. Components never hard-code strings (CLAUDE.md,
@@ -661,6 +661,7 @@ export const ar = {
       "يُحتسب للبديل أجره هو، بمسار الحصة كما نُفّذت. الأجر يُعاد تسجيله الآن ولا يتأثر بأي تعديل لاحق.",
     substituted: "تم تعيين المعلم البديل.",
     sameTeacher: "هذا هو معلم الحصة بالفعل.",
+    substitutedFrom: "بدلاً عن",
 
     extra: "حصة إضافية",
     extraTitle: "تسجيل حصة إضافية",
@@ -675,6 +676,23 @@ export const ar = {
     noSuchPeriod: "لا توجد حصة بهذا الرقم في هذا اليوم.",
     teacherNotInBranch: "هذا المعلم غير مرتبط بالفرع أو غير نشط.",
     sessionCancelled: "الحصة ملغاة — أعد تفعيلها أولاً لتسجيل الحضور.",
+
+    /** Recording a moved lesson rather than an added one (`drizzle/0020`). */
+    makesUpFor: "تعويضاً عن حصة",
+    makesUpNone: "حصة إضافية (ليست تعويضاً)",
+    makesUpLabel: "الحصة المُعوَّضة",
+    makesUpHint: "اختر الحصة الملغاة التي تُعوّضها هذه الحصة، فلا تُحتسب الاثنتان معاً في المستحقات.",
+    makeUpBadge: "تعويضية",
+    makeUp: {
+      ALREADY_MADE_UP: "هذه الحصة معوَّضة بحصة أخرى بالفعل.",
+      DIFFERENT_CLASS: "الحصة المُعوَّضة لشعبة أخرى.",
+      BEFORE_ORIGINAL: "تاريخ الحصة التعويضية قبل تاريخ الحصة الملغاة.",
+      SAME_SESSION: "لا يمكن لحصة أن تعوّض نفسها.",
+      /** Not a `checkMakeUp` violation — the guard on restoring a compensated lesson. */
+      RESTORE_MADE_UP: "هذه الحصة معوَّضة بحصة أخرى. ألغِ الحصة التعويضية أولاً.",
+    },
+    makeUpCancelReason: (date: string, period: number) =>
+      `عُوِّضت بحصة ${formatDisplayDate(date)} — الحصة ${period}`,
 
     /** Why this viewer may not write this day (rule 10.5). */
     violations: {
@@ -746,9 +764,42 @@ export const ar = {
     futurePeriod: "لا يمكن صرف شهر لم يبدأ بعد.",
     nothingToPay: "لا مستحقات لهذا المعلم في هذا الشهر.",
     alreadySettled: "تم صرف هذا الشهر بالفعل.",
+
+    /** Paying everybody in one press (asked for 2026-09-24). */
+    settleAll: "صرف للكل",
+    settleAllTitle: "صرف مستحقات الشهر لكل المعلمين؟",
+    settleAllDescription:
+      "يُسجَّل لكل معلم سطر صرف مستقلّ بمبلغه المحسوب الآن. المعلمون المصروف لهم والذين لا مستحقات لهم يُتخطَّون. بعد الصرف يُجمَّد حضور الشهر لحصصهم.",
+    settleAllDone: (paid: number, skipped: number) =>
+      skipped > 0 ? `تم الصرف لـ ${paid} معلم، وتُخطّي ${skipped}.` : `تم الصرف لـ ${paid} معلم.`,
+    allAlreadySettled: "تم صرف مستحقات كل المعلمين لهذا الشهر.",
+    nothingToPayAll: "لا مستحقات لأي معلم في هذا الشهر.",
     alreadyReversal: "هذا السطر عكسي بالفعل.",
     periodSettled: "تم صرف مستحقات هذا الشهر لهذا المعلم، فلا يمكن تعديل حضوره. ألغِ الصرف أولاً.",
+    /** A hand-over moves money between TWO months, so both have to be open. */
+    substitutePeriodSettled: "تم صرف مستحقات هذا الشهر للمعلم البديل. ألغِ صرفه أولاً.",
+    originalPeriodSettled: "تم صرف مستحقات هذا الشهر لمعلم الحصة الملغاة. ألغِ صرفه أولاً.",
     myPayouts: "ما صُرف لي",
+  },
+
+  /**
+   * Absence without permission (asked for 2026-09-24). Deliberately NOT under
+   * `reports`: a teacher reads this screen and holds no reporting permission.
+   */
+  absences: {
+    title: "الغياب بدون إذن",
+    description: "كل حصة غاب عنها طالب بدون إذن خلال الفترة — ولو حصة واحدة.",
+    teacherDescription: "طلابك الغائبون بدون إذن عن حصصك أنت.",
+    today: "غياب اليوم بدون إذن",
+    todayNone: "لا غياب بدون إذن اليوم.",
+    none: "لا غياب بدون إذن في هذه الفترة.",
+    noneHint: "كل من تغيّب كان بإذن، أو لم تُسجَّل حصص بعد.",
+    period: "الحصة",
+    periods: "حصة",
+    students: "طالب",
+    excusedNote: "الغياب بإذن لا يظهر هنا — يظهر في كشف الشعبة.",
+    truncated: "النتائج كثيرة — ضيّق الفترة أو اختر شعبة.",
+    viewAll: "كل الغياب",
   },
 
   reports: {
@@ -756,8 +807,8 @@ export const ar = {
     description: "تقارير الحضور والمستحقات للفرع النشط.",
     studentAttendance: "حضور الطلاب",
     studentAttendanceDescription: "نسبة حضور كل طالب خلال فترة. الغياب وحده هو ما يُحتسب ضد الطالب.",
-    classMatrix: "كشف الشعبة",
-    classMatrixDescription: "مصفوفة الطلاب × التواريخ لشعبة واحدة.",
+    classMatrix: "كشف الحضور والغياب",
+    classMatrixDescription: "الطلاب × الحصص لشعبة واحدة — عمود لكل حصة تحت كل تاريخ، كما في الكشف الورقي.",
     absenceAlerts: "تنبيهات الغياب",
     absenceAlertsDescription:
       "الطلاب الذين تجاوزت نسبة غيابهم الحد المضبوط في الإعدادات. اضغط لمراسلة ولي الأمر.",
@@ -877,6 +928,8 @@ export const ar = {
     attendanceSheet: "كشف حضور",
     payroll: "كشف مستحقات",
     studentAttendance: "تقرير حضور الطلاب",
+    /** The monthly register — students down the side, one column per lesson. */
+    register: "كشف الحضور والغياب",
     teacherTimetable: "الجدول الأسبوعي للمعلم",
     printedAt: "تاريخ الطباعة",
     signature: "التوقيع",

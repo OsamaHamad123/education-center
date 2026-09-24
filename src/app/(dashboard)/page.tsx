@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BarChart3, Wallet } from "lucide-react";
+import { getTodayAbsences, TodayAbsencesCard } from "@/modules/attendance";
 import {
   BranchComparisonView,
   BranchDashboardView,
@@ -61,16 +62,24 @@ export default async function DashboardPage() {
     );
   }
 
-  const dashboard = await getBranchDashboard();
+  // Two reads rather than one query: the absences are `attendance.read` and the pulse
+  // is `report.read`, and keeping them apart is what lets the teacher's dashboard reuse
+  // the same card without holding a reporting permission.
+  const [dashboard, absences] = await Promise.all([getBranchDashboard(), getTodayAbsences()]);
 
   return (
     <>
       {header}
-      {dashboard.ok ? (
-        <BranchDashboardView dashboard={dashboard.data} />
-      ) : (
-        <EmptyState title={ar.reports.empty} description={ar.reports.emptyHint} />
-      )}
+      <div className="space-y-4">
+        {dashboard.ok ? (
+          <BranchDashboardView dashboard={dashboard.data} />
+        ) : (
+          <EmptyState title={ar.reports.empty} description={ar.reports.emptyHint} />
+        )}
+
+        {/* Who was not in a lesson today, even for one period (asked for 2026-09-24). */}
+        {absences.ok ? <TodayAbsencesCard students={absences.data} linkStudents /> : null}
+      </div>
     </>
   );
 }

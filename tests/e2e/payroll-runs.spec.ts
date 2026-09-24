@@ -24,6 +24,17 @@ async function signIn(page: Page, username: string) {
   await expect(page).toHaveURL("/", { timeout: 20_000 });
 }
 
+/**
+ * The per-teacher "صرف" trigger, and only that one.
+ *
+ * Inside a list item on purpose: "صرف للكل" sits above the list, its accessible name
+ * is "صرف للكل (7)", and `^صرف .` matches it — so an unscoped locator opened the
+ * bulk dialog and then waited for a description that dialog does not have.
+ */
+function teacherSettleTrigger(page: Page) {
+  return page.getByRole("listitem").getByRole("button", { name: new RegExp(`^${ar.payroll.settle} .`) });
+}
+
 test.describe("the settlement screen", () => {
   test("lists this month's teachers with what is computed and what is paid", async ({ page }) => {
     test.setTimeout(120_000);
@@ -41,7 +52,9 @@ test.describe("the settlement screen", () => {
     await page.goto("/payroll/runs");
 
     // The trigger is labelled "صرف <teacher>"; the dialog's own button is just "صرف".
-    const settle = page.getByRole("button", { name: new RegExp(`^${ar.payroll.settle} .`) }).first();
+    // Scoped to the teacher ROWS since 2026-09-24: "صرف للكل" sits above the list and
+    // matches `^صرف .` just as well, and it opens a different dialog.
+    const settle = teacherSettleTrigger(page).first();
     await expect(settle).toBeVisible({ timeout: 20_000 });
     await settle.click();
 
@@ -90,8 +103,9 @@ test.describe("settling a month", () => {
     for (let i = 0; i < 20; i++) {
       // Trigger vs confirm: the trigger is labelled "صرف <teacher>" and the dialog's
       // button is exactly "صرف". Matching both with one locator picks up a closing
-      // dialog's disabled button and waits for ever.
-      const settle = page.getByRole("button", { name: new RegExp(`^${ar.payroll.settle} .`) }).first();
+      // dialog's disabled button and waits for ever. And since 2026-09-24 there is a
+      // third: "صرف للكل", which is not in the list.
+      const settle = teacherSettleTrigger(page).first();
       if ((await settle.count()) === 0) break;
       await settle.click();
       const dialog = page.getByRole("dialog");

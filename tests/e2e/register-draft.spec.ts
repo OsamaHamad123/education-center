@@ -33,6 +33,20 @@ async function openFirstRegister(page: Page) {
 }
 
 test.describe("unsaved marks on a bad connection", () => {
+  /*
+   * SERIAL, and it has to be.
+   *
+   * `fullyParallel` runs these two across two workers, and both open the SAME first
+   * Giza register and tap the SAME first "حاضر" button — the first student on it. One
+   * test then SAVES that student absent, and the other's draft, which says exactly the
+   * same thing, stops differing from the server: `offerDraft` requires the draft to
+   * disagree with what was committed, so the banner never appears and the test fails
+   * on a race between two tests rather than on anything the product did.
+   *
+   * Run in order, each starts from a settled register and taps a different student.
+   */
+  test.describe.configure({ mode: "serial" });
+
   test("survive a reload, and are offered back rather than applied behind your back", async ({
     page,
   }, testInfo) => {

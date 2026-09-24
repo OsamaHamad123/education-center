@@ -4,7 +4,9 @@ import {
   checkSettlement,
   isSettled,
   paidTotal,
+  planBulkSettlement,
   settlementState,
+  type BulkCandidate,
   type RunRow,
 } from "./settlement";
 
@@ -104,5 +106,63 @@ describe("canEditSettledPeriod", () => {
 
   it("allows it again once the settlement is reversed", () => {
     expect(canEditSettledPeriod([paid(100_000), reversal(100_000)])).toBe(true);
+  });
+});
+
+describe("planBulkSettlement", () => {
+  const candidate = (over: Partial<BulkCandidate> & { teacherId: string }): BulkCandidate => ({
+    branchId: "b1",
+    computedPiasters: 100_000,
+    sessions: 10,
+    runs: [],
+    ...over,
+  });
+
+  it("writes one row per teacher, never one combined row", () => {
+    // The grain matters: a reversal has to be able to undo ONE teacher.
+    const plan = planBulkSettlement([candidate({ teacherId: "t1" }), candidate({ teacherId: "t2" })]);
+    expect(plan.toPay).toHaveLength(2);
+    expect(plan.toPay.map((row) => row.teacherId)).toEqual(["t1", "t2"]);
+  });
+
+  it("skips a teacher already paid, rather than failing the whole run", () => {
+    const plan = planBulkSettlement([
+      candidate({
+        teacherId: "paid",
+        runs: [{ amountPiasters: 100_000, sessionsCount: 10, reversesId: null }],
+      }),
+      candidate({ teacherId: "owed" }),
+    ]);
+    expect(plan.alreadySettled).toEqual(["paid"]);
+    expect(plan.toPay.map((row) => row.teacherId)).toEqual(["owed"]);
+  });
+
+  it("pays again after a reversal, because the money came back", () => {
+    const plan = planBulkSettlement([
+      candidate({
+        teacherId: "t1",
+        runs: [
+          { amountPiasters: 100_000, sessionsCount: 10, reversesId: null },
+          { amountPiasters: -100_000, sessionsCount: 10, reversesId: "r1" },
+        ],
+      }),
+    ]);
+    expect(plan.toPay.map((row) => row.teacherId)).toEqual(["t1"]);
+  });
+
+  it("skips a teacher who is owed nothing", () => {
+    const plan = planBulkSettlement([candidate({ teacherId: "t1", computedPiasters: 0, sessions: 0 })]);
+    expect(plan.nothingToPay).toEqual(["t1"]);
+    expect(plan.toPay).toEqual([]);
+  });
+
+  it("carries the computed amount and session count onto the row", () => {
+    const plan = planBulkSettlement([candidate({ teacherId: "t1", computedPiasters: 87_500, sessions: 7 })]);
+    expect(plan.toPay[0]).toEqual({
+      teacherId: "t1",
+      branchId: "b1",
+      amountPiasters: 87_500,
+      sessionsCount: 7,
+    });
   });
 });

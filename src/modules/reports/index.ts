@@ -38,6 +38,7 @@ export { BranchComparisonView } from "./ui/branch-comparison";
 export { MoneyReportView } from "./ui/money-report";
 export { BranchDashboardView } from "./ui/branch-dashboard";
 export { ClassMatrix } from "./ui/class-matrix";
+export { RegisterPrint } from "./ui/register-print";
 export { ReportFilters } from "./ui/report-filters";
 export { StudentAttendanceTable } from "./ui/student-attendance-table";
 export { StudentAttendancePrint } from "./ui/student-attendance-print";

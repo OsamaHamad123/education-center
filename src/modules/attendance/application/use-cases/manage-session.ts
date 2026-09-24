@@ -7,9 +7,17 @@ import { ar } from "@/shared/i18n/ar";
 import { err, ok } from "@/shared/lib/result";
 import { timeRangesOverlap, todayInCairo } from "@/shared/lib/time";
 import { canMarkAttendance } from "../../domain/edit-window";
-import { planSessionSnapshot, planSubstitution, validateCancellation } from "../../domain/session-plan";
+import {
+  checkMakeUp,
+  checkRestore,
+  makeUpNeedsCancelling,
+  planSessionSnapshot,
+  planSubstitution,
+  validateCancellation,
+} from "../../domain/session-plan";
 import {
   findClassRef,
+  findMakeUpOf,
   findSessionById,
   findTeacherRatesInBranch,
   insertSession,
@@ -75,8 +83,18 @@ export const restoreSession = createAction({
   handler: async ({ tx, ctx, input }) => {
     const session = await findSessionById(ctx, tx, input.sessionId);
     if (!session) return err("NOT_FOUND", ar.errors.NOT_FOUND);
-    if (session.status !== "cancelled") return err("CONFLICT", ar.attendance.notCancelled);
-    // And restoring one would increase it. Both directions, same rule.
+
+    // Both rules in one place: it must be cancelled, and nothing may still be standing
+    // in for it. The second is what stops the double payment coming back through the
+    // restore button after `drizzle/0020` closed the front door.
+    const violation = checkRestore({
+      status: session.status,
+      makeUp: await findMakeUpOf(ctx, tx, session.id),
+    });
+    if (violation === "NOT_CANCELLED") return err("CONFLICT", ar.attendance.notCancelled);
+    if (violation === "ALREADY_MADE_UP") return err("CONFLICT", ar.attendance.makeUp.RESTORE_MADE_UP);
+
+    // And restoring one would increase what is owed. Both directions, same rule.
     if (await isPeriodSettled(ctx, tx, session.branchId, session.teacherId, session.sessionDate)) {
       return err("CONFLICT", ar.payroll.periodSettled);
     }
@@ -101,15 +119,30 @@ export const setSubstituteTeacher = createAction({
     if (!session) return err("NOT_FOUND", ar.errors.NOT_FOUND);
     if (session.teacherId === input.teacherId) return err("CONFLICT", ar.attendance.sameTeacher);
 
+    // BOTH months, not one. A hand-over does not change what a lesson is worth — it
+    // changes WHOSE it is, so it takes the money off one teacher's month and puts it
+    // on another's. Either being settled means a figure that has already been paid
+    // would move, and the guard cancelling and restoring have always had was simply
+    // missing here (`drizzle/0020`).
+    if (await isPeriodSettled(ctx, tx, session.branchId, session.teacherId, session.sessionDate)) {
+      return err("CONFLICT", ar.payroll.periodSettled);
+    }
+    if (await isPeriodSettled(ctx, tx, session.branchId, input.teacherId, session.sessionDate)) {
+      return err("CONFLICT", ar.payroll.substitutePeriodSettled);
+    }
+
     const rates = await findTeacherRatesInBranch(ctx, tx, input.teacherId, session.branchId);
     if (!rates) return err("CONFLICT", ar.attendance.teacherNotInBranch);
 
     // The substitute is paid THEIR rate, at the track the session was run at — not
     // the absent teacher's rate, and not the substitute's usual track (rule 10.5).
+    // It also records whose lesson it was, which overwriting `teacher_id` destroyed.
     const substitution = planSubstitution({
       substituteTeacherId: input.teacherId,
       substituteRates: rates,
       trackApplied: session.trackApplied,
+      currentTeacherId: session.teacherId,
+      substitutedFromTeacherId: session.substitutedFromTeacherId,
     });
 
     const updated = await updateSession(ctx, tx, input.sessionId, substitution);
@@ -161,11 +194,47 @@ export const createExtraSession = createAction({
     );
     if (clash) return err("CONFLICT", ar.attendance.timeTaken);
 
+    // An extra session ADDS a lesson's pay, so it cannot be added to a month that has
+    // already been handed over. Cancelling has refused this since `drizzle/0016`;
+    // creating did not, and it moves the total in the same direction.
+    if (await isPeriodSettled(ctx, tx, classRef.branchId, input.teacherId, input.sessionDate)) {
+      return err("CONFLICT", ar.payroll.periodSettled);
+    }
+
     const rates = await findTeacherRatesInBranch(ctx, tx, input.teacherId, classRef.branchId);
     if (!rates) return err("CONFLICT", ar.attendance.teacherNotInBranch);
 
     const subject = (await listSubjectOptions(ctx, tx)).find((row) => row.id === input.subjectId);
     if (!subject) return err("NOT_FOUND", ar.attendance.noSuchSubject);
+
+    // --- the lesson this one makes up for, if it makes up for one -----------------
+    //
+    // Everything below runs inside the action's transaction, so a make-up either
+    // links AND cancels, or neither. Half of it — an extra session recorded and the
+    // original left standing — is precisely the double payment (`drizzle/0020`).
+    const original = input.makesUpSessionId ? await findSessionById(ctx, tx, input.makesUpSessionId) : null;
+
+    if (input.makesUpSessionId) {
+      // A session in another branch is invisible under RLS, so this is 404, not 403.
+      if (!original) return err("NOT_FOUND", ar.errors.NOT_FOUND);
+
+      const problem = checkMakeUp({
+        original: {
+          id: original.id,
+          classId: original.classId,
+          sessionDate: original.sessionDate,
+          madeUpBy: (await findMakeUpOf(ctx, tx, original.id))?.id ?? null,
+        },
+        makeUp: { classId: input.classId, sessionDate: input.sessionDate },
+      });
+      if (problem) return err("CONFLICT", ar.attendance.makeUp[problem]);
+
+      // The missed lesson's own month must be open too: cancelling it here is a
+      // cancellation, and it takes money off a teacher who may already have been paid.
+      if (await isPeriodSettled(ctx, tx, original.branchId, original.teacherId, original.sessionDate)) {
+        return err("CONFLICT", ar.payroll.originalPeriodSettled);
+      }
+    }
 
     const snapshot = planSessionSnapshot({
       period: {
@@ -183,8 +252,24 @@ export const createExtraSession = createAction({
       teacherRates: rates,
     });
 
+    // Cancel the missed lesson in the same transaction, if the office had not already.
+    // The reason names the replacement, so "why was there no lesson on Sunday" reads
+    // as an answer rather than as a gap.
+    if (original && makeUpNeedsCancelling(original.status)) {
+      const cancelled = await updateSession(ctx, tx, original.id, {
+        status: "cancelled",
+        cancelReason: ar.attendance.makeUpCancelReason(input.sessionDate, input.periodNumber),
+      });
+      if (!cancelled) return err("NOT_FOUND", ar.errors.NOT_FOUND);
+    }
+
     return ok(
-      await insertSession(ctx, tx, { ...snapshot, branchId: classRef.branchId, classId: classRef.id }),
+      await insertSession(ctx, tx, {
+        ...snapshot,
+        branchId: classRef.branchId,
+        classId: classRef.id,
+        makesUpSessionId: original?.id ?? null,
+      }),
     );
   },
 });

@@ -64,6 +64,9 @@ export const DASHBOARD_NAV: NavItem[] = [
 export const TEACHER_NAV: NavItem[] = [
   { href: "/teacher", label: ar.nav.teacherHome, icon: "attendance" },
   { href: "/teacher/timetable", label: ar.nav.teacherTimetable, icon: "timetable" },
+  // Their own students' unexcused absences. No permission entry: every role in this
+  // area holds `attendance.read`, and RLS decides which lessons are theirs.
+  { href: "/teacher/absences", label: ar.absences.title, icon: "attendance" },
   { href: "/teacher/earnings", label: ar.nav.teacherEarnings, icon: "payroll" },
   // A teacher's access code IS their password, so this is the same screen every
   // other role uses — one flow to keep correct rather than two.

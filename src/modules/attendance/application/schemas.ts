@@ -57,4 +57,17 @@ export const extraSessionSchema = z.object({
     .string()
     .trim()
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "صيغة الوقت غير صحيحة (HH:MM)"),
+  /**
+   * The missed lesson this one makes up for (`drizzle/0020`). Optional, because most
+   * extra sessions are genuinely extra — a revision lesson before an exam adds a
+   * lesson's pay because it added a lesson. This is for the other case, where the
+   * lesson was MOVED and paying for both would pay twice.
+   *
+   * An empty string is what a `<select>` with no choice submits, so it is normalised
+   * to undefined rather than failing validation on a form the office left alone.
+   */
+  makesUpSessionId: z
+    .union([z.uuid("معرّف غير صالح"), z.literal("")])
+    .optional()
+    .transform((value) => (value ? value : undefined)),
 });

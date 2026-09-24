@@ -3,11 +3,16 @@ import { EmptyState } from "@/shared/ui/empty-state";
 import type { ClassMatrixReport } from "../application/queries/get-reports";
 
 /**
- * Students × dates for one class (rule 10.7). A server component — it is a table of
- * letters, and there is nothing here to interact with.
+ * The register sheet: students × LESSONS for one class (rule 10.7). A server component
+ * — it is a table of letters, and there is nothing here to interact with.
  *
- * A day can hold several periods; the cell shows the WORST status of the day, because
- * the question this grid answers is "which days did this student miss".
+ * It used to be students × days, one cell per day holding the worst status in it. The
+ * centre sent photographs of the paper register it actually keeps, and every date on it
+ * carries a sub-column per period, because a boy who sits through first period and
+ * walks out of second is two facts and the fold made it one (2026-09-24).
+ *
+ * So the header is two rows: the date on top, spanning however many lessons ran that
+ * day, and the period number under it. Which is what the paper does.
  */
 export function ClassMatrix({ report }: { report: ClassMatrixReport }) {
   if (report.columns.length === 0) {
@@ -19,23 +24,46 @@ export function ClassMatrix({ report }: { report: ClassMatrixReport }) {
       <table className="border-collapse text-sm">
         <thead>
           <tr>
-            <th scope="col" className="bg-background sticky start-0 border p-2 text-start">
+            <th scope="col" rowSpan={2} className="bg-background sticky start-0 border p-2 text-start">
               {ar.reports.student}
             </th>
-            {report.columns.map((column) => (
-              <th key={column.sessionDate} scope="col" className="border p-1 text-xs whitespace-nowrap">
+            {report.days.map((day) => (
+              <th
+                key={day.sessionDate}
+                scope="col"
+                colSpan={day.periods}
+                className="border p-1 text-xs whitespace-nowrap"
+              >
                 {/* dd/MM only: the year is the same for every column in one range. */}
-                {column.sessionDate.slice(8, 10)}/{column.sessionDate.slice(5, 7)}
+                {day.sessionDate.slice(8, 10)}/{day.sessionDate.slice(5, 7)}
               </th>
             ))}
             {/*
               A total, so the eye does not have to count pink cells
               (docs/PRODUCT-REVIEW-2026-09.md). It is what turns this picture into a
-              decision about who to ring.
+              decision about who to ring. It spans both header rows.
             */}
-            <th scope="col" className="bg-background sticky end-0 border p-2 text-xs whitespace-nowrap">
+            <th
+              scope="col"
+              rowSpan={2}
+              className="bg-background sticky end-0 border p-2 text-xs whitespace-nowrap"
+            >
               {ar.attendanceStatus.absent}
             </th>
+          </tr>
+          <tr>
+            {report.columns.map((column) => (
+              <th
+                key={column.sessionId}
+                scope="col"
+                className={`text-muted-foreground border p-1 text-[0.625rem] font-normal ${
+                  column.status === "cancelled" ? "line-through" : ""
+                }`}
+                title={`${column.subjectName}${column.status === "cancelled" ? ` — ${ar.attendance.cancelled}` : ""}`}
+              >
+                {column.periodNumber}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
@@ -48,10 +76,10 @@ export function ClassMatrix({ report }: { report: ClassMatrixReport }) {
                 {student.fullName}
               </th>
               {report.columns.map((column) => {
-                const status = report.cells[`${student.studentId}|${column.sessionDate}`];
+                const status = report.cells[`${student.studentId}|${column.sessionId}`];
                 return (
                   <td
-                    key={column.sessionDate}
+                    key={column.sessionId}
                     className={`border p-1 text-center text-xs ${cellClass(status)}`}
                     title={status ? ar.attendanceStatus[status] : undefined}
                   >
@@ -72,9 +100,15 @@ export function ClassMatrix({ report }: { report: ClassMatrixReport }) {
   );
 }
 
-/** How many days in this range the student was absent — counted from the cells shown. */
+/**
+ * How many LESSONS in this range the student missed — counted from the cells shown.
+ *
+ * Periods, not days, now that the grid holds periods. A boy who skipped two lessons on
+ * one day has missed two lessons, and the teacher who taught the second one is owed
+ * that fact.
+ */
 function absencesOf(report: ClassMatrixReport, studentId: string): number {
-  return report.columns.filter((column) => report.cells[`${studentId}|${column.sessionDate}`] === "absent")
+  return report.columns.filter((column) => report.cells[`${studentId}|${column.sessionId}`] === "absent")
     .length;
 }
 

@@ -164,15 +164,41 @@ function MarksBadge({ row }: { row: SessionLogRow }) {
   );
 }
 
+/**
+ * What happened to this lesson, in as few badges as it takes.
+ *
+ * "بدلاً عن فلان" is the one that was impossible to show before `drizzle/0020`: a
+ * substitution overwrote `teacher_id` and left nothing behind, so a covered lesson was
+ * indistinguishable from one that had always been the substitute's.
+ */
 function StatusBadge({ row }: { row: SessionLogRow }) {
+  const origin = row.substitutedFromName ? (
+    <Badge variant="outline" className="font-normal">
+      {ar.attendance.substitutedFrom} {row.substitutedFromName}
+    </Badge>
+  ) : null;
+
   if (row.status === "cancelled") {
     return (
-      <Badge variant="destructive" title={row.cancelReason ?? undefined}>
-        {ar.attendance.cancelledBadge}
-      </Badge>
+      <>
+        <Badge variant="destructive" title={row.cancelReason ?? undefined}>
+          {ar.attendance.cancelledBadge}
+        </Badge>
+        {origin}
+      </>
     );
   }
-  return row.isExtra ? <Badge variant="outline">{ar.attendance.extraBadge}</Badge> : null;
+
+  return (
+    <>
+      {row.isExtra ? (
+        <Badge variant="outline">
+          {row.makesUpSessionId ? ar.attendance.makeUpBadge : ar.attendance.extraBadge}
+        </Badge>
+      ) : null}
+      {origin}
+    </>
+  );
 }
 
 function RowActions({

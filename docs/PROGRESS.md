@@ -920,6 +920,185 @@ React runtime. That is a hundred-file refactor for the byte count of a page nobo
 complained about, on a product that has still never been deployed. The measurement is
 recorded so the decision can be made on a number rather than on my guess.
 
+---
+
+## 2026-09-24 — the register by period, absence without permission, and paying everyone
+
+Five things the centre asked for in one message. **Three of them already existed**, which
+is the first thing worth recording: the answer to "we want attendance per lesson, not per
+day" was that it has been per lesson since Phase 7. `class_sessions` carries
+`period_number`, `attendance_records` is keyed on `(session_id, student_id)`, and
+`absent` and `excused` have been separate statuses since the first migration. Nothing in
+the DATA folded a day together. Two SCREENS did, and nothing read the difference between
+the two kinds of absence. That is a reporting gap, not a schema one, and it was fixed as
+one.
+
+### `drizzle/0020` — three holes around who taught a lesson
+
+Found by reading `manage-session.ts` beside `settle-payroll.ts` while answering the
+centre's question about paying a teacher who covered somebody else's lesson. The covering
+itself was already built and already right — the substitute is re-snapshotted at THEIR
+rate, on the track the session was run at (rule 10.5). Everything around the edges of it
+was not.
+
+1. **A substitution erased the original teacher.** `set_substitute` overwrote
+   `teacher_id` in place, so the moment Ahmad's lesson went to Khaled the record said it
+   had always been Khaled's. "How many lessons did Ahmad miss, and who covered them" had
+   no answer anywhere in the database — and that is the question the centre asked.
+   `substituted_from_teacher_id` records it, and records the FIRST owner, not the
+   previous one: Ahmad → Khaled → Mona still says Ahmad. Handing it back to Ahmad clears
+   the column, because "taken from Ahmad, taught by Ahmad" is not a substitution and a
+   CHECK constraint refuses it.
+
+2. **A substitution ignored the settled-month freeze.** Cancelling and restoring have
+   both refused a paid month since `drizzle/0016`. Substituting did not — and it is the
+   one operation that moves money between TWO teachers, taking a lesson off one ledger
+   and putting it on another. Done after both were paid, the centre had overpaid one and
+   underpaid the other with nothing on either row saying so. Both months are now checked.
+   `createExtraSession` had the same gap in the other direction and now checks too.
+
+3. **A make-up lesson could be paid twice.** "He taught Sunday's period on Wednesday" was
+   recorded as an ordinary extra session, which ADDS a lesson's pay — correct only if the
+   original was cancelled, and nothing required it to be or connected the two.
+   `makes_up_session_id` links them, a partial unique index makes it one-to-one, and
+   choosing one in the dialog cancels the original **in the same transaction**, with a
+   reason that names the replacement. The index is the guarantee, not the use case's
+   check: two clerks recording a make-up for the same missed lesson is a race, and the
+   loser of a check is a second payment.
+
+The link is a **composite** foreign key — `(makes_up_session_id, branch_id)` — for the
+reason `drizzle/0015` spells out: foreign keys are not subject to RLS, so a session a
+branch admin cannot see was still a valid target to name.
+
+### My advice on the substitution question, recorded because it was asked
+
+**Do not build a "swap" concept.** The lesson is the unit of pay, and "who taught this
+lesson" answers the whole question. Two teachers exchanging lessons is two independent
+substitutions, each paid at the right rate to the right person — tying them into one
+action invents a constraint that breaks the first time one of them cancels.
+
+### The register, per lesson
+
+The centre sent photographs of the paper register it keeps: students down the side, and
+under every date a sub-column per period. `classMatrix` folded each day into one cell
+holding the worst status in it, which answers "which days did he miss" and cannot answer
+"which lesson did he walk out of". The grid is now one column per SESSION with a two-row
+header — the date spanning its periods, the period number beneath — and there is an A4
+**landscape** print at `/print/reports/register` that matches the paper, serial column
+included.
+
+### Absence without permission — a new screen, not a new threshold
+
+`/attendance/absences`, and a card on both dashboards. **A percentage is the wrong
+instrument for this question**: a boy who missed one lesson out of forty is at 2.5%, under
+any threshold a centre would set, and his father still wants to know. So this counts
+nothing and hides nothing — one period missed without permission is one line.
+
+It lives under `/attendance` and asks for `attendance.read`, **not** `report.read`,
+because teachers read it and hold no reporting permission. There is **no role branch in
+the code**: a teacher gets their own lessons and a branch admin gets the branch because
+`attendance_records_select` says so. The isolation is the database's, and a filter in
+TypeScript would be a second answer to a question that already has one.
+
+### صرف للكل
+
+One press pays every teacher owed something for a month. **One row per teacher, never one
+combined row** — `payroll_runs` is keyed on (branch, teacher, month) because that is the
+grain a reversal works at, and a single branch row would make undoing one mistake an undo
+of the payroll. Amounts are recomputed inside the transaction, never taken from the
+client. Teachers already paid and teachers owed nothing are **skipped and counted**, not
+errors: that is the ordinary state of a payroll run, and an all-or-nothing rule would mean
+the button could never be pressed twice.
+
+### A latent layout bug, found by adding the third button
+
+`PageHeader` wrapped its action slot in `shrink-0`. A `shrink-0` container never gets
+narrower than its content, so an action slot holding a `flex-wrap` row **could never
+actually wrap** — the row kept its max-content width and the PAGE scrolled sideways
+instead.
+
+It went unnoticed for eleven phases because every page had one or two buttons. Adding a
+third to `/attendance` made it visible: on a 375px phone the header ran off the edge and
+took the date stepper with it, so the previous-day button sat under the date field and
+could not be tapped. Three mobile e2e tests failed on it — `attendance.spec.ts`,
+`filter-history.spec.ts` and `loading-feedback.spec.ts` — all of them clicking that one
+control.
+
+**The fix is `min-w-0`, and it is in `PageHeader`, not in `/attendance`.** The bug was
+never about the third button; the third button is what made a container that cannot wrap
+finally overflow. Confirmed in a real browser at 375px before and after.
+
+Worth recording for what it says about the suite: the three tests that caught it are
+about a back button, a double tap and a date stepper. None of them is about layout.
+
+### Two e2e locators the new button broke
+
+`صرف للكل` has the accessible name "صرف للكل (7)", and `payroll-runs.spec.ts` located
+the per-teacher trigger with `^صرف .` — which matches it. The locator now scopes to the
+teacher rows, where the bulk button is not. And the reports index asserted the literal
+"كشف الشعبة", which this entry renamed; it reads `ar.reports.classMatrix` now, so it
+cannot drift again.
+
+The bulk-payout e2e settles **El Obour**, not Giza: `payroll-runs.spec.ts` owns Giza's
+settle-and-reverse, the suite runs two workers against one database, and two tests
+settling the same branch's month would fail for a reason that is not about the product.
+
+### And one race that was always there
+
+`register-draft.spec.ts` then failed once, and passed on its own. Both of its tests open
+the SAME first Giza register and tap the SAME first "حاضر" button — the first student on
+it — and `fullyParallel` runs them in two browsers at once. One saves that student
+absent; the other's draft then says exactly what the server says, and `offerDraft`
+requires the draft to DISAGREE with what was committed, so the banner never appears.
+
+The file is `mode: "serial"` now, which is what its own header always implied. Nothing
+about the product changed. Worth writing down because the run before this one passed
+with the same race in it: a suite that shares one database has an ordering, and
+"it passed" is not the same as "it cannot fail".
+
+### A fourth hole, found while trying to test the third
+
+Writing the make-up test asked an obvious question the implementation had not: what
+happens if somebody presses **إعادة تفعيل الحصة** on a lesson that has already been made
+up? Nothing stopped them — and both lessons would then be completed, both would count,
+and the double payment `drizzle/0020` exists to prevent would walk back in through the
+restore button.
+
+`checkRestore` in `domain/session-plan.ts` now holds both of that button's rules, and
+only a make-up that still STANDS blocks it: cancel the replacement and the original may
+come back, because nothing is compensating it then. Four unit tests.
+
+### And the dialog wiring, verified in a browser rather than by a test
+
+The make-up path is the one thing here that no test can reach: it needs a session, so
+the integration suite cannot call the action, and an e2e that creates sessions by period
+number is not repeatable against a shared database — the second run finds the periods
+taken and fails for a reason that is not about the product. It was driven by hand
+instead, at 1280px, and the database says what happened:
+
+```
+ period | subject   | status    | is_extra | cancel_reason | links
+      9 | الجغرافيا | cancelled | t        | غياب المعلم   | f
+     10 | الجغرافيا | completed | t        |               | t
+```
+
+One press: the replacement created, the missed lesson cancelled, the two linked. The
+rules behind it are unit-tested and the constraints are integration-tested; this is the
+wiring between them, and it is checked by hand each time it changes.
+
+### One test that passed by skipping itself
+
+`absences-and-payout.spec.ts` located the bulk button with a regex built in a template
+literal — where `\(` is just `(` and `\d` is just `d`. It compiled to
+`/^صرف للكل (d+)$/`, matched nothing, took its own "nothing owed this month" branch, and
+was counted as a **pass**. The whole suite was green with that test doing nothing.
+
+Found by checking the database rather than the report: El Obour had sixty lessons and no
+`payroll_runs` rows at all. Now it uses character classes, and it ASSERTS the button
+instead of skipping when it is missing — a seeded month always owes something, so its
+absence is news. It writes two rows and two reversals, net zero, which is the proof that
+"one row per teacher" is real.
+
 ## Next steps
 
 **See `docs/ROADMAP.md`** — written 2026-09-17, after payroll runs closed the last item

@@ -13,10 +13,12 @@ import {
   listClassOptions,
   listDayPeriods,
   listEnrollmentPeriods,
+  listMakeUpCandidates,
   listMarks,
   listSessionsForDay,
   listStudentsByIds,
   type ClassRef,
+  type MakeUpCandidate,
   type RosterRow,
 } from "../../infrastructure/attendance.repository";
 import { loadMarkingPolicy } from "./marking-policy";
@@ -62,6 +64,14 @@ export type AttendanceBoard = {
   rosterSize: number;
   /** Null when this viewer may write on this day; otherwise why not. */
   blockedBy: MarkingViolation | null;
+  /**
+   * Cancelled lessons of this class that nothing has made up for yet (`drizzle/0020`).
+   *
+   * Loaded with the board rather than when the dialog opens, because the dialog is a
+   * client component and a second round trip to fill one `<select>` would show an
+   * empty list first.
+   */
+  makeUpCandidates: MakeUpCandidate[];
 };
 
 export async function listAttendanceClasses(): Promise<Result<{ id: string; name: string }[]>> {
@@ -98,10 +108,13 @@ export async function getAttendanceBoard(input: {
     const today = todayInCairo();
     const policy = await loadMarkingPolicy(auth.data, tx);
 
-    const [slots, sessions, enrollments] = await Promise.all([
+    const [slots, sessions, enrollments, makeUpCandidates] = await Promise.all([
       listDayPeriods(auth.data, tx, input.classId, isoDayOfWeek(sessionDate)),
       listSessionsForDay(auth.data, tx, input.classId, sessionDate),
       listEnrollmentPeriods(auth.data, tx, input.classId),
+      // Sixty days back, and never forward: a make-up compensates a lesson already
+      // missed, so a cancelled lesson next week is not one of these.
+      listMakeUpCandidates(auth.data, tx, input.classId, minusDays(sessionDate, 60), sessionDate),
     ]);
 
     const counts = await countMarksBySession(
@@ -140,8 +153,16 @@ export async function getAttendanceBoard(input: {
         today,
         ...policy,
       }),
+      makeUpCandidates,
     });
   });
+}
+
+/** `yyyy-MM-dd` minus n days, without pulling a date library into a query file. */
+function minusDays(date: string, days: number): string {
+  const [year, month, day] = date.split("-").map(Number) as [number, number, number];
+  const shifted = new Date(Date.UTC(year, month - 1, day - days));
+  return shifted.toISOString().slice(0, 10);
 }
 
 export type RosterEntry = RosterRow & {

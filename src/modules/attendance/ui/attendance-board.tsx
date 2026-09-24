@@ -107,6 +107,7 @@ export function AttendanceBoardView({
               sessionDate={board.sessionDate}
               teachers={teachers}
               subjects={subjects}
+              makeUpCandidates={board.makeUpCandidates}
               trigger={
                 <Button variant="outline">
                   <Plus className="size-4" aria-hidden />

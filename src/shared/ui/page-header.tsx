@@ -26,7 +26,21 @@ export function PageHeader({
         </h1>
         {description ? <p className="text-muted-foreground text-sm">{description}</p> : null}
       </div>
-      {action ? <div className="shrink-0">{action}</div> : null}
+      {/*
+        NOT `shrink-0`, which it was until 2026-09-24.
+
+        A `shrink-0` container never gets narrower than its content, so an action slot
+        holding a `flex-wrap` row could never actually wrap: the row's width stayed at
+        max-content and the PAGE scrolled sideways instead. It went unnoticed while
+        every page had one or two buttons and was found the day a third was added to
+        `/attendance` — on a 375px phone the header ran off the edge and took the
+        attendance date stepper with it, which is the one control this product is
+        built around.
+
+        `min-w-0` lets it shrink so the wrap inside it can happen. The title keeps its
+        own line because the outer container wraps too.
+      */}
+      {action ? <div className="min-w-0">{action}</div> : null}
     </div>
   );
 }

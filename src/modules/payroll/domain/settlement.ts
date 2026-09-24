@@ -73,3 +73,62 @@ export function checkSettlement(input: {
 export function canEditSettledPeriod(runs: readonly RunRow[]): boolean {
   return !isSettled(runs);
 }
+
+// --- paying everybody at once -------------------------------------------------
+
+export type BulkCandidate = {
+  teacherId: string;
+  branchId: string;
+  computedPiasters: number;
+  sessions: number;
+  /** That teacher's settlements for this month, reversals included. */
+  runs: readonly RunRow[];
+};
+
+export type BulkSettlementPlan = {
+  /** Exactly what will be written, one row per teacher. */
+  toPay: { teacherId: string; branchId: string; amountPiasters: number; sessionsCount: number }[];
+  /** Skipped because the money is already out the door. */
+  alreadySettled: string[];
+  /** Skipped because there is nothing owed — no lessons, or all of them cancelled. */
+  nothingToPay: string[];
+};
+
+/**
+ * "Pay everyone" as a plan, decided before anything is written.
+ *
+ * ONE ROW PER TEACHER, never a combined one. `payroll_runs` is keyed on (branch,
+ * teacher, month) because that is the grain a reversal has to work at: a clerk who
+ * paid Khaled the wrong amount must be able to undo Khaled without unpicking the
+ * other eight. A single row for the branch would make the reversal of one mistake a
+ * reversal of the payroll.
+ *
+ * It SKIPS rather than fails. A month where seven of nine are owed something and two
+ * were already paid is the ordinary state of a payroll run, not an error — and an
+ * all-or-nothing rule would mean the office could never use the button twice. Both
+ * skip lists are returned so the screen can say which, and why.
+ */
+export function planBulkSettlement(candidates: readonly BulkCandidate[]): BulkSettlementPlan {
+  const plan: BulkSettlementPlan = { toPay: [], alreadySettled: [], nothingToPay: [] };
+
+  for (const candidate of candidates) {
+    // Same order as `checkSettlement`: already-paid is the more informative answer
+    // when a teacher was paid and their lessons have since been cancelled.
+    if (isSettled(candidate.runs)) {
+      plan.alreadySettled.push(candidate.teacherId);
+      continue;
+    }
+    if (candidate.computedPiasters <= 0) {
+      plan.nothingToPay.push(candidate.teacherId);
+      continue;
+    }
+    plan.toPay.push({
+      teacherId: candidate.teacherId,
+      branchId: candidate.branchId,
+      amountPiasters: candidate.computedPiasters,
+      sessionsCount: candidate.sessions,
+    });
+  }
+
+  return plan;
+}

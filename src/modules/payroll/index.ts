@@ -39,7 +39,7 @@ export {
   type SettlementRow,
   type SettlementsView,
 } from "./application/queries/get-settlements";
-export { reversePayrollRun, settlePayroll } from "./application/use-cases/settle-payroll";
+export { reversePayrollRun, settleAllPayroll, settlePayroll } from "./application/use-cases/settle-payroll";
 export { exportPayrollCsv } from "./application/use-cases/export-payroll";
 export { PayrollReportView, PayrollSessionsView } from "./ui/payroll-report";
 export { PayrollPrint } from "./ui/payroll-print";

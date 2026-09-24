@@ -115,9 +115,12 @@ export type ClassMatrixReport = {
   range: DateRange;
   classId: string | null;
   classes: { id: string; name: string }[];
+  /** One per LESSON, in order. The view groups them by date for the header. */
   columns: MatrixSessionColumn[];
+  /** The dates above those columns, each with how many periods sit under it. */
+  days: { sessionDate: string; periods: number }[];
   students: { studentId: string; fullName: string; studentCode: string }[];
-  /** `studentId|sessionDate` → the worst status recorded that day. */
+  /** `studentId|sessionId` → the status recorded in that lesson. */
   cells: Record<string, "present" | "absent" | "late" | "excused">;
 };
 
@@ -138,32 +141,40 @@ export async function getClassMatrixReport(input: {
     // A malformed id falls back to the first class the viewer can see, exactly as an
     // absent one does. RLS still decides whether a WELL-formed id is theirs.
     const classId = resolveClassId(input) ?? classes[0]?.id;
-    if (!classId) return ok({ range, classId: null, classes, columns: [], students: [], cells: {} });
+    if (!classId)
+      return ok({ range, classId: null, classes, columns: [], days: [], students: [], cells: {} });
 
     const [matrix, students] = await Promise.all([
       classMatrix(auth.data, tx, classId, range),
       countByStudent(auth.data, tx, range, classId),
     ]);
 
-    // One day can hold several periods. The cell shows the WORST of them, because a
-    // parent asking "was my son in on Tuesday" is asking about the absence.
+    // One cell per LESSON. Nothing is folded: a boy who attends first period and
+    // skips second is two different facts, and the register the centre keeps on paper
+    // has always had a sub-column for each (photographs, 2026-09-24).
     const cells: ClassMatrixReport["cells"] = {};
     for (const cell of matrix.cells) {
-      const key = `${cell.studentId}|${cell.sessionDate}`;
-      cells[key] = worse(cells[key], cell.status);
+      cells[`${cell.studentId}|${cell.sessionId}`] = cell.status;
     }
 
-    // De-duplicate the columns to one per day; the matrix is read by date, not period.
-    const byDate = new Map<string, MatrixSessionColumn>();
+    // The dates above the columns, each spanning its own periods — the top row of the
+    // header. Counted here rather than in the view, which has no business reducing.
+    const days: ClassMatrixReport["days"] = [];
     for (const column of matrix.columns) {
-      if (!byDate.has(column.sessionDate)) byDate.set(column.sessionDate, column);
+      const last = days.at(-1);
+      if (last?.sessionDate === column.sessionDate) {
+        last.periods += 1;
+        continue;
+      }
+      days.push({ sessionDate: column.sessionDate, periods: 1 });
     }
 
     return ok({
       range,
       classId,
       classes,
-      columns: [...byDate.values()],
+      columns: matrix.columns,
+      days,
       students: students.map((row) => ({
         studentId: row.studentId,
         fullName: row.fullName,
@@ -172,16 +183,6 @@ export async function getClassMatrixReport(input: {
       cells,
     });
   });
-}
-
-const SEVERITY = { present: 0, excused: 1, late: 2, absent: 3 } as const;
-
-function worse(
-  current: "present" | "absent" | "late" | "excused" | undefined,
-  next: "present" | "absent" | "late" | "excused",
-): "present" | "absent" | "late" | "excused" {
-  if (!current) return next;
-  return SEVERITY[next] > SEVERITY[current] ? next : current;
 }
 
 // --- absence alerts -----------------------------------------------------------

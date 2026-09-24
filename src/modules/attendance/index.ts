@@ -6,6 +6,7 @@
  */
 export { summarize, type AttendanceStatus, type AttendanceSummary } from "./domain/roster";
 export { canMarkAttendance, type MarkingViolation } from "./domain/edit-window";
+export { describePeriodRuns, groupAbsences, type StudentAbsences } from "./domain/absences";
 export {
   getAttendanceBoard,
   getAttendanceSheet,
@@ -14,6 +15,11 @@ export {
   type AttendanceSheet,
   type BoardPeriod,
 } from "./application/queries/get-attendance-board";
+export {
+  getTodayAbsences,
+  getUnexcusedAbsences,
+  type AbsencesView,
+} from "./application/queries/get-absences";
 export {
   getMyToday,
   resolveSlotForMarking,
@@ -45,6 +51,8 @@ export {
  */
 export { findSessionById, listSessions, type SessionRow } from "./infrastructure/attendance.repository";
 
+export { AbsencesList } from "./ui/absences-list";
+export { TodayAbsencesCard } from "./ui/today-absences-card";
 export { AttendanceBoardView } from "./ui/attendance-board";
 export { TeacherTodayView } from "./ui/teacher-today";
 export { AttendanceSheetView } from "./ui/attendance-sheet";

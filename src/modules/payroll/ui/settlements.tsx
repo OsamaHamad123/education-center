@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Wallet } from "lucide-react";
+import { Loader2, Wallet, Wallet2 } from "lucide-react";
 import { toast } from "sonner";
 import { ar } from "@/shared/i18n/ar";
 import { formatEGP } from "@/shared/lib/money";
@@ -26,7 +26,7 @@ import { Label } from "@/shared/ui/label";
 import { useAction } from "@/shared/ui/use-action";
 import { useNavPending } from "@/shared/ui/use-nav-pending";
 import type { SettlementRow, SettlementsView } from "../application/queries/get-settlements";
-import { reversePayrollRun, settlePayroll } from "../application/use-cases/settle-payroll";
+import { reversePayrollRun, settleAllPayroll, settlePayroll } from "../application/use-cases/settle-payroll";
 
 /**
  * Paying the teachers for a month (`drizzle/0016`).
@@ -61,6 +61,15 @@ export function SettlementsScreen({ view, canSettle }: { view: SettlementsView; 
         <Figure label={ar.payroll.computedAmount} piasters={view.totalComputed} />
         <Figure label={ar.payroll.paidAmount} piasters={view.totalPaid} />
       </div>
+
+      {/*
+        Paying everybody at once. Shown only while somebody is actually owed something,
+        so the button is absent on a month that is finished rather than present and
+        refusing — the office should not have to press it to learn there is no work.
+      */}
+      {canSettle && view.rows.some((row) => row.state === "unsettled" && row.computedPiasters > 0) ? (
+        <SettleAllDialog period={view.period} count={view.rows.filter(isPayable).length} />
+      ) : null}
 
       {view.rows.length === 0 ? (
         <EmptyState title={ar.payroll.noRuns} description={ar.payroll.noRunsHint} />
@@ -164,6 +173,81 @@ function RunCard({ row, period, canSettle }: { row: SettlementRow; period: strin
         ) : null}
       </CardContent>
     </Card>
+  );
+}
+
+/** Unsettled AND owed something — the same two tests `planBulkSettlement` applies. */
+function isPayable(row: SettlementRow): boolean {
+  return row.state === "unsettled" && row.computedPiasters > 0;
+}
+
+/**
+ * "صرف للكل" (asked for 2026-09-24).
+ *
+ * It names the number of teachers and the total BEFORE the press, because this is the
+ * one button in the product that moves nine people's money at once — and because the
+ * freeze it applies to nine months is the part nobody expects.
+ *
+ * The figures shown are the ones already on this screen. The server recomputes its own
+ * inside the transaction and writes those; these are for the person deciding.
+ */
+function SettleAllDialog({ period, count }: { period: string; count: number }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [note, setNote] = useState("");
+  const [isPending, startTransition] = useAction();
+
+  function confirm() {
+    startTransition(async () => {
+      const result = await settleAllPayroll({ period, note });
+      if (!result.ok) {
+        toast.error(result.error.message);
+        return;
+      }
+      // Skipped teachers are counted, not hidden: "7 paid, 2 skipped" is the sentence
+      // that stops somebody going looking for the two.
+      const skipped = result.data.alreadySettled + result.data.nothingToPay;
+      toast.success(ar.payroll.settleAllDone(result.data.paid, skipped));
+      setOpen(false);
+      router.refresh();
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="w-full sm:w-auto">
+          <Wallet2 className="size-4" aria-hidden />
+          {ar.payroll.settleAll} ({count})
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{ar.payroll.settleAllTitle}</DialogTitle>
+          <DialogDescription>{ar.payroll.settleAllDescription}</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-2">
+          <Label htmlFor="settle-all-note">{ar.fees.note}</Label>
+          <Input
+            id="settle-all-note"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            disabled={isPending}
+          />
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
+            {ar.common.cancel}
+          </Button>
+          <Button onClick={confirm} disabled={isPending}>
+            {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+            {ar.payroll.settleAll}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

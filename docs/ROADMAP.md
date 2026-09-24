@@ -232,6 +232,29 @@ a guess.
 
 ---
 
+# Added 2026-09-24, at the centre's request — and it makes the case below worse
+
+Five changes asked for in one message; three already existed. What was actually built:
+
+- **`drizzle/0020`** closed three holes around substitution and make-up lessons, one of
+  which moved money between two already-settled months with nothing recording it.
+- **The register is now per lesson**, with a landscape print matching the centre's own
+  paper sheet.
+- **Absence without permission** is its own screen and a card on both dashboards.
+- **صرف للكل** pays every teacher owed something for a month, one row each.
+
+And one thing that was not asked for: **`PageHeader` could never wrap its action row**,
+because it was `shrink-0`. Eleven phases of one- and two-button headers hid it; the third
+button on `/attendance` overflowed a 375px phone and pushed the attendance date stepper
+off the screen. A mobile-first product, and the control it is built around.
+
+That is the eleventh feature built on top of a phase 1 that has still never happened —
+and the layout bug is the argument for phase 1 in miniature. It took a real browser at a
+real width to see, and nothing in this product has yet met a real phone in a real
+branch.
+
+---
+
 # What I would NOT do
 
 **Build anything else before phase 1.** Every feature added now is more code that has

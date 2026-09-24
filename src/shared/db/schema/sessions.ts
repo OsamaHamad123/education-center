@@ -56,6 +56,25 @@ export const classSessions = pgTable(
     cancelReason: text(),
     isExtra: boolean().notNull().default(false),
 
+    /**
+     * Whose lesson it was before it was handed over (`drizzle/0020`).
+     *
+     * The ORIGINAL owner, never the previous one: a lesson that passes from Ahmad to
+     * Khaled to Mona still says Ahmad, because "whose lesson was this" has one answer.
+     * Null for the overwhelming majority, which were taught by the person on the
+     * timetable.
+     */
+    substitutedFromTeacherId: uuid().references(() => teachers.id, { onDelete: "restrict" }),
+
+    /**
+     * The missed lesson this extra one makes up for (`drizzle/0020`).
+     *
+     * Without it, "he taught it on Wednesday instead of Sunday" is two sessions and two
+     * lessons' pay. The composite foreign key and the unique index live in the SQL
+     * migration; Drizzle cannot express either.
+     */
+    makesUpSessionId: uuid(),
+
     createdBy: text().references(() => user.id, { onDelete: "set null" }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),

@@ -5,6 +5,7 @@ Multi-Branch Education Center Management System — نظام ويب عربي (RT
 المعلمين، التقارير القابلة للطباعة، بوابة المعلم، وصفحة استعلام عامة لأولياء الأمور والطلاب.
 
 [![CI](https://github.com/OsamaHamad123/education-center/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/OsamaHamad123/education-center/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/OsamaHamad123/education-center/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/OsamaHamad123/education-center/actions/workflows/codeql.yml)
 
 > **In English:** an Arabic, right-to-left, mobile-first system for running a tutoring centre across several
 > branches — classes, timetables, attendance, fees, teacher payroll, a teacher portal and a parent portal.

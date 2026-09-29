@@ -1,0 +1,28 @@
+version: 2
+updates:
+  # Minor and patch updates only, grouped into one monthly PR. Major versions are a
+  # decision (CLAUDE.md: "never add a new major dependency without asking"), so
+  # Dependabot proposes none.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci(deps)"

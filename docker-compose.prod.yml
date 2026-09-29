@@ -76,6 +76,7 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:?set BETTER_AUTH_URL}
       LOOKUP_IP_SALT: ${LOOKUP_IP_SALT:?set LOOKUP_IP_SALT}
+      PORTAL_PHONE_SALT: ${PORTAL_PHONE_SALT:?set PORTAL_PHONE_SALT}
       NODE_ENV: production
       TZ: Africa/Cairo
     volumes:
@@ -107,6 +108,8 @@ services:
         condition: service_healthy
     environment:
       PGPASSWORD: ${DB_OWNER_PASSWORD}
+      # Without it backup.sh still runs, but writes plaintext dumps and logs a warning.
+      BACKUP_PASSPHRASE: ${BACKUP_PASSPHRASE:-}
       TZ: Africa/Cairo
     volumes:
       - ./docker/backup/backup.sh:/usr/local/bin/backup.sh:ro

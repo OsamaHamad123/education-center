@@ -9,8 +9,11 @@ export const env = createEnv({
   server: {
     /** Application role (`school_app`) — NOBYPASSRLS. Everything the app does uses this. */
     DATABASE_URL: z.string().url(),
-    /** Owner role (`school_owner`) — migrations and seeds only. */
-    DATABASE_OWNER_URL: z.string().url(),
+    /**
+     * Owner role (`school_owner`) — migrations and seeds only. Optional here because the
+     * running app never uses it: production does not hand the app container owner rights.
+     */
+    DATABASE_OWNER_URL: z.string().url().optional(),
 
     BETTER_AUTH_SECRET: z.string().min(32, "BETTER_AUTH_SECRET must be at least 32 characters"),
     BETTER_AUTH_URL: z.string().url(),

@@ -7,6 +7,8 @@ import { db } from "@/shared/db/client";
 import { account, session, user, verification } from "@/shared/db/schema";
 import { LOGIN_LIMITS } from "@/shared/config/constants";
 import { recordLogin } from "./record-login";
+import { assertNotLockedOut, clearFailedLogins, recordFailedLogin } from "./login-lockout";
+import { lockoutHooks } from "./login-lockout-hooks";
 
 /**
  * PROJECT_PLAN section 9.
@@ -61,7 +63,7 @@ export const auth = betterAuth({
    * in that quarter hour — they share one public IP. So this is a deliberate
    * per-IP request budget instead: still far too slow to brute-force a password,
    * without turning a busy morning into an outage. Per-ACCOUNT failure lockout is
-   * tracked in docs/PROGRESS.md.
+   * the `hooks` below.
    */
   rateLimit: {
     enabled: process.env.DISABLE_RATE_LIMIT !== "1",
@@ -81,6 +83,12 @@ export const auth = betterAuth({
       sameSite: "lax",
     },
   },
+
+  /**
+   * Per-account lockout (docs/SECURITY-REVIEW.md, finding 1), enforced on the sign-in
+   * endpoints themselves so it holds however the request arrives.
+   */
+  hooks: lockoutHooks({ assertNotLockedOut, recordFailedLogin, clearFailedLogins }),
 
   databaseHooks: {
     session: {

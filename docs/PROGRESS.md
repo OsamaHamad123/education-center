@@ -12,6 +12,18 @@ Phase 10 — Hardening, performance, deployment — status: **done**
 | All tests green                             | ✅ 427 tests (298 unit + 129 integration) and 219 e2e, twice in a row                                |
 | Lighthouse mobile ≥ 90                      | ⚠️ accessibility **100**, best practices **100**, performance **85** — measured, not met             |
 
+## After Phase 10
+
+- **Lockout moved into the sign-in endpoints.** The per-account lockout was enforced by
+  the login form through three server actions, which are public endpoints: a direct
+  request to `/api/auth/sign-in/username` skipped it, and anyone could clear or fill any
+  account's failure count. It now runs as Better Auth `hooks` (`login-lockout-hooks.ts`)
+  on `/sign-in/username` and `/sign-in/email`. The form only maps the result: a 429 with
+  code `ACCOUNT_LOCKED` shows the lock message, any other 429 the per-IP message.
+- **Production compose passes every required env var.** `PORTAL_PHONE_SALT` to the app
+  and `BACKUP_PASSPHRASE` to the backup job; `DATABASE_OWNER_URL` is optional in
+  `env.ts`, because the running app never uses the owner role.
+
 ## The two criteria that are not a tick
 
 **The deploy has not been run on a real server.** Every piece exists and is written

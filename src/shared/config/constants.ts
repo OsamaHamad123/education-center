@@ -49,6 +49,8 @@ export const LOGIN_LOCKOUT = {
   windowMinutes: 15,
   /** Nothing older than this is kept; the window is 15 minutes, an hour is ample. */
   retentionMinutes: 60,
+  /** Sent with the 429, so the form can tell a locked account from the per-IP limit. */
+  errorCode: "ACCOUNT_LOCKED",
 } as const;
 
 /**

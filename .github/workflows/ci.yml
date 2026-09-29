@@ -62,6 +62,15 @@ jobs:
     env:
       DATABASE_TEST_URL: postgresql://school_app:app@localhost:5432/school_test
       DATABASE_TEST_OWNER_URL: postgresql://school_owner:owner@localhost:5432/school_test
+      # Suites that reach src/shared/auth load src/shared/config/env.ts, which validates
+      # the app's own variables at import. Locally they come from .env; CI has none, so
+      # three files failed to load. Throwaway values, pointed at the test database.
+      DATABASE_URL: postgresql://school_app:app@localhost:5432/school_test
+      DATABASE_OWNER_URL: postgresql://school_owner:owner@localhost:5432/school_test
+      BETTER_AUTH_SECRET: ci-only-secret-not-used-anywhere-else
+      BETTER_AUTH_URL: http://localhost:3000
+      LOOKUP_IP_SALT: ci-only-salt-at-least-16-chars
+      PORTAL_PHONE_SALT: ci-only-phone-salt-at-least-16
     steps:
       - uses: actions/checkout@v5
 
@@ -143,6 +152,7 @@ jobs:
       BETTER_AUTH_SECRET: ci-only-secret-not-used-anywhere-else
       BETTER_AUTH_URL: http://localhost:3000
       LOOKUP_IP_SALT: ci-only-salt-at-least-16-chars
+      PORTAL_PHONE_SALT: ci-only-phone-salt-at-least-16
       # The whole suite runs from one address; a per-IP budget meant for the internet
       # would block it against itself. Never set outside CI and local test runs.
       DISABLE_RATE_LIMIT: "1"

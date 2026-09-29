@@ -65,6 +65,14 @@ single-host one is.
 A successful sign-in clears the account's failures, so a parent-office user who
 mistypes twice and then succeeds starts clean.
 
+**Follow-up (2026-09).** As first shipped, the form drove the lockout through three
+server actions — check, record a failure, clear on success. A server action is a
+public endpoint, so the lock held only for people who used the form: posting straight
+to `/api/auth/sign-in/username` skipped it, anyone could clear any account's count, and
+anyone could lock another user out. The check and the counting now run as Better Auth
+`hooks` on the sign-in endpoints (`src/shared/auth/login-lockout-hooks.ts`), including
+`/sign-in/email`, and `login-lockout.ts` is no longer a server action.
+
 ## 2. No security headers — High
 
 `next.config.ts` was the generator's empty default. The app served no CSP, no

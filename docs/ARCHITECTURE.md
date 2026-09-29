@@ -226,8 +226,8 @@ students, sessions, attendance or money.
 
 Staff and teachers sign in through Better Auth (`src/shared/auth/auth.ts`): Drizzle adapter, `username` plugin,
 public sign-up disabled, 7-day rolling sessions, `httpOnly` cookies, and a per-IP budget of 20 sign-in
-requests per 5 minutes. The login form also checks a per-username failure counter
-(`src/shared/auth/login-lockout.ts`, 10 failures per 15 minutes) before calling sign-in. There are three roles
+requests per 5 minutes. Better Auth `hooks` on the sign-in endpoints enforce a per-username failure counter
+(`src/shared/auth/login-lockout-hooks.ts` over `login-lockout.ts`, 10 failures per 15 minutes). There are three roles
 and 37 permissions in one typed map (`src/shared/auth/permissions.ts`). A permission answers "may this role do
 this kind of thing"; which rows it may touch is left to `TenantContext` and RLS.
 
@@ -302,8 +302,6 @@ Production is one host running `docker-compose.prod.yml` with five services:
 - The parent credential is a student code and four phone digits, not a one-time code, because no messaging
   provider is integrated; rate limits on both IP and code are the mitigation.
 - The 16 SECURITY DEFINER functions bypass RLS by design; each is its own authorization boundary to review.
-- The per-username lockout runs in the login form's flow around Better Auth's sign-in endpoint; inside the
-  endpoint, only Better Auth's per-IP limit applies.
 - The lint rule matches the `@/modules/...` alias, so a relative cross-module import would pass (none exist).
 - End-to-end tests run only on pushes to `main`, not on pull requests; server-side PDF export is not built
   (the `src/app/print/` pages use the browser's print dialog).

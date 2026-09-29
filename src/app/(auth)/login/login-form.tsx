@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { signIn } from "@/shared/auth/client";
-import { assertNotLockedOut, clearFailedLogins, recordFailedLogin } from "@/shared/auth/login-lockout";
+import { LOGIN_LOCKOUT } from "@/shared/config/constants";
 import { ar } from "@/shared/i18n/ar";
 import { safeRedirectPath } from "@/shared/lib/safe-redirect";
 import { readText } from "@/shared/lib/form-data";
@@ -14,6 +14,16 @@ import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { useAction } from "@/shared/ui/use-action";
+
+/**
+ * A locked account gets the server's message, which says how long to wait. Anything
+ * else stays deliberately vague.
+ */
+function loginErrorMessage(error: { status: number; code?: string; message?: string }): string {
+  if (error.code === LOGIN_LOCKOUT.errorCode && error.message) return error.message;
+  if (error.status === 429) return ar.auth.tooManyAttempts;
+  return ar.auth.invalidCredentials;
+}
 
 /**
  * One form, two tabs (PROJECT_PLAN section 9): an admin signs in with a username, a
@@ -43,26 +53,16 @@ export function LoginForm() {
     const username = identifier.toLowerCase();
 
     startTransition(async () => {
-      // Asked BEFORE the password is checked, so a locked account costs an attacker a
-      // query and tells them nothing (docs/SECURITY-REVIEW.md, finding 1).
-      const gate = await assertNotLockedOut(username);
-      if (!gate.ok) {
-        setError(gate.error.message);
-        return;
-      }
-
+      // The per-account lockout runs inside the sign-in endpoint (login-lockout-hooks.ts):
+      // the server checks it, counts failures and clears them on success.
       const { error: authError } = await signIn.username({ username, password });
 
       if (authError) {
-        await recordFailedLogin(username);
         // The same message for a wrong name and a wrong password: telling them apart
         // would let someone enumerate valid usernames.
-        setError(authError.status === 429 ? ar.auth.tooManyAttempts : ar.auth.invalidCredentials);
+        setError(loginErrorMessage(authError));
         return;
       }
-
-      // Somebody who mistypes twice and then succeeds starts clean.
-      await clearFailedLogins(username);
 
       // `startsWith("/")` is not enough: `//evil.com` passes it and is a different
       // origin (docs/AUDIT-2026-09.md, finding 5).

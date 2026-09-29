@@ -1,5 +1,3 @@
-"use server";
-
 import { and, eq, gt, lt, sql } from "drizzle-orm";
 import { db } from "@/shared/db/client";
 import { loginAttempts } from "@/shared/db/schema";
@@ -18,6 +16,10 @@ import { err, ok, type Result } from "@/shared/lib/result";
  * It runs outside `withTenant` on purpose — there is no tenant and no session yet;
  * these rows are written before anybody is authenticated. The table holds no
  * password, no hash and no address.
+ *
+ * Server-only, and deliberately NOT a server action: Better Auth calls these from its
+ * sign-in hooks (login-lockout-hooks.ts). As server actions they were public
+ * endpoints, so anyone could clear or fill any account's failure count.
  */
 
 function since(minutes: number): Date {

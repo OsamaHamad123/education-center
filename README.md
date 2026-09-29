@@ -4,13 +4,41 @@ Multi-Branch Education Center Management System — نظام ويب عربي (RT
 مركز تعليمي له عدة فروع: الفروع، الشُعب، الطلاب، المعلمون، الجداول الأسبوعية، الحضور اليومي، مستحقات
 المعلمين، التقارير القابلة للطباعة، بوابة المعلم، وصفحة استعلام عامة لأولياء الأمور والطلاب.
 
+[![CI](https://github.com/OsamaHamad123/education-center/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/OsamaHamad123/education-center/actions/workflows/ci.yml)
+
+> **In English:** an Arabic, right-to-left, mobile-first system for running a tutoring centre across several
+> branches — classes, timetables, attendance, fees, teacher payroll, a teacher portal and a parent portal.
+> A modular monolith on Next.js, TypeScript and PostgreSQL. Each branch's data is isolated twice: in the
+> application layer and by PostgreSQL Row Level Security, which the integration suite tests against a real
+> database. 730 unit and integration tests, plus Playwright end-to-end tests on desktop and mobile.
+
+## لقطات الشاشة
+
+<table>
+  <tr>
+    <td colspan="2"><img src="docs/screenshots/dashboard.png" alt="لوحة التحكم للإدارة العامة: الحضور والمستحقات لكل فرع"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/timetable.png" alt="الجدول الأسبوعي لشعبة، محسوب من جرس المدرسة"></td>
+    <td><img src="docs/screenshots/money-report.png" alt="تقرير مال المركز: المحصّل والمتأخر ومستحقات المعلمين لكل فرع"></td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="docs/screenshots/attendance-mobile.png" alt="تسجيل الحضور على الهاتف" width="300">
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/teacher-portal-mobile.png" alt="بوابة المعلم: حصص اليوم" width="300">
+</p>
+
+<sub>البيانات في اللقطات تجريبية من <code>pnpm db:seed</code>.</sub>
+
 ## الحالة
 
 اكتملت **كل المراحل من 0 إلى 10**: التأسيس، قاعدة البيانات وسياسات عزل الفروع (RLS)، المصادقة
 والأدوار، شاشات الإدارة العامة، الشُعب والطلاب بكامل دورة القيد، المعلمون وأجورهم، محرك الجداول،
 الحضور والحصص، المستحقات والتقارير، بوابة المعلم واستعلام ولي الأمر، ثم التقسية والنشر.
 
-كل الفحوص خضراء: **419 اختباراً** (290 وحدة + 129 تكامل على PostgreSQL حقيقي) و **210 اختبار e2e**
+**730 اختباراً** (497 وحدة + 233 تكامل على PostgreSQL حقيقي) و **420 اختبار e2e** بـ Playwright
 على مقاسي سطح المكتب والهاتف.
 
 - المواصفات الكاملة: [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md)
@@ -23,7 +51,7 @@ Multi-Branch Education Center Management System — نظام ويب عربي (RT
 ## التقنيات
 
 Next.js (App Router) + TypeScript strict · PostgreSQL 16 + Drizzle ORM · Better Auth · Zod ·
-Tailwind CSS + shadcn/ui (RTL، خط Cairo) · TanStack Table · React Hook Form · date-fns
+Tailwind CSS + shadcn/ui (RTL، خط Cairo) · TanStack Table · date-fns
 (المنطقة الزمنية دائماً `Africa/Cairo`) · Vitest + Playwright · pnpm + Docker Compose.
 
 ## البنية
